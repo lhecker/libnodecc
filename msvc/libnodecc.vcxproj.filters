@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{255fab3b-0cab-4233-b1e7-9f0363d4879e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\http">
+      <UniqueIdentifier>{f62297ee-9ced-46d5-968b-524e7d222bbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\http\http-parser">
+      <UniqueIdentifier>{57a72891-490f-4599-b68c-f321b1a16e73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\net">
+      <UniqueIdentifier>{0f84e42f-d473-4e35-8130-9a173d72ad7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{9e62744f-5e2a-4919-97af-5fe32b3eeb05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\libnodecc">
+      <UniqueIdentifier>{861f4818-ae5d-49b5-9a56-0b133ab1da4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\libnodecc\net">
+      <UniqueIdentifier>{1a185ae9-6613-4df2-a7cf-5b53c4f7a933}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\libnodecc\events">
+      <UniqueIdentifier>{5ded5197-a1e3-498d-9e2f-f4f1bb3b67c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\libnodecc\http">
+      <UniqueIdentifier>{a454b289-35f9-4011-99f1-c6494549fa04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\libnodecc\uv">
+      <UniqueIdentifier>{e3ef565b-83d3-431c-8c0c-19725e539032}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\libnodecc\dns">
+      <UniqueIdentifier>{15052b75-5528-4e07-9962-75a76c60ad90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\dns">
+      <UniqueIdentifier>{b2ce3b78-85aa-4a70-9f90-28d4d888fac2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\http\http-parser\http_parser.c">
+      <Filter>src\http\http-parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\http\server_response.cc">
+      <Filter>src\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\http\incoming_message.cc">
+      <Filter>src\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\http\server.cc">
+      <Filter>src\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\net\server.cc">
+      <Filter>src\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\net\socket.cc">
+      <Filter>src\net</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\http\client_request.cc">
+      <Filter>src\http</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dns\dns.cc">
+      <Filter>src\dns</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\http\http-parser\http_parser.h">
+      <Filter>src\http\http-parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\events\event_emitter.h">
+      <Filter>include\libnodecc\events</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\http\incoming_message.h">
+      <Filter>include\libnodecc\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\http\server.h">
+      <Filter>include\libnodecc\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\net\server.h">
+      <Filter>include\libnodecc\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\net\socket.h">
+      <Filter>include\libnodecc\net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\http\server_response.h">
+      <Filter>include\libnodecc\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\uv\handle.h">
+      <Filter>include\libnodecc\uv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\uv\stream.h">
+      <Filter>include\libnodecc\uv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\common.h">
+      <Filter>include\libnodecc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\http\client_request.h">
+      <Filter>include\libnodecc\http</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\dns\dns.h">
+      <Filter>include\libnodecc\dns</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
