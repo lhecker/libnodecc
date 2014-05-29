@@ -181,6 +181,7 @@
     <ClInclude Include="..\include\libnodecc\http\server_response.h" />
     <ClInclude Include="..\include\libnodecc\net\server.h" />
     <ClInclude Include="..\include\libnodecc\net\socket.h" />
+    <ClInclude Include="..\include\libnodecc\util\spinlock.h" />
     <ClInclude Include="..\include\libnodecc\uv\handle.h" />
     <ClInclude Include="..\include\libnodecc\uv\stream.h" />
     <ClInclude Include="..\src\http\http-parser\http_parser.h" />

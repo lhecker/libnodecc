@@ -37,6 +37,9 @@
     <Filter Include="src\dns">
       <UniqueIdentifier>{b2ce3b78-85aa-4a70-9f90-28d4d888fac2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\libnodecc\util">
+      <UniqueIdentifier>{122dafa4-8e55-467a-be78-a0e60b21c641}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\http\http-parser\http_parser.c">
@@ -103,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="..\include\libnodecc\dns\dns.h">
       <Filter>include\libnodecc\dns</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\libnodecc\util\spinlock.h">
+      <Filter>include\libnodecc\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
