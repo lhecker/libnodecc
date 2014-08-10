@@ -1,6 +1,8 @@
 #ifndef nodecc_uv_stream_h
 #define nodecc_uv_stream_h
 
+#include <string>
+
 #include "../common.h"
 #include "handle.h"
 
@@ -59,17 +61,18 @@ public:
 	on_read_t  on_read;
 
 private:
-	class packed_write_req {
-	public:
+	struct packed_write_req {
 		uv_write_t req;
 		std::string buf;
 		on_write_t cb;
-
-		inline uv_buf_t uv_buf() { return uv_buf_init(const_cast<char *>(this->buf.data()), (unsigned int)this->buf.length()); }
 	};
 
 	void write(packed_write_req *packed_req) {
-		uv_write(&packed_req->req, reinterpret_cast<uv_stream_t*>(this->uv_handle()), &packed_req->uv_buf(), 1, [](uv_write_t *req, int status) {
+		uv_buf_t buf;
+		buf.base = const_cast<char*>(packed_req->buf.data());
+		buf.len = packed_req->buf.length();
+
+		uv_write(&packed_req->req, reinterpret_cast<uv_stream_t*>(this->uv_handle()), &buf, 1, [](uv_write_t *req, int status) {
 			packed_write_req *packed_req = container_of(req, packed_write_req, req);
 
 			if (packed_req->cb) {

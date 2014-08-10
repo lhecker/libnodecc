@@ -1,6 +1,6 @@
 #include "libnodecc/http/server.h"
 
-#include <libuv/uv.h>
+#include <uv.h>
 #include <string>
 
 

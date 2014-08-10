@@ -6,7 +6,7 @@
 #define M_LOG16 2.7725887222397812376689284858327062723020005374410210 // log(16)
 
 
-http::client_request::client_request(uv_loop_t *loop) : net::socket(loop), _headersSent(false), hostname("localhost"), method("GET"), path("/") {
+http::client_request::client_request(uv_loop_t *loop) : net::socket(loop), method("GET"), path("/"), hostname("localhost"), _headersSent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 

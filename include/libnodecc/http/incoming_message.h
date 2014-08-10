@@ -1,8 +1,8 @@
 #ifndef nodecc_http_incoming_message_h
 #define nodecc_http_incoming_message_h
 
-#include <cstdint>
 #include <functional>
+#include <string>
 #include <unordered_map>
 
 

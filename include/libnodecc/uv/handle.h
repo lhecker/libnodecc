@@ -2,7 +2,7 @@
 #define nodecc_uv_handle_h
 
 #include <functional>
-#include <libuv/uv.h>
+#include <uv.h>
 
 
 namespace uv {

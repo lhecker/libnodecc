@@ -1,12 +1,12 @@
 #ifndef nodecc_http_server_response_h
 #define nodecc_http_server_response_h
 
-#include <cstdint>
+#include <string>
 #include <unordered_map>
 
 
 namespace net {
-class net::socket;
+class socket;
 }
 
 

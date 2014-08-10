@@ -1,8 +1,8 @@
 #ifndef nodecc_http_client_request_h
 #define nodecc_http_client_request_h
 
-#include <functional>
 #include <unordered_map>
+
 #include "../net/socket.h"
 
 
@@ -31,9 +31,9 @@ public:
 	void end();
 
 
-	std::string hostname;
-	std::string path;
 	std::string method;
+	std::string path;
+	std::string hostname;
 
 
 	using net::socket::on_read;

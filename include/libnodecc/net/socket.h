@@ -1,6 +1,8 @@
 #ifndef nodecc_net_socket_h
 #define nodecc_net_socket_h
 
+#include <cmath>
+
 #include "../uv/stream.h"
 
 

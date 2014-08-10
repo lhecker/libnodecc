@@ -1,8 +1,7 @@
 #ifndef nodecc_net_server_h
 #define nodecc_net_server_h
 
-#include "../uv/handle.h"
-#include "../net/socket.h"
+#include "socket.h"
 
 
 namespace net {

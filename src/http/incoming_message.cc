@@ -114,7 +114,7 @@ http::incoming_message::incoming_message(net::socket &socket) : socket(socket) {
 
 			this->socket.close();
 		} else if (nread > 0) {
-			size_t nparsed = http_parser_execute(this->_parser, &http_req_parser_settings, buf->base, nread);
+			ssize_t nparsed = http_parser_execute(this->_parser, &http_req_parser_settings, buf->base, nread);
 
 			// TODO: handle upgrade
 			if (this->_parser->upgrade == 1 || nparsed != nread) {
