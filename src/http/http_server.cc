@@ -8,7 +8,7 @@ http::server::server(uv_loop_t *loop) : net::server(loop) {
 	this->clients.max_load_factor(0.75);
 
 	this->on_connection = [this]() {
-		auto iter = this->clients.emplace(this->uv_handle()->loop).first;
+		auto iter = this->clients.emplace(static_cast<uv_handle_t*>(*this)->loop).first;
 		net::socket &socket = const_cast<net::socket&>(*iter);
 
 		if (!this->accept(socket)) {

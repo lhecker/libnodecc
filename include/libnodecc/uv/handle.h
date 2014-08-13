@@ -4,6 +4,8 @@
 #include <functional>
 #include <uv.h>
 
+#include "../common.h"
+
 
 namespace uv {
 
@@ -12,41 +14,26 @@ class handle {
 public:
 	typedef std::function<void()> on_close_t;
 
-	explicit handle() : _handle(new T) {
-		this->_handle->data = this;
-	};
-
-	virtual ~handle() {
-		if (this->_handle) {
-			// make sure the libuv structure does not reference back to this deleted instance
-			this->_handle->data = nullptr;
-
-			this->close();
-		}
+	explicit handle() {
+		this->_handle.data = this;
 	}
 
+	operator T*() {
+		return &this->_handle;
+	}
 
-	inline T *uv_handle() const {
-		return this->_handle;
+	operator uv_handle_t*() {
+		return reinterpret_cast<uv_handle_t*>(&this->_handle);
 	}
 
 	void close() {
-		uv_handle_t *handle = reinterpret_cast<uv_handle_t*>(this->_handle);
-
-		if (handle && !uv_is_closing(handle)) {
-			uv_close(handle, [](uv_handle_t *handle) {
+		if (!uv_is_closing(*this)) {
+			uv_close(*this, [](uv_handle_t *handle) {
 				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
-				if (self) {
-					// the instance might get deleted in the callback => do not modify self after the callback
-					self->_handle = nullptr;
-
-					if (self->on_close) {
-						self->on_close();
-					}
+				if (self && self->on_close) {
+					self->on_close();
 				}
-
-				delete reinterpret_cast<T*>(handle);
 			});
 		}
 	}
@@ -57,11 +44,11 @@ public:
 	}
 
 	void ref() {
-		uv_ref(reinterpret_cast<uv_handle_t*>(this->uv_handle()));
+		uv_ref(*this);
 	}
 
 	void unref() {
-		uv_unref(reinterpret_cast<uv_handle_t*>(this->uv_handle()));
+		uv_unref(*this);
 	}
 
 
@@ -69,7 +56,7 @@ public:
 
 
 protected:
-	T *_handle;
+	T _handle;
 };
 
 } // namespace uv

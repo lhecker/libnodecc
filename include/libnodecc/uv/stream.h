@@ -16,6 +16,11 @@ public:
 	typedef std::function<void(ssize_t nread, const uv_buf_t *buf)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
 
+	explicit stream() : uv::handle<T>() {}
+
+	operator uv_stream_t*() {
+		return reinterpret_cast<uv_stream_t*>(&this->_handle);
+	}
 
 	bool read_start() {
 		// TODO getter/setter
@@ -23,7 +28,7 @@ public:
 			return false;
 		}
 
-		return 0 == uv_read_start(reinterpret_cast<uv_stream_t*>(this->uv_handle()), [](uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+		return 0 == uv_read_start(*this, [](uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
 			auto self = reinterpret_cast<uv::stream<T>*>(handle->data);
 
 			if (self) {
@@ -39,7 +44,7 @@ public:
 	}
 
 	bool read_stop() {
-		return 0 == uv_read_stop(reinterpret_cast<uv_stream_t*>(this->uv_handle()));
+		return 0 == uv_read_stop(*this);
 	}
 
 	// TODO: std::move functions &&
@@ -72,7 +77,7 @@ private:
 		buf.base = const_cast<char*>(packed_req->buf.data());
 		buf.len = packed_req->buf.length();
 
-		uv_write(&packed_req->req, reinterpret_cast<uv_stream_t*>(this->uv_handle()), &buf, 1, [](uv_write_t *req, int status) {
+		uv_write(&packed_req->req, *this, &buf, 1, [](uv_write_t *req, int status) {
 			packed_write_req *packed_req = container_of(req, packed_write_req, req);
 
 			if (packed_req->cb) {
