@@ -1,5 +1,81 @@
 {
 	'target_defaults': {
+		'default_configuration': 'Debug',
+		'configurations': {
+			'Debug': {
+				'defines': [
+					'DEBUG',
+					'_DEBUG',
+				],
+				'cflags': [
+					'-g',
+					'-O0',
+				],
+				'msvs_settings': {
+					'VCCLCompilerTool': {
+						'target_conditions': [
+							['uv_library=="static_library"', {
+								'RuntimeLibrary': 1, # static debug
+							}, {
+								'RuntimeLibrary': 3, # DLL debug
+							}],
+						],
+						'Optimization': 0, # /Od, no optimization
+						'MinimalRebuild': 'false',
+						'OmitFramePointers': 'false',
+						'BasicRuntimeChecks': 3, # /RTC1
+					},
+					'VCLinkerTool': {
+						'LinkIncremental': 2, # enable incremental linking
+					},
+					'xcode_settings': {
+						'GCC_OPTIMIZATION_LEVEL': '0',
+						'OTHER_CFLAGS': [ '-Wno-strict-aliasing' ],
+					},
+				},
+			},
+			'Release': {
+				'defines': [
+					'NDEBUG',
+				],
+				'cflags': [
+					'-O3',
+					'-fstrict-aliasing',
+					'-fomit-frame-pointer',
+					'-fdata-sections',
+					'-ffunction-sections',
+				],
+				'msvs_settings': {
+					'VCCLCompilerTool': {
+						'target_conditions': [
+							['uv_library=="static_library"', {
+								'RuntimeLibrary': 0, # static release
+							}, {
+								'RuntimeLibrary': 2, # debug release
+							}],
+						],
+						'Optimization': 3, # /Ox, full optimization
+						'FavorSizeOrSpeed': 1, # /Ot, favour speed over size
+						'InlineFunctionExpansion': 2, # /Ob2, inline anything eligible
+						'WholeProgramOptimization': 'true', # /GL, whole program optimization, needed for LTCG
+						'OmitFramePointers': 'true',
+						'EnableFunctionLevelLinking': 'true',
+						'EnableIntrinsicFunctions': 'true',
+					},
+					'VCLibrarianTool': {
+						'AdditionalOptions': [
+							'/LTCG', # link time code generation
+						],
+					},
+					'VCLinkerTool': {
+						'LinkTimeCodeGeneration': 1, # link-time code generation
+						'OptimizeReferences': 2, # /OPT:REF
+						'EnableCOMDATFolding': 2, # /OPT:ICF
+						'LinkIncremental': 1, # disable incremental linking
+					},
+				},
+			},
+		},
 		'conditions': [
 			['OS != "win"', {
 				'defines': [
