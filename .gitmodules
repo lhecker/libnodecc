@@ -1,6 +1,8 @@
 [submodule "src/http/http-parser"]
 	path = src/http/http-parser
 	url = https://github.com/joyent/http-parser.git
+	ignore = untracked
 [submodule "deps/libuv"]
 	path = deps/libuv
 	url = https://github.com/joyent/libuv.git
+	ignore = untracked
