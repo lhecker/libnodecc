@@ -77,7 +77,7 @@
 			},
 		},
 		'conditions': [
-			['OS != "win"', {
+			['OS!="win"', {
 				'defines': [
 					'_LARGEFILE_SOURCE',
 					'_FILE_OFFSET_BITS=64',
@@ -90,10 +90,7 @@
 		{
 			'target_name': 'libnodecc',
 			'type': '<(uv_library)',
-			'include_dirs': [
-				'include',
-				'src/http/http-parser',
-			],
+			'include_dirs': [ 'include' ],
 			'sources': [
 				'include/libnodecc/common.h',
 				'include/libnodecc/dns/dns.h',
@@ -120,8 +117,14 @@
 			'dependencies': [
 				'deps/libuv/uv.gyp:libuv',
 			],
+			'direct_dependent_settings': {
+				'include_dirs': [ 'include' ],
+			},
+			'export_dependent_settings': [
+				'deps/libuv/uv.gyp:libuv',
+			],
 			'conditions': [
-				[ 'OS=="win"', {
+				['OS=="win"', {
 					'defines': [
 						'_WIN32_WINNT=0x0600',
 					],
@@ -138,7 +141,6 @@
 				}],
 			],
 			'xcode_settings': {
-				'ALWAYS_SEARCH_USER_PATHS': 'NO',
 				'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
 				'CLANG_CXX_LIBRARY': 'libc++',
 				'WARNING_CFLAGS': [
