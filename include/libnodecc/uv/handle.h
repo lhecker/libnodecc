@@ -18,12 +18,16 @@ public:
 		this->_handle.data = this;
 	}
 
-	operator T*() {
-		return &this->_handle;
+	operator uv_loop_t*() {
+		return this->_handle.loop;
 	}
 
 	operator uv_handle_t*() {
 		return reinterpret_cast<uv_handle_t*>(&this->_handle);
+	}
+
+	operator T*() {
+		return &this->_handle;
 	}
 
 	void close() {

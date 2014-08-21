@@ -1,10 +1,11 @@
 #include "libnodecc/net/server.h"
 
-#include "libnodecc/net/socket.h"
 
+net::server::server() : uv::stream<uv_tcp_t>() {
+}
 
-net::server::server(uv_loop_t *loop) : uv::stream<uv_tcp_t>() {
-	uv_tcp_init(loop, *this);
+bool net::server::init(uv_loop_t *loop) {
+	return 0 == uv_tcp_init(loop, *this);
 }
 
 bool net::server::listen(uint16_t port, const std::string &ip, int backlog) {

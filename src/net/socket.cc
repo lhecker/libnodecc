@@ -3,8 +3,11 @@
 #include "libnodecc/dns/dns.h"
 
 
-net::socket::socket(uv_loop_t *loop) : uv::stream<uv_tcp_t>() {
-	uv_tcp_init(loop, *this);
+net::socket::socket() : uv::stream<uv_tcp_t>() {
+}
+
+bool net::socket::init(uv_loop_t *loop) {
+	return 0 == uv_tcp_init(loop, *this);
 }
 
 bool net::socket::connect(const std::string &ip, uint16_t port) {

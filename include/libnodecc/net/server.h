@@ -11,7 +11,9 @@ public:
 	typedef std::function<void()> on_connection_t;
 
 
-	explicit server(uv_loop_t *loop);
+	explicit server();
+
+	bool init(uv_loop_t *loop);
 
 	bool listen(uint16_t port, const std::string &ip = "0.0.0.0", int backlog = 511);
 	bool accept(net::socket &client);

@@ -13,7 +13,9 @@ public:
 	typedef std::function<void()> on_connect_t;
 
 
-	explicit socket(uv_loop_t *loop);
+	explicit socket();
+
+	bool init(uv_loop_t *loop);
 
 	bool connect(const std::string &ip, uint16_t port);
 
