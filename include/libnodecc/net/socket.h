@@ -1,23 +1,23 @@
 #ifndef nodecc_net_socket_h
 #define nodecc_net_socket_h
 
-#include <cmath>
-
 #include "../uv/stream.h"
+
+#include <cmath>
 
 
 namespace net {
 
 class socket : public uv::stream<uv_tcp_t> {
 public:
-	typedef std::function<void()> on_connect_t;
+	typedef std::function<void(bool ok)> on_connect_t;
 
 
 	explicit socket();
 
 	bool init(uv_loop_t *loop);
 
-	bool connect(const std::string &ip, uint16_t port);
+	bool connect(const std::string &address, uint16_t port);
 
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);

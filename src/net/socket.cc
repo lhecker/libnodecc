@@ -3,6 +3,55 @@
 #include "libnodecc/dns/dns.h"
 
 
+namespace {
+
+struct net_socket_connect {
+	explicit net_socket_connect(net::socket *socket, const std::shared_ptr<addrinfo> &ai) : ai(ai), socket(socket) {
+		this->req.data = this;
+		this->current_ai = this->ai.get();
+	};
+
+	addrinfo *next() {
+		this->current_ai = this->current_ai->ai_next;
+		return this->current_ai;
+	}
+
+	void connect() {
+		uv_tcp_connect(&this->req, *this->socket, this->current_ai->ai_addr, [](uv_connect_t *req, int status) {
+			auto self = reinterpret_cast<net_socket_connect*>(req->data);
+
+			if (status == 0) {
+				// connect successful ---> call callback with true
+				if(self->socket->on_connect) {
+					self->socket->on_connect(true);
+				}
+			} else {
+				// connect NOT successful but another address is available ---> call next connect
+				if (self->next()) {
+					self->connect();
+					return;
+				} else {
+					// connect NOT successful and NO another address available ---> call callback with false
+					if(self->socket->on_connect) {
+						self->socket->on_connect(false);
+					}
+				}
+			}
+
+			// delete this instance if it finished connecting (if it tries again, it will return; above)
+			delete self;
+		});
+	}
+
+	uv_connect_t req;
+	std::shared_ptr<addrinfo> ai;
+	addrinfo *current_ai;
+	net::socket *socket;
+};
+
+}
+
+
 net::socket::socket() : uv::stream<uv_tcp_t>() {
 }
 
@@ -10,23 +59,13 @@ bool net::socket::init(uv_loop_t *loop) {
 	return 0 == uv_tcp_init(loop, *this);
 }
 
-bool net::socket::connect(const std::string &ip, uint16_t port) {
-	dns::lookup(static_cast<uv_handle_t*>(*this)->loop, ip, [this](int err, const addrinfo *res) {
-		if (err == 0) {
-		}
-
+bool net::socket::connect(const std::string &address, uint16_t port) {
+	dns::lookup(*this, address, [this](const std::shared_ptr<addrinfo> &res) {
 		uv_connect_t *req = new uv_connect_t;
 		req->data = this;
 
-		uv_tcp_connect(req, *this, (const sockaddr *)res->ai_addr, [](uv_connect_t *req, int status) {
-			auto self = reinterpret_cast<net::socket*>(req->data);
-
-			if (status == 0 && self->on_connect) {
-				self->on_connect();
-			}
-
-			delete req;
-		});
+		net_socket_connect *data = new net_socket_connect(this, res);
+		data->connect();
 	});
 
 	return true;
