@@ -11,6 +11,9 @@
 					'-g',
 					'-O0',
 				],
+				'xcode_settings': {
+					'GCC_OPTIMIZATION_LEVEL': '0',
+				},
 				'msvs_settings': {
 					'VCCLCompilerTool': {
 						'target_conditions': [
@@ -40,11 +43,10 @@
 				],
 				'cflags': [
 					'-O3',
-					'-fstrict-aliasing',
-					'-fomit-frame-pointer',
-					'-fdata-sections',
-					'-ffunction-sections',
 				],
+				'xcode_settings': {
+					'GCC_OPTIMIZATION_LEVEL': '3',
+				},
 				'msvs_settings': {
 					'VCCLCompilerTool': {
 						'target_conditions': [
@@ -114,12 +116,14 @@
 			],
 			'dependencies': [
 				'deps/libuv/uv.gyp:libuv',
+				'deps/json11.gyp:json11',
 			],
 			'direct_dependent_settings': {
 				'include_dirs': [ 'include' ],
 			},
 			'export_dependent_settings': [
 				'deps/libuv/uv.gyp:libuv',
+				'deps/json11.gyp:json11',
 			],
 			'conditions': [
 				['OS=="win"', {
