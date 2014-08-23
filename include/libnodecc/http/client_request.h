@@ -13,7 +13,9 @@ public:
 	typedef std::function<void()> on_response_t;
 
 
-	explicit client_request(uv_loop_t *loop);
+	explicit client_request();
+
+	using net::socket::init;
 
 	/*
 	* If the a transfer-encoding header is set, it *must*
