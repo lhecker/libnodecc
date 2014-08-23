@@ -20,12 +20,10 @@ public:
 	* either include "chunked" as the last comma-seperated entry,
 	* or a content-length entry.
 	*/
-	template <typename T>
-	const std::string &getHeader(T&& key) { return this->_headers[std::forward<T>(key)]; }
-	template <typename... T>
-	void setHeader(T&&... args) { this->_headers.emplace(std::forward<T>(args)...); }
 
-	inline bool headersSent() const { return this->_headersSent; }
+	const std::string &getHeader(const std::string &key);
+	void setHeader(const std::string &key, const std::string &value);
+	bool headersSent() const;
 
 	void write(const std::string &str);
 	void end();

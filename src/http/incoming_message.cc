@@ -15,9 +15,7 @@ static int on_url(http_parser *parser, const char *at, size_t length) {
 
 static int on_header_field(http_parser *parser, const char *at, size_t length) {
 	auto self = static_cast<http::incoming_message *>(parser->data);
-
 	self->_partialHeaderField.append(at, length);
-
 	return 0;
 }
 
@@ -33,6 +31,11 @@ static int on_header_value(http_parser *parser, const char *at, size_t length) {
 		field.clear();
 
 		self->_partialHeaderValue = &iter.first->second;
+
+		if (!iter.second) {
+			self->_partialHeaderValue->append(", ");
+			self->_partialHeaderValue->append(at, length);
+		}
 	}
 
 	return 0;

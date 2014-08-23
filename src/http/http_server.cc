@@ -4,15 +4,14 @@
 #include <string>
 
 
-http::server::server(uv_loop_t *loop) : net::server() {
-	this->init(loop);
+http::server::server() : net::server() {
 	this->clients.max_load_factor(0.75);
 
 	this->on_connection = [this]() {
 		auto iter = this->clients.emplace().first;
 		net::socket &socket = const_cast<net::socket&>(*iter);
 
-		if (!socket.init(static_cast<uv_loop_t*>(*this)) || !this->accept(socket)) {
+		if (!socket.init(*this) || !this->accept(socket)) {
 			this->clients.erase(iter);
 		}
 

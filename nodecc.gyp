@@ -111,8 +111,6 @@
 				'src/http/server_response.cc',
 				'src/net/server.cc',
 				'src/net/socket.cc',
-				'src/uv/handle.cc',
-				'src/uv/stream.cc',
 			],
 			'dependencies': [
 				'deps/libuv/uv.gyp:libuv',

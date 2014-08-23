@@ -16,7 +16,9 @@ public:
 	typedef std::function<void(http::incoming_message &req, http::server_response &res)> on_request_t;
 
 
-	explicit server(uv_loop_t *loop);
+	explicit server();
+
+	using net::server::init;
 
 
 	std::unordered_set<net::socket> clients;
