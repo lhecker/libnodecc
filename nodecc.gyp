@@ -102,6 +102,7 @@
 				'include/libnodecc/http/server_response.h',
 				'include/libnodecc/net/server.h',
 				'include/libnodecc/net/socket.h',
+				'include/libnodecc/util/buffer.h',
 				'include/libnodecc/util/spinlock.h',
 				'include/libnodecc/uv/handle.h',
 				'include/libnodecc/uv/stream.h',
@@ -113,6 +114,7 @@
 				'src/http/server_response.cc',
 				'src/net/server.cc',
 				'src/net/socket.cc',
+				'src/util/buffer.cc',
 			],
 			'dependencies': [
 				'deps/libuv/uv.gyp:libuv',
