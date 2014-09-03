@@ -16,18 +16,8 @@ struct buffer::control {
 }
 
 
-util::buffer::buffer(const void *data, size_t size, util::flags flags) noexcept {
-	this->_data = (uint8_t*)data;
-	this->_size = size;
-
-	switch (flags) {
-		case util::flags::strong:
-			this->_p = new control((void*)data);
-		case util::flags::copy:
-			this->copy();
-		default:
-			;
-	}
+util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept {
+	this->reset(base, size, flags);
 }
 
 util::buffer::buffer(const buffer &other) noexcept : _p(other._p) {
@@ -48,6 +38,26 @@ util::buffer::buffer(size_t size) noexcept {
 
 util::buffer::~buffer() noexcept {
 	this->release();
+}
+
+void util::buffer::reset() noexcept {
+	this->_p = nullptr;
+	this->_data = nullptr;
+	this->_size = 0;
+}
+
+void util::buffer::reset(const void *base, size_t size, util::flags flags) noexcept {
+	this->_data = (uint8_t*)base;
+	this->_size = size;
+
+	switch (flags) {
+		case util::flags::strong:
+			this->_p = new control((void*)base);
+		case util::flags::copy:
+			this->copy();
+		default:
+			;
+	}
 }
 
 size_t util::buffer::use_count() const noexcept {
@@ -111,6 +121,41 @@ bool util::buffer::copy(bool copy, size_t size) noexcept {
 	return true;
 }
 
+util::buffer util::buffer::slice(size_t offset, size_t size) const noexcept {
+	util::buffer buffer;
+	buffer._p = this->_p;
+
+	if (this->_data) {
+		/*
+		 * If offset/size are too large the buffer would refer
+		 * to memory outside of the original one.
+		 * In that case or if size is the default value of zero,
+		 * we default to the maximum possible value
+		 */
+		if (offset > this->size()) {
+			offset = this->size();
+			size = 0;
+		} else if (size == 0 || offset + size > this->size()) {
+			size = this->size() - offset;
+		}
+
+		buffer._data = this->data<uint8_t>() + offset;
+		buffer._size = size;
+	}
+
+	return buffer;
+}
+
+util::buffer util::buffer::slice(const void *data, size_t size) const noexcept {
+	size_t offset = SIZE_T_MAX;
+
+	if (data >= this->_data) {
+		offset = (uint8_t*)data - this->data<uint8_t>();
+	}
+
+	return this->slice(offset, size);
+}
+
 /*
  * Increasing the reference count is done using memory_order_relaxed,
  * since new references can only be formed from an existing reference and
@@ -134,7 +179,5 @@ void util::buffer::release() noexcept {
 		}
 	}
 
-	this->_p = nullptr;
-	this->_data = nullptr;
-	this->_size = 0;
+	this->reset();
 }
