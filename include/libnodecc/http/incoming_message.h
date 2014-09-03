@@ -6,11 +6,14 @@
 #include <unordered_map>
 
 
-struct uv_buf_t;
 struct http_parser;
 
 namespace net {
-class socket;
+	class socket;
+}
+
+namespace util {
+	class buffer;
 }
 
 
@@ -19,10 +22,12 @@ namespace http {
 class incoming_message {
 public:
 	typedef std::function<void()> on_complete_t;
-	typedef std::function<void(uv_buf_t)> on_body_t;
+	typedef std::function<void(const util::buffer &buffer)> on_body_t;
 
 
 	explicit incoming_message(net::socket &socket);
+
+	~incoming_message();
 
 
 	net::socket &socket;
@@ -39,11 +44,19 @@ public:
 	on_body_t     on_body;
 
 
-	// *** private ***
+private:
+	static int parser_on_url(http_parser *parser, const char *at, size_t length);
+	static int parser_on_header_field(http_parser *parser, const char *at, size_t length);
+	static int parser_on_header_value(http_parser *parser, const char *at, size_t length);
+	static int parser_on_headers_complete(http_parser *parser);
+	static int parser_on_body(http_parser *parser, const char *at, size_t length);
+	static int parser_on_message_complete(http_parser *parser);
+
 	std::string _partialHeaderField;
 	std::string *_partialHeaderValue;
 
 	http_parser *_parser;
+	const util::buffer *_parserBuffer;
 };
 
 } // namespace http

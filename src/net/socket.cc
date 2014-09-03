@@ -6,7 +6,7 @@
 namespace {
 
 struct net_socket_connect {
-	explicit net_socket_connect(net::socket *socket, const std::shared_ptr<addrinfo> &ai) : ai(ai), socket(socket) {
+	explicit net_socket_connect(net::socket *socket, const std::shared_ptr<addrinfo> &ai) : socket(socket), ai(ai) {
 		this->req.data = this;
 		this->current_ai = this->ai.get();
 	};
@@ -43,10 +43,10 @@ struct net_socket_connect {
 		});
 	}
 
-	uv_connect_t req;
-	std::shared_ptr<addrinfo> ai;
-	addrinfo *current_ai;
 	net::socket *socket;
+	addrinfo *current_ai;
+	std::shared_ptr<addrinfo> ai;
+	uv_connect_t req;
 };
 
 }

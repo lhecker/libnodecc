@@ -1,9 +1,11 @@
 #ifndef nodecc_uv_stream_h
 #define nodecc_uv_stream_h
 
-#include <string>
+#include <cstddef>
+#include <cstdlib>
+#include <vector>
 
-#include "../common.h"
+#include "../util/buffer.h"
 #include "handle.h"
 
 
@@ -12,8 +14,7 @@ namespace uv {
 template<typename T>
 class stream : public uv::handle<T> {
 public:
-	typedef std::function<void(size_t suggested_size, uv_buf_t *buf)> on_alloc_t;
-	typedef std::function<void(ssize_t nread, const uv_buf_t *buf)> on_read_t;
+	typedef std::function<void(int err, const util::buffer &buffer)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
 
 	explicit stream() : uv::handle<T>() {}
@@ -24,21 +25,24 @@ public:
 
 	bool read_start() {
 		// TODO getter/setter
-		if (!this->on_alloc || !this->on_read) {
+		if (!this->on_read) {
 			return false;
 		}
 
 		return 0 == uv_read_start(*this, [](uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
-			auto self = reinterpret_cast<uv::stream<T>*>(handle->data);
-
-			if (self) {
-				self->on_alloc(suggested_size, buf);
-			}
+			buf->base = (char*)malloc(suggested_size);
+			buf->len = suggested_size;
 		}, [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 			auto self = reinterpret_cast<uv::stream<T>*>(stream->data);
 
-			if (self) {
-				self->on_read(nread, buf);
+			util::buffer buffer;
+
+			if (nread >= 0 && buf->base) {
+				buffer.reset(buf->base, nread, util::strong);
+			}
+
+			if (nread != 0 && self->on_read) {
+				self->on_read(nread < 0 ? nread : 0, buffer);
 			}
 		});
 	}
@@ -47,38 +51,22 @@ public:
 		return 0 == uv_read_stop(*this);
 	}
 
-	// TODO: std::move functions &&
-	void write(const std::string &str) {
-		packed_write_req *packed_req = new packed_write_req();
-		packed_req->buf = str;
-		this->write(packed_req);
+	bool write(const util::buffer &buf, const on_write_t &on_write = nullptr) {
+		return this->write(&buf, 1, on_write);
 	}
 
-	void write(const std::string &str, const on_write_t &on_write) {
-		packed_write_req *packed_req = new packed_write_req();
-		packed_req->buf = str;
-		packed_req->cb = on_write;
-		this->write(packed_req);
-	}
+	bool write(const util::buffer bufs[], size_t bufcnt, const on_write_t &on_write = nullptr) {
+		auto packed_req = new packed_write_req(bufs, bufcnt, on_write);
+		auto uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
 
+		for (size_t i = 0; i < bufcnt; i++) {
+			auto buf = bufs[i];
+			uv_bufs[i].base = buf;
+			uv_bufs[i].len  = buf.size();
+		}
 
-	on_alloc_t on_alloc;
-	on_read_t  on_read;
-
-private:
-	struct packed_write_req {
-		uv_write_t req;
-		std::string buf;
-		on_write_t cb;
-	};
-
-	void write(packed_write_req *packed_req) {
-		uv_buf_t buf;
-		buf.base = const_cast<char*>(packed_req->buf.data());
-		buf.len = packed_req->buf.length();
-
-		uv_write(&packed_req->req, *this, &buf, 1, [](uv_write_t *req, int status) {
-			packed_write_req *packed_req = container_of(req, packed_write_req, req);
+		return 0 == uv_write(&packed_req->req, *this, uv_bufs, bufcnt, [](uv_write_t *req, int status) {
+			packed_write_req *packed_req = reinterpret_cast<packed_write_req*>(reinterpret_cast<uint8_t*>(req) - offsetof(packed_write_req, req));
 
 			if (packed_req->cb) {
 				packed_req->cb(status);
@@ -87,6 +75,20 @@ private:
 			delete packed_req;
 		});
 	}
+
+
+	on_read_t on_read;
+
+private:
+	struct packed_write_req {
+		constexpr packed_write_req(const util::buffer bufs[], size_t bufcnt, const on_write_t &cb) : cb(cb), bufs(bufs, bufs + bufcnt) {
+			static_assert(std::is_standard_layout<packed_write_req>::value && offsetof(packed_write_req, req) == 0, "packed_write_req needs to be in standard layout!");
+		}
+
+		uv_write_t req;
+		on_write_t cb;
+		std::vector<util::buffer> bufs;
+	};
 };
 
 } // namespace uv
