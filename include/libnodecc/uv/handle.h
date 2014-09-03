@@ -4,8 +4,6 @@
 #include <functional>
 #include <uv.h>
 
-#include "../common.h"
-
 
 namespace uv {
 
