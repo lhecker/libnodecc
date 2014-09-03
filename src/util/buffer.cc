@@ -16,23 +16,25 @@ struct buffer::control {
 }
 
 
-util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept {
+util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept : _p(nullptr) {
 	this->reset(base, size, flags);
 }
 
-util::buffer::buffer(const buffer &other) noexcept : _p(other._p) {
+util::buffer::buffer(const buffer &other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	this->retain();
 }
 
 util::buffer& util::buffer::operator=(const buffer &other) noexcept {
 	this->release();
 	this->_p = other._p;
+	this->_data = other._data;
+	this->_size = other._size;
 	this->retain();
 
 	return *this;
 }
 
-util::buffer::buffer(size_t size) noexcept {
+util::buffer::buffer(size_t size) noexcept : buffer() {
 	this->copy(size);
 }
 
@@ -47,6 +49,8 @@ void util::buffer::reset() noexcept {
 }
 
 void util::buffer::reset(const void *base, size_t size, util::flags flags) noexcept {
+	this->release();
+
 	this->_data = (uint8_t*)base;
 	this->_size = size;
 
