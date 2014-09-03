@@ -77,18 +77,16 @@ uv_buf_t str_status_code(uint16_t statusCode) {
 	case 509: ret.len = 28; ret.base = const_cast<char*>("509 Bandwidth Limit Exceeded");        break;
 	case 510: ret.len = 16; ret.base = const_cast<char*>("510 Not Extended");                    break; // RFC 2774
 	case 511: ret.len = 35; ret.base = const_cast<char*>("511 Network Authentication Required"); break; // RFC 6585
-	default:  ret.len = 0;  ret.base = nullptr;                               break;
+	default:  ret.len = 0;  ret.base = nullptr;                                                  break;
 	}
 
 	return ret;
 }
 
 
-http::server_response::server_response(net::socket &socket) : socket(socket), statusCode(200), _headersSent(false) {
-	this->_headers.max_load_factor(0.75);
-}
+http::server_response::server_response(net::socket &socket) : request_response_proto(), socket(socket), statusCode(200) {}
 
-void http::server_response::sendHeaders() {
+void http::server_response::send_headers() {
 	if (!this->_headersSent) {
 		this->_headersSent = true;
 		this->_isChunked = this->_headers.find("content-length") == this->_headers.end();
@@ -98,88 +96,46 @@ void http::server_response::sendHeaders() {
 		{
 			uv_buf_t status = str_status_code(this->statusCode);
 
-			buf.append("HTTP/1.1 ", 9);
+			buf.append("HTTP/1.1 ");
 			buf.append(status.base, status.len);
-			buf.append("\r\n", 2);
+			buf.append("\r\n");
 		}
 
-		{
-			const auto iter = this->_headers.find("date");
+		if (!this->_headers.count("date")) {
+			char dateBuf[38];
 
-			if (iter == this->_headers.end()) {
-				char dateBuf[38];
+			time_t t = time(NULL);
+			tm t2;
+			gmtime_r(&t, &t2);
+			size_t written = strftime(dateBuf, 38, "date: %a, %d %b %Y %H:%M:%S GMT\r\n", &t2);
+			assert(written == 37);
 
-				time_t t = time(NULL);
-				tm t2;
-				gmtime_r(&t, &t2);
-				size_t written = strftime(dateBuf, 38, "date: %a, %d %b %Y %H:%M:%S GMT\r\n", &t2);
-				assert(written == 37);
-
-				buf.append(dateBuf, 37);
-			}
+			buf.append(dateBuf, 37);
 		}
 
 		if (this->_isChunked) {
-			if (this->_headers.find("transfer-encoding") == this->_headers.end()) {
-				buf.append("transfer-encoding: chunked\r\n", 28);
+			if (!this->_headers.count("transfer-encoding")) {
+				buf.append("transfer-encoding: chunked\r\n");
 			}
 		}
 
 		{
 			for (const auto iter : this->_headers) {
 				buf.append(iter.first);
-				buf.append(": ", 2);
+				buf.append(": ");
 				buf.append(iter.second);
-				buf.append("\r\n", 2);
+				buf.append("\r\n");
 			}
 
-			buf.append("\r\n", 2);
+			buf.append("\r\n");
 		}
 
-		this->socket.write(buf);
+		util::buffer buffer = util::buffer(buf, util::copy);
+		this->socket_write(&buffer, 1);
 		this->_headers.clear();
 	}
 }
 
-void http::server_response::write(const std::string &str) {
-	this->sendHeaders();
-
-	if (this->_isChunked) {
-		// output length after converting to hex is log() to the base of 16
-		size_t length = str.length();
-		assert(length > 0);
-		const size_t chunkedHeaderLength = static_cast<size_t>(std::log(static_cast<double>(length)) / M_LOG16 + 1.0);
-
-		std::string chunkedStr;
-		chunkedStr.reserve(chunkedHeaderLength + 2 + length + 2); // each 2 for "\r\n" below
-
-		{
-			static const char *const hex_lookup = "0123456789abcdef";
-
-			chunkedStr.append(chunkedHeaderLength, ' ');
-			char *to = &chunkedStr[chunkedHeaderLength];
-
-			do {
-				*--to = hex_lookup[length & 0xf];
-			} while (length >>= 4);
-		}
-
-		chunkedStr.append("\r\n", 2);
-		chunkedStr.append(str);
-		chunkedStr.append("\r\n", 2);
-
-		this->socket.write(chunkedStr);
-	} else {
-		this->socket.write(str);
-	}
-}
-
-void http::server_response::end() {
-	this->sendHeaders();
-
-	if (this->_isChunked) {
-		this->socket.write(std::string("0\r\n\r\n", 5));
-	}
-
-	this->_headersSent = false;
+bool http::server_response::socket_write(const util::buffer bufs[], size_t bufcnt) {
+	return this->socket.write(bufs, bufcnt);
 }

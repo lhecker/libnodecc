@@ -2,30 +2,18 @@
 
 #include <cassert>
 
+#include "libnodecc/net/socket.h"
+
 
 #define M_LOG16 2.7725887222397812376689284858327062723020005374410210 // log(16)
 
 
-http::client_request::client_request() : net::socket(), method("GET"), path("/"), hostname("localhost"), _headersSent(false) {
+http::client_request::client_request() : request_response_proto(), method("GET"), path("/"), hostname("localhost") {
 	this->_headers.max_load_factor(0.75);
 }
 
-const std::string &http::client_request::getHeader(const std::string &key) {
-	return this->_headers.at(key);
-}
-
-void http::client_request::setHeader(const std::string &key, const std::string &value) {
-	this->_headers.emplace(key, value);
-}
-
-bool http::client_request::headersSent() const {
-	return this->_headersSent;
-}
-
-void http::client_request::sendHeaders() {
+void http::client_request::send_headers() {
 	if (!this->_headersSent) {
-		this->read_start();
-
 		this->_headersSent = true;
 		this->_isChunked = this->_headers.find("content-length") == this->_headers.end();
 
@@ -52,49 +40,11 @@ void http::client_request::sendHeaders() {
 			buf.append("\r\n");
 		}
 
-		net::socket::write(buf);
+		net::socket::write(util::buffer(buf, util::copy));
 		this->_headers.clear();
 	}
 }
 
-void http::client_request::write(const std::string &str) {
-	this->sendHeaders();
-
-	if (this->_isChunked) {
-		size_t length = str.length();
-		assert(length > 0);
-
-		// output length after converting to hex is log() to the base of 16
-		unsigned int hexLength = ceil(log(length) / M_LOG16);
-
-		std::string chunkedStr;
-		chunkedStr.reserve(hexLength + 2 + length + 2); // +2+2 for those 2 "\r\n" below
-
-		{
-			static const char *hex_lookup = "0123456789abcdef";
-
-			do {
-				hexLength--;
-				chunkedStr.push_back(hex_lookup[(length >> (4 * hexLength)) & 0x0f]);
-			} while (hexLength > 0);
-		}
-
-		chunkedStr.append("\r\n");
-		chunkedStr.append(str);
-		chunkedStr.append("\r\n");
-
-		net::socket::write(chunkedStr);
-	} else {
-		net::socket::write(str);
-	}
-}
-
-void http::client_request::end() {
-	this->sendHeaders();
-
-	if (this->_isChunked) {
-		net::socket::write("0\r\n\r\n");
-	}
-
-	this->_headersSent = false;
+bool http::client_request::socket_write(const util::buffer bufs[], size_t bufcnt) {
+	return net::socket::write(bufs, bufcnt);
 }
