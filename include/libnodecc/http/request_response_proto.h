@@ -40,15 +40,15 @@ public:
 	bool write(const util::buffer &buf);
 	bool write(const util::buffer bufs[], size_t bufcnt);
 
-	void end();
+	bool end();
 
 protected:
 	virtual void send_headers() = 0;
 	virtual bool socket_write(const util::buffer bufs[], size_t bufcnt) = 0;
 
 	std::unordered_map<std::string, std::string> _headers;
-	bool _headersSent;
-	bool _isChunked;
+	bool _headers_sent;
+	bool _is_chunked;
 };
 
 } // namespace http

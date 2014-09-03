@@ -9,7 +9,7 @@
 #define M_LOG16 2.7725887222397812376689284858327062723020005374410210 // log(16)
 
 
-http::request_response_proto::request_response_proto() : _headersSent(false) {
+http::request_response_proto::request_response_proto() : _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 
@@ -25,7 +25,7 @@ void http::request_response_proto::set_header(const std::string &key, const std:
 }
 
 bool http::request_response_proto::headers_sent() const {
-	return this->_headersSent;
+	return this->_headers_sent;
 }
 
 bool http::request_response_proto::write(const util::buffer &buf) {
@@ -36,9 +36,14 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 	assert(bufs != nullptr);
 	assert(bufcnt > 0);
 
-	this->send_headers();
+	bool ret;
 
-	if (this->_isChunked) {
+	if (!this->headers_sent()) {
+		this->send_headers();
+		this->_headers_sent = true;
+	}
+
+	if (this->_is_chunked) {
 		/*
 		 * A bufcnt of N results in "2 * N + 1" chunked bufs
 		 *
@@ -83,19 +88,31 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 
 		chunked_bufs[chunked_pos] = util::buffer("\r\n", util::weak);
 
-		return this->socket_write(chunked_bufs, chunked_bufcnt);
+		ret = this->socket_write(chunked_bufs, chunked_bufcnt);
+
+		for (size_t i = 0; i < chunked_bufcnt; i++) {
+			chunked_bufs[i].~buffer();
+		}
 	} else {
-		return this->socket_write(bufs, bufcnt);
+		ret = this->socket_write(bufs, bufcnt);
 	}
+
+	return ret;
 }
 
-void http::request_response_proto::end() {
-	this->send_headers();
+bool http::request_response_proto::end() {
+	bool ret = true;
 
-	if (this->_isChunked) {
-		util::buffer buffer = util::buffer("0\r\n\r\n", util::weak);
-		this->socket_write(&buffer, 1);
+	if (!this->headers_sent()) {
+		this->send_headers();
 	}
-	
-	this->_headersSent = false;
+
+	if (this->_is_chunked) {
+		util::buffer buffer = util::buffer("0\r\n\r\n", util::weak);
+		ret = this->socket_write(&buffer, 1);
+	}
+
+	this->_headers_sent = false;
+
+	return ret;
 }

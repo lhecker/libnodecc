@@ -60,13 +60,12 @@ public:
 		auto uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
 
 		for (size_t i = 0; i < bufcnt; i++) {
-			auto buf = bufs[i];
-			uv_bufs[i].base = buf;
-			uv_bufs[i].len  = buf.size();
+			uv_bufs[i].base = bufs[i].data<char>();
+			uv_bufs[i].len  = bufs[i].size();
 		}
 
 		return 0 == uv_write(&packed_req->req, *this, uv_bufs, bufcnt, [](uv_write_t *req, int status) {
-			packed_write_req *packed_req = reinterpret_cast<packed_write_req*>(reinterpret_cast<uint8_t*>(req) - offsetof(packed_write_req, req));
+			packed_write_req *packed_req = reinterpret_cast<packed_write_req*>(req);
 
 			if (packed_req->cb) {
 				packed_req->cb(status);

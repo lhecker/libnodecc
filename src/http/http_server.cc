@@ -26,24 +26,24 @@ http::server::server() : net::server() {
 		};
 
 		req->on_headers_complete = [this, req, res]() {
-			if (this->on_request) {
-				this->on_request(*req, *res);
-			}
-		};
-
-		req->on_message_complete = [req]() {
 			const auto iter = req->headers.find("connection");
 			bool hasConnectionHeader = iter != req->headers.end();
 			bool isHTTP11 = req->http_version_major == 1 && req->http_version_major == 1;
 
 			if (isHTTP11) {
 				if (!hasConnectionHeader || iter->second != "keep-alive") {
-					req->socket.close();
+					res->_close_on_end = true;
 				}
 			} else {
 				if (hasConnectionHeader && iter->second == "close") {
-					req->socket.close();
+					res->_close_on_end = true;
 				}
+			}
+
+			if (this->on_request) {
+				this->on_request(*req, *res);
+			} else {
+				res->socket.close();
 			}
 		};
 

@@ -52,8 +52,10 @@ private:
 	static int parser_on_body(http_parser *parser, const char *at, size_t length);
 	static int parser_on_message_complete(http_parser *parser);
 
-	std::string _partialHeaderField;
-	std::string *_partialHeaderValue;
+	void add_header_partials();
+
+	std::string _partial_header_field;
+	std::string _partial_header_value;
 
 	http_parser *_parser;
 	const util::buffer *_parserBuffer;

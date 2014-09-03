@@ -15,34 +15,22 @@ int http::incoming_message::parser_on_url(http_parser *parser, const char *at, s
 
 int http::incoming_message::parser_on_header_field(http_parser *parser, const char *at, size_t length) {
 	auto self = static_cast<http::incoming_message *>(parser->data);
-	self->_partialHeaderField.append(at, length);
+	self->add_header_partials();
+	self->_partial_header_field.append(at, length);
 	return 0;
 }
 
 int http::incoming_message::parser_on_header_value(http_parser *parser, const char *at, size_t length) {
 	auto self = static_cast<http::incoming_message *>(parser->data);
-	auto &field = self->_partialHeaderField;
-
-	if (field.empty()) {
-		self->_partialHeaderValue->append(at, length);
-	} else {
-		std::transform(field.begin(), field.end(), field.begin(), std::tolower);
-		const auto iter = self->headers.emplace(std::piecewise_construct, std::forward_as_tuple(field), std::forward_as_tuple(at, length));
-		field.clear();
-
-		self->_partialHeaderValue = &iter.first->second;
-
-		if (!iter.second) {
-			self->_partialHeaderValue->append(", ");
-			self->_partialHeaderValue->append(at, length);
-		}
-	}
-
+	self->add_header_partials();
+	self->_partial_header_value.append(at, length);
 	return 0;
 }
 
 int http::incoming_message::parser_on_headers_complete(http_parser *parser) {
 	auto self = static_cast<http::incoming_message *>(parser->data);
+
+	self->add_header_partials();
 
 	self->http_version_major = static_cast<uint8_t>(parser->http_major);
 	self->http_version_minor = static_cast<uint8_t>(parser->http_minor);
@@ -97,9 +85,6 @@ http::incoming_message::incoming_message(net::socket &socket) : socket(socket) {
 	http_parser_init(this->_parser, HTTP_REQUEST);
 	this->_parser->data = this;
 
-	// the _partialHeaderValue should always have a target
-	this->_partialHeaderValue = &this->_partialHeaderField;
-
 	this->headers.max_load_factor(0.75);
 
 	socket.on_read = [this](int err, const util::buffer &buffer) {
@@ -124,4 +109,21 @@ http::incoming_message::incoming_message(net::socket &socket) : socket(socket) {
 
 http::incoming_message::~incoming_message() {
 	delete this->_parser;
+}
+
+void http::incoming_message::add_header_partials() {
+	if (!this->_partial_header_field.empty() && !this->_partial_header_value.empty()) {
+		std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
+
+		const auto iter = this->headers.emplace(this->_partial_header_field, this->_partial_header_value);
+
+		if (!iter.second) {
+			std::string &existingValue = iter.first->second;
+			existingValue.append(", ");
+			existingValue.append(this->_partial_header_value);
+		}
+
+		this->_partial_header_field.clear();
+		this->_partial_header_value.clear();
+	}
 }

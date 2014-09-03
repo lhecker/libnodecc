@@ -84,58 +84,67 @@ uv_buf_t str_status_code(uint16_t statusCode) {
 }
 
 
-http::server_response::server_response(net::socket &socket) : request_response_proto(), socket(socket), statusCode(200) {}
+http::server_response::server_response(net::socket &socket) : request_response_proto(), socket(socket), statusCode(200), _close_on_end(false) {
+}
 
 void http::server_response::send_headers() {
-	if (!this->_headersSent) {
-		this->_headersSent = true;
-		this->_isChunked = this->_headers.find("content-length") == this->_headers.end();
+	this->_is_chunked = !this->_headers.count("content-length");
 
-		std::string buf;
+	std::string buf;
+	buf.reserve(1024);
 
-		{
-			uv_buf_t status = str_status_code(this->statusCode);
+	{
+		uv_buf_t status = str_status_code(this->statusCode);
 
-			buf.append("HTTP/1.1 ");
-			buf.append(status.base, status.len);
-			buf.append("\r\n");
-		}
-
-		if (!this->_headers.count("date")) {
-			char dateBuf[38];
-
-			time_t t = time(NULL);
-			tm t2;
-			gmtime_r(&t, &t2);
-			size_t written = strftime(dateBuf, 38, "date: %a, %d %b %Y %H:%M:%S GMT\r\n", &t2);
-			assert(written == 37);
-
-			buf.append(dateBuf, 37);
-		}
-
-		if (this->_isChunked) {
-			if (!this->_headers.count("transfer-encoding")) {
-				buf.append("transfer-encoding: chunked\r\n");
-			}
-		}
-
-		{
-			for (const auto iter : this->_headers) {
-				buf.append(iter.first);
-				buf.append(": ");
-				buf.append(iter.second);
-				buf.append("\r\n");
-			}
-
-			buf.append("\r\n");
-		}
-
-		util::buffer buffer = util::buffer(buf, util::copy);
-		this->socket_write(&buffer, 1);
-		this->_headers.clear();
+		buf.append("HTTP/1.1 ");
+		buf.append(status.base, status.len);
+		buf.append("\r\n");
 	}
+
+	if (!this->_headers.count("date")) {
+		char dateBuf[38];
+
+		time_t t = time(NULL);
+		tm t2;
+		gmtime_r(&t, &t2);
+		size_t written = strftime(dateBuf, 38, "date: %a, %d %b %Y %H:%M:%S GMT\r\n", &t2);
+		assert(written == 37);
+
+		buf.append(dateBuf, 37);
+	}
+
+	if (this->_is_chunked) {
+		if (!this->_headers.count("transfer-encoding")) {
+			buf.append("transfer-encoding: chunked\r\n");
+		}
+	}
+
+	{
+		for (const auto iter : this->_headers) {
+			buf.append(iter.first);
+			buf.append(": ");
+			buf.append(iter.second);
+			buf.append("\r\n");
+		}
+
+		buf.append("\r\n");
+	}
+
+	util::buffer buffer = util::buffer(buf, util::copy);
+	this->socket_write(&buffer, 1);
+	this->_headers.clear();
 }
 
 bool http::server_response::socket_write(const util::buffer bufs[], size_t bufcnt) {
 	return this->socket.write(bufs, bufcnt);
+}
+
+bool http::server_response::end() {
+	bool ret = http::request_response_proto::end();
+
+	if (this->_close_on_end) {
+		this->socket.close();
+	}
+
+	return ret;
 }
