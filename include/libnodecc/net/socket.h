@@ -28,30 +28,4 @@ public:
 
 } // namespace net
 
-
-namespace std {
-
-template<>
-struct hash<net::socket> {
-	size_t operator()(const net::socket &val) const {
-		/*
-		 * Instances are likely to be aligned along the size of the class.
-		 * Those least significant bits which "represent" that alignment are therefore
-		 * likely to be some static value (e.g. zero) and can be cut off for a better hash value.
-		 */
-		static const size_t shift = static_cast<size_t>(std::log2(1 + sizeof(net::socket)));
-
-		return reinterpret_cast<size_t>(&val) >> shift;
-	}
-};
-
-template<>
-struct equal_to<net::socket> {
-	bool operator()(const net::socket &left, const net::socket &right) const {
-		return &left == &right;
-	}
-};
-
-} // namespace std
-
 #endif // nodecc_net_socket_h

@@ -14,8 +14,11 @@ namespace uv {
 template<typename T>
 class stream : public uv::handle<T> {
 public:
+	typedef stream stream_type;
+
 	typedef std::function<void(int err, const util::buffer &buffer)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
+	
 
 	explicit stream() : uv::handle<T>() {}
 

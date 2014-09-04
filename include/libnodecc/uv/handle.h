@@ -2,6 +2,7 @@
 #define nodecc_uv_handle_h
 
 #include <functional>
+#include <cmath>
 #include <uv.h>
 
 
@@ -10,11 +11,18 @@ namespace uv {
 template<typename T>
 class handle {
 public:
+	typedef handle handle_type;
+
 	typedef std::function<void()> on_close_t;
+
 
 	explicit handle() {
 		this->_handle.data = this;
 	}
+
+	handle(const handle&) = delete;
+	handle& operator=(const handle&) = delete;
+
 
 	operator uv_loop_t*() {
 		return this->_handle.loop;
@@ -27,6 +35,18 @@ public:
 	operator T*() {
 		return &this->_handle;
 	}
+
+
+	template<class T1, class T2>
+	friend bool operator==(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) {
+		return &lhs._handle == &rhs._handle;
+	}
+
+	template<class T1, class T2>
+	friend bool operator!=(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) {
+		return &lhs._handle != &rhs._handle;
+	}
+
 
 	void close() {
 		if (!uv_is_closing(*this)) {
@@ -56,11 +76,30 @@ public:
 
 	on_close_t on_close;
 
-
 protected:
 	T _handle;
 };
 
 } // namespace uv
+
+/*
+ * Instances are likely to be aligned along the size of the class.
+ * Those least significant bits which "represent" that alignment are therefore
+ * likely to be some static value (e.g. zero) and can be cut off for a better hash value.
+ */
+template<typename T>
+struct std::hash<uv::handle<T>> {
+	size_t operator()(const uv::handle<T> &val) const {
+		static const size_t shift = static_cast<size_t>(std::log2(1 + sizeof(uv::handle<T>)));
+		return reinterpret_cast<size_t>(&val) >> shift;
+	}
+};
+
+template<typename T>
+struct std::equal_to<uv::handle<T>> {
+	bool operator()(const uv::handle<T> &left, const uv::handle<T> &right) const {
+		return static_cast<uv_handle_t*>(left) == static_cast<uv_handle_t*>(right);
+	}
+};
 
 #endif // nodecc_uv_handle_h

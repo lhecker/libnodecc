@@ -6,9 +6,6 @@
 #include "libnodecc/util/buffer.h"
 
 
-#define M_LOG16 2.7725887222397812376689284858327062723020005374410210 // log(16)
-
-
 http::request_response_proto::request_response_proto() : _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
@@ -56,13 +53,13 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 		auto chunked_bufs = static_cast<util::buffer*>(alloca(chunked_bufcnt * sizeof(util::buffer)));
 		new(chunked_bufs) util::buffer[chunked_bufcnt]();
 
-		std::string chunkedStr;
+		util::string chunkedStr;
 
 		for (size_t i = 0; i < bufcnt; i++) {
 			size_t size = bufs[i].size();
 
 			// output length after converting to hex is log() to the base of 16
-			unsigned int hexLength = ceil(log(size) / M_LOG16);
+			unsigned int hexLength = std::ceil(std::log(size) / std::log(16));
 
 			chunkedStr.clear();
 			chunkedStr.reserve(hexLength + 2 + 2); // +2+2 for those 2 "\r\n" below
@@ -82,7 +79,7 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 
 			chunkedStr.append("\r\n");
 
-			chunked_bufs[chunked_pos++] = util::buffer(chunkedStr, util::copy);
+			chunked_bufs[chunked_pos++] = chunkedStr;
 			chunked_bufs[chunked_pos++] = bufs[i];
 		}
 

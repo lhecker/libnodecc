@@ -1,7 +1,5 @@
 #include "libnodecc/http/client_request.h"
 
-#include <cassert>
-
 #include "libnodecc/net/socket.h"
 
 
@@ -15,8 +13,7 @@ http::client_request::client_request() : request_response_proto(), method("GET")
 void http::client_request::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
-	std::string buf;
-	buf.reserve(1023); // average HTTP header should be between 700-800 byte
+	util::string buf(800); // average HTTP header should be between 700-800 byte
 
 	{
 		buf.append(this->method);
@@ -28,7 +25,7 @@ void http::client_request::send_headers() {
 	}
 
 	{
-		for (const auto iter : this->_headers) {
+		for (const auto &iter : this->_headers) {
 			buf.append(iter.first);
 			buf.append(": ");
 			buf.append(iter.second);
@@ -38,7 +35,7 @@ void http::client_request::send_headers() {
 		buf.append("\r\n");
 	}
 
-	net::socket::write(util::buffer(buf, util::copy));
+	net::socket::write(buf);
 	this->_headers.clear();
 }
 

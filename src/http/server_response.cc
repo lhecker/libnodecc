@@ -90,8 +90,7 @@ http::server_response::server_response(net::socket &socket) : request_response_p
 void http::server_response::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
-	std::string buf;
-	buf.reserve(1024);
+	util::string buf(800);
 
 	{
 		uv_buf_t status = str_status_code(this->statusCode);
@@ -130,7 +129,7 @@ void http::server_response::send_headers() {
 		buf.append("\r\n");
 	}
 
-	util::buffer buffer = util::buffer(buf, util::copy);
+	util::buffer buffer = buf;
 	this->socket_write(&buffer, 1);
 	this->_headers.clear();
 }

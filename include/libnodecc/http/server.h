@@ -21,7 +21,7 @@ public:
 	using net::server::init;
 
 
-	std::unordered_set<net::socket> clients;
+	std::unordered_set<net::socket, std::hash<net::socket::handle_type>> clients;
 
 	on_request_t on_request;
 };
