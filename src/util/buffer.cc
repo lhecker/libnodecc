@@ -35,7 +35,7 @@ util::buffer& util::buffer::operator=(const buffer &other) noexcept {
 }
 
 util::buffer::buffer(size_t size) noexcept : buffer() {
-	this->copy(size);
+	this->copy(false, size);
 }
 
 util::buffer::~buffer() noexcept {
@@ -139,7 +139,7 @@ util::buffer util::buffer::slice(size_t offset, size_t size) const noexcept {
 		if (offset > this->size()) {
 			offset = this->size();
 			size = 0;
-		} else if (size == 0 || offset + size > this->size()) {
+		} else if (size > this->size() - offset) {
 			size = this->size() - offset;
 		}
 
@@ -147,17 +147,15 @@ util::buffer util::buffer::slice(size_t offset, size_t size) const noexcept {
 		buffer._size = size;
 	}
 
+	buffer.retain();
+
 	return buffer;
 }
 
-util::buffer util::buffer::slice(const void *data, size_t size) const noexcept {
-	size_t offset = SIZE_T_MAX;
-
-	if (data >= this->_data) {
-		offset = (uint8_t*)data - this->data<uint8_t>();
-	}
-
-	return this->slice(offset, size);
+void util::buffer::swap(util::buffer &other) noexcept {
+	std::swap(this->_p, other._p);
+	std::swap(this->_data, other._data);
+	std::swap(this->_size, other._size);
 }
 
 /*
