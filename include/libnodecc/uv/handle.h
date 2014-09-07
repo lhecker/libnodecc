@@ -24,26 +24,22 @@ public:
 	handle& operator=(const handle&) = delete;
 
 
-	operator uv_loop_t*() {
-		return this->_handle.loop;
-	}
+	operator uv_loop_t*() { return this->_handle.loop; }
+	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
+	operator T*() { return &this->_handle; }
 
-	operator uv_handle_t*() {
-		return reinterpret_cast<uv_handle_t*>(&this->_handle);
-	}
-
-	operator T*() {
-		return &this->_handle;
-	}
+	operator const uv_loop_t*() const { return this->_handle.loop; }
+	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
+	operator const T*() const { return &this->_handle; }
 
 
 	template<class T1, class T2>
-	friend bool operator==(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) {
+	friend bool operator==(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) noexcept {
 		return &lhs._handle == &rhs._handle;
 	}
 
 	template<class T1, class T2>
-	friend bool operator!=(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) {
+	friend bool operator!=(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) noexcept {
 		return &lhs._handle != &rhs._handle;
 	}
 
@@ -91,7 +87,7 @@ template<typename T>
 struct std::hash<uv::handle<T>> {
 	size_t operator()(const uv::handle<T> &val) const {
 		static const size_t shift = static_cast<size_t>(std::log2(1 + sizeof(uv::handle<T>)));
-		return reinterpret_cast<size_t>(&val) >> shift;
+		return size_t(static_cast<const uv_handle_t*>(val)) >> shift;
 	}
 };
 

@@ -104,6 +104,7 @@
 				'include/libnodecc/net/socket.h',
 				'include/libnodecc/util/buffer.h',
 				'include/libnodecc/util/spinlock.h',
+				'include/libnodecc/util/string.h',
 				'include/libnodecc/uv/handle.h',
 				'include/libnodecc/uv/stream.h',
 				'src/dns/dns.cc',
@@ -116,17 +117,18 @@
 				'src/net/server.cc',
 				'src/net/socket.cc',
 				'src/util/buffer.cc',
+				'src/util/string.cc',
 			],
 			'dependencies': [
-				'deps/libuv/uv.gyp:libuv',
 				'deps/json11.gyp:json11',
+				'deps/libuv/uv.gyp:libuv',
 			],
 			'direct_dependent_settings': {
 				'include_dirs': [ 'include' ],
 			},
 			'export_dependent_settings': [
-				'deps/libuv/uv.gyp:libuv',
 				'deps/json11.gyp:json11',
+				'deps/libuv/uv.gyp:libuv',
 			],
 			'conditions': [
 				['OS=="win"', {
@@ -153,6 +155,7 @@
 					'-Wextra',
 					'-Wno-unused-parameter',
 				],
+				'USE_HEADERMAP': 'NO',
 			},
 		},
 	]

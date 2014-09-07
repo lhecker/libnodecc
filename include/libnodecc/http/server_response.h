@@ -15,7 +15,7 @@ public:
 	
 	net::socket &socket;
 
-	uint16_t statusCode;
+	uint16_t status_code;
 
 private:
 	// http::server needs exclusive access to _close_on_end

@@ -3,7 +3,7 @@
 #include <cassert>
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/util/buffer.h"
+#include "libnodecc/util/string.h"
 
 
 http::request_response_proto::request_response_proto() : _headers_sent(false) {

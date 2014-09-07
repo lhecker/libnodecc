@@ -143,7 +143,7 @@ util::buffer util::buffer::slice(size_t offset, size_t size) const noexcept {
 			size = this->size() - offset;
 		}
 
-		buffer._data = this->data<uint8_t>() + offset;
+		buffer._data = this->get() + offset;
 		buffer._size = size;
 	}
 

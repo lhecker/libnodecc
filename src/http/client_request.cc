@@ -1,9 +1,7 @@
 #include "libnodecc/http/client_request.h"
 
 #include "libnodecc/net/socket.h"
-
-
-#define M_LOG16 2.7725887222397812376689284858327062723020005374410210 // log(16)
+#include "libnodecc/util/string.h"
 
 
 http::client_request::client_request() : request_response_proto(), method("GET"), path("/"), hostname("localhost") {

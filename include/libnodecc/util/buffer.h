@@ -64,7 +64,7 @@ public:
 	// implemented as a template, so the other slice() method gets preferred
 	template<typename T>
 	util::buffer slice(const T *data, size_t size = SIZE_T_MAX) const noexcept {
-		return this->slice((uint8_t*)data - this->data<uint8_t>(), size);
+		return this->slice((uint8_t*)data - this->get(), size);
 	}
 
 
@@ -150,89 +150,6 @@ public:
 
 private:
 	util::buffer _buffer;
-};
-
-class string {
-public:
-	explicit string() : _buffer(), _used(0) {}
-	explicit string(size_t size) : _buffer(size), _used(0) {}
-
-	string& append(const void *data, size_t size) {
-		this->reserve(this->size() + size);
-		memcpy(this->_buffer.template data<uint8_t>() + this->_used, data, size);
-		this->_used += size;
-		return *this;
-	}
-
-	template<typename charT>
-	string& append(const charT *data) {
-		this->append(static_cast<const void*>(data), strlen(data));
-		return *this;
-	}
-
-	template<typename charT>
-	string& append(const charT *data, size_t count) {
-		this->append(static_cast<const void*>(data), count * sizeof(charT));
-		return *this;
-	}
-
-	template<typename charT, typename traits, typename Allocator>
-	string& append(const std::basic_string<charT, traits, Allocator> &str) {
-		this->append(str.data(), str.size() * sizeof(charT));
-		return *this;
-	}
-
-	template<typename charT, typename traits, typename Allocator>
-	string& append(const std::basic_string<charT, traits, Allocator> &str, size_t pos, size_t count) {
-		if (pos >= str.size()) {
-			throw std::out_of_range("util::string");
-		}
-
-		if (count > str.size() - pos) {
-			count = str.size() - pos;
-		}
-
-		this->append(str.data() + pos, count * sizeof(charT));
-		return *this;
-	}
-
-	template<typename charT>
-	void push_back(charT ch) {
-		this->append(&ch, sizeof(charT));
-	}
-
-	void clear() {
-		this->_buffer.reset();
-		this->_used = 0;
-	}
-
-	void reserve(size_t size) {
-		if (size > this->capacity()) {
-			// the growth rate is = 16 * 1.5^x
-			this->_buffer.copy(true, 16 * std::pow(1.5, 1 + (std::log((double)(size + 16) / 16.0) / std::log(1.5))));
-		}
-
-	}
-
-	size_t size() {
-		return this->_used;
-	}
-
-	size_t capacity() {
-		return this->_buffer.size();
-	}
-
-	util::buffer buffer() {
-		return this->_buffer.slice(0, this->size());
-	}
-
-	operator util::buffer() {
-		return this->buffer();
-	}
-
-private:
-	util::buffer _buffer;
-	size_t _used;
 };
 
 } // namespace util
