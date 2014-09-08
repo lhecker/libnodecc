@@ -47,7 +47,8 @@ int http::incoming_message::parser_on_body(http_parser *parser, const char *at, 
 	auto self = static_cast<http::incoming_message *>(parser->data);
 
 	if (self->on_body) {
-		self->on_body(self->_parserBuffer->slice(at, length));
+		ssize_t start = self->_parserBuffer->get() - (uint8_t*)at;
+		self->on_body(self->_parserBuffer->slice(start, start + length));
 	}
 
 	return 0;

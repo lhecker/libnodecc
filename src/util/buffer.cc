@@ -16,8 +16,15 @@ struct buffer::control {
 }
 
 
-util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept : _p(nullptr) {
-	this->reset(base, size, flags);
+util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept : _p(nullptr), _data((void*)base), _size(size) {
+	switch (flags) {
+		case util::flags::strong:
+			this->_p = new control((void*)base);
+		case util::flags::copy:
+			this->copy();
+		default:
+			;
+	}
 }
 
 util::buffer::buffer(const buffer &other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
@@ -34,8 +41,20 @@ util::buffer& util::buffer::operator=(const buffer &other) noexcept {
 	return *this;
 }
 
-util::buffer::buffer(size_t size) noexcept : buffer() {
-	this->copy(false, size);
+util::buffer::buffer(size_t size) noexcept {
+	if (size > 0) {
+		uint8_t *base = (uint8_t*)malloc(sizeof(control) + size);
+		uint8_t *data = base + sizeof(control);
+
+		if (base) {
+			this->_p = new(base) control(base);
+			this->_data = data;
+			this->_size = size;
+			return;
+		}
+	}
+
+	util::buffer::buffer();
 }
 
 util::buffer::~buffer() noexcept {
@@ -50,18 +69,7 @@ void util::buffer::reset() noexcept {
 
 void util::buffer::reset(const void *base, size_t size, util::flags flags) noexcept {
 	this->release();
-
-	this->_data = (uint8_t*)base;
-	this->_size = size;
-
-	switch (flags) {
-		case util::flags::strong:
-			this->_p = new control((void*)base);
-		case util::flags::copy:
-			this->copy();
-		default:
-			;
-	}
+	util::buffer::buffer(base, size, flags);
 }
 
 size_t util::buffer::use_count() const noexcept {
@@ -100,54 +108,62 @@ size_t util::buffer::size() const noexcept {
 	return this->_size;
 }
 
-bool util::buffer::copy(bool copy, size_t size) noexcept {
+util::buffer util::buffer::copy(size_t size) const noexcept {
+	util::buffer buffer;
+
 	if (size == 0) {
-		size = this->size();
+		size = this->_size;
 	}
 
 	uint8_t *base = (uint8_t*)malloc(sizeof(control) + size);
 	uint8_t *data = base + sizeof(control);
 
-	if (!base) {
-		return false;
-	}
-
-	if (copy && this->_data) {
-		memcpy(data, this->data<void>(), std::min(this->size(), size));
-	}
-
-	this->release();
-
-	this->_p = new(base) control(base);
-	this->_data = data;
-	this->_size = size;
-
-	return true;
-}
-
-util::buffer util::buffer::slice(size_t offset, size_t size) const noexcept {
-	util::buffer buffer;
-	buffer._p = this->_p;
-
-	if (this->_data) {
-		/*
-		 * If offset/size are too large the buffer would refer
-		 * to memory outside of the original one.
-		 * In that case or if size is the default value of zero,
-		 * we default to the maximum possible value
-		 */
-		if (offset > this->size()) {
-			offset = this->size();
-			size = 0;
-		} else if (size > this->size() - offset) {
-			size = this->size() - offset;
+	if (base) {
+		if (this->_data) {
+			memcpy(data, this->_data, std::min(size, this->_size));
 		}
 
-		buffer._data = this->get() + offset;
+		buffer._p = new(base) control(base);
+		buffer._data = data;
 		buffer._size = size;
 	}
 
-	buffer.retain();
+	return buffer;
+}
+
+util::buffer util::buffer::slice(ssize_t start, ssize_t end) const noexcept {
+	util::buffer buffer;
+
+	if (this->_size < size_t(SSIZE_MAX) && this->_data) {
+		if (start < 0) {
+			start += this->_size;
+
+			if (start < 0) {
+				start = 0;
+			}
+		} else if (size_t(start) > this->_size) {
+			start = this->_size;
+		}
+
+		if (end < 0) {
+			end += this->_size;
+
+			if (end < 0) {
+				end = 0;
+			}
+		} else if (size_t(end) > this->_size) {
+			end = this->_size;
+		}
+
+		if (end < start) {
+			end = start;
+		}
+
+		buffer._p = this->_p;
+		buffer._data = this->get() + start;
+		buffer._size = end - start;
+		buffer.retain();
+	}
 
 	return buffer;
 }

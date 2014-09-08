@@ -24,48 +24,103 @@ enum flags : uint8_t {
  */
 class buffer {
 public:
+	/**
+	 * Creates an empty buffer.
+	 */
 	constexpr buffer() : _p(nullptr), _data(nullptr), _size(0) {};
 
+	/**
+	 * Retains another buffer, while referring to it's data.
+	 */
 	buffer(const buffer &other) noexcept;
+
+	/**
+	 * Retains another buffer, while referring to it's data.
+	 */
 	buffer& operator=(const buffer &other) noexcept;
 
+	/**
+	 * Creates a buffer with the specified size.
+	 *
+	 * @param size The size of the buffer in bytes.
+	 */
 	explicit buffer(size_t size) noexcept;
+
+	/**
+	 * Creates a buffer referring the specified memory area.
+	 *
+	 * @param base  The base address of the memory area.
+	 * @param size  The size of the memory area.
+	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 */
 	explicit buffer(const void *base, size_t size, util::flags flags) noexcept;
 
 
+	/**
+	 * Creates a buffer referring the specified std::vector.
+	 *
+	 * @param  vec   The std::vector<T> which should be referred to.
+	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 */
 	template<typename T>
 	explicit buffer(const std::vector<T> &vec, util::flags flags) noexcept : buffer((void*)vec.data(), vec.size(), flags) {}
 
+	/**
+	 * Creates a buffer referring the specified std::basic_string.
+	 *
+	 * @param  str   The std::basic_string<charT, traits, Allocator> which should be referred to.
+	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 */
 	template<typename charT, typename traits, typename Allocator>
 	explicit buffer(const std::basic_string<charT, traits, Allocator> &str, util::flags flags) noexcept : buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
 
+	/**
+	 * Creates a buffer referring the specified vector.
+	 *
+	 * @param  vec   The Null-terminated byte string which should be referred to.
+	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 */
 	explicit buffer(const char *str, util::flags flags) noexcept : buffer((void*)str, strlen(str), flags) {}
 
 
 	~buffer() noexcept;
 
 
+	/**
+	 * Swaps the references of this buffer with the other one.
+	 */
+	void swap(util::buffer &other) noexcept;
+
+	/**
+	 * Releases the buffer and resets it's data and size to zero.
+	 */
 	void reset() noexcept;
+
+	/**
+	 * Releases the current buffer and sets it's new memory it should refer to.
+	 *
+	 * @param base  The base address of the memory area.
+	 * @param size  The size of the memory area.
+	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 */
 	void reset(const void *base, size_t size, util::flags flags) noexcept;
 
 	/**
-	 * Detaches the buffer from the current one.
+	 * Returns a copy of the buffer, while optionally resizing it.
 	 *
-	 * @param copy If true (the default), as much data as possible will be copied over to the new buffer.
 	 * @param size If zero (the default), the new size will be equal to the old one.
-	 *
-	 * @return Returns true, if memory for the new instance could be allocated.
 	 */
-	bool copy(bool copy = true, size_t size = 0) noexcept;
+	util::buffer copy(size_t size = 0) const noexcept;
 
-
-	util::buffer slice(size_t offset = 0, size_t size = SIZE_T_MAX) const noexcept;
-
-	// implemented as a template, so the other slice() method gets preferred
-	template<typename T>
-	util::buffer slice(const T *data, size_t size = SIZE_T_MAX) const noexcept {
-		return this->slice((uint8_t*)data - this->get(), size);
-	}
+	/**
+	 * Returns a buffer, referencing this buffer, but offset and cropped.
+	 *
+	 * Negative indexes (start/end) start at the end of the buffer.
+	 *
+	 * @param start The new buffer is offset by the index start.
+	 * @param start The new buffer is cropped to the index end.
+	 */
+	util::buffer slice(ssize_t start = 0, ssize_t end = SIZE_T_MAX) const noexcept;
 
 
 	bool is_strong() const noexcept;
@@ -90,8 +145,6 @@ public:
 	}
 
 	size_t size() const noexcept;
-
-	void swap(util::buffer &other) noexcept;
 
 protected:
 	struct control;
