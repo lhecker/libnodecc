@@ -81,16 +81,11 @@ protected:
 
 } // namespace uv
 
-/*
- * Instances are likely to be aligned along the size of the class.
- * Those least significant bits which "represent" that alignment are therefore
- * likely to be some static value (e.g. zero) and can be cut off for a better hash value.
- */
 template<typename T>
 struct std::hash<uv::handle<T>> {
 	size_t operator()(const uv::handle<T> &val) const {
-		static const size_t shift = static_cast<size_t>(std::log2(1 + sizeof(uv::handle<T>)));
-		return size_t(static_cast<const uv_handle_t*>(val)) >> shift;
+		std::size_t x = size_t(static_cast<const uv_handle_t*>(val));
+		return x + (x >> 3);
 	}
 };
 

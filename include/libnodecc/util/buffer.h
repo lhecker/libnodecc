@@ -1,9 +1,10 @@
 #ifndef nodecc_util_buffer_h
 #define nodecc_util_buffer_h
 
+#include <cmath>
+#include <functional>
 #include <string>
 #include <vector>
-#include <cmath>
 
 
 namespace util {
@@ -44,7 +45,7 @@ public:
 	 *
 	 * @param size The size of the buffer in bytes.
 	 */
-	explicit buffer(size_t size) noexcept;
+	explicit buffer(std::size_t size) noexcept;
 
 	/**
 	 * Creates a buffer referring the specified memory area.
@@ -53,7 +54,7 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	explicit buffer(const void *base, size_t size, util::flags flags) noexcept;
+	explicit buffer(const void *base, std::size_t size, util::flags flags) noexcept;
 
 
 	/**
@@ -103,14 +104,14 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	void reset(const void *base, size_t size, util::flags flags) noexcept;
+	void reset(const void *base, std::size_t size, util::flags flags) noexcept;
 
 	/**
 	 * Returns a copy of the buffer, while optionally resizing it.
 	 *
 	 * @param size If zero (the default), the new size will be equal to the old one.
 	 */
-	util::buffer copy(size_t size = 0) const noexcept;
+	util::buffer copy(std::size_t size = 0) const noexcept;
 
 	/**
 	 * Returns a buffer, referencing this buffer, but offset and cropped.
@@ -120,7 +121,7 @@ public:
 	 * @param start The new buffer is offset by the index start.
 	 * @param start The new buffer is cropped to the index end.
 	 */
-	util::buffer slice(ssize_t start = 0, ssize_t end = SIZE_T_MAX) const noexcept;
+	util::buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = SSIZE_MAX) const noexcept;
 
 
 	bool is_strong() const noexcept;
@@ -129,19 +130,20 @@ public:
 	operator void*() const noexcept;
 	operator char*() const noexcept;
 	operator unsigned char*() const noexcept;
-	char& operator[](size_t pos) const noexcept;
+	char& operator[](std::size_t pos) const noexcept;
+
+	friend bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept;
+	friend bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept;
 
 	explicit operator bool() const noexcept;
-	size_t use_count() const noexcept;
+	std::size_t use_count() const noexcept;
 
 	uint8_t* get() const noexcept;
 
 	template<typename T = void>
-	T* data() const noexcept {
-		return reinterpret_cast<T*>(this->_data);
-	}
+	T* data() const noexcept { return reinterpret_cast<T*>(this->_data); }
 
-	size_t size() const noexcept;
+	std::size_t size() const noexcept;
 
 protected:
 	struct control;
@@ -151,57 +153,25 @@ protected:
 
 	control *_p;
 	void *_data;
-	size_t _size;
-};
-
-
-template<typename T>
-class buffer_allocator {
-public:
-	typedef T              value_type;
-	typedef T*             pointer;
-	typedef const T*       const_pointer;
-	typedef T&             reference;
-	typedef const T&       const_reference;
-	typedef std::size_t    size_type;
-	typedef std::ptrdiff_t difference_type;
-
-
-	template<typename U>
-	struct rebind {
-		typedef buffer_allocator<U> other;
-	};
-
-
-	constexpr buffer_allocator() noexcept : _buffer() {}
-
-	buffer_allocator(const buffer_allocator& other) {
-		this->_buffer = other._buffer;
-	}
-
-	template<typename U>
-	buffer_allocator(const buffer_allocator<U>& other) {
-		this->_buffer = other._buffer;
-	}
-
-	pointer allocate(size_type n, const_pointer hint = 0) {
-		this->_buffer = util::buffer(n * sizeof(T));
-		return this->_buffer.template data<T>();
-	}
-
-	void deallocate(pointer p, size_type n) {
-	}
-
-	util::buffer to_buffer() {
-		util::buffer buf;
-		buf.swap(this->_buffer);
-		return buf;
-	}
-
-private:
-	util::buffer _buffer;
+	std::size_t _size;
 };
 
 } // namespace util
+
+
+template<>
+struct std::hash<util::buffer> {
+	std::size_t operator()(const util::buffer &buf) const {
+		std::size_t x = size_t(buf.data());
+		return x + (x >> 3);
+	}
+};
+
+template<>
+struct std::equal_to<util::buffer> {
+	bool operator()(const util::buffer &lhs, const util::buffer &rhs) const {
+		return lhs.data() == rhs.data();
+	}
+};
 
 #endif // nodecc_util_buffer_h
