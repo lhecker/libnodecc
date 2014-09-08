@@ -103,7 +103,6 @@
 				'include/libnodecc/net/server.h',
 				'include/libnodecc/net/socket.h',
 				'include/libnodecc/util/buffer.h',
-				'include/libnodecc/util/spinlock.h',
 				'include/libnodecc/util/string.h',
 				'include/libnodecc/uv/handle.h',
 				'include/libnodecc/uv/stream.h',
