@@ -1,14 +1,14 @@
 #include "libnodecc/util/string.h"
 
 
-util::string& util::string::append(const void *data, size_t size) {
+util::string& util::string::append(const void* data, size_t size) {
 	this->append(size);
 	memcpy(this->_buffer.get() + this->_used, data, size);
 	this->_used += size;
 	return *this;
 }
 
-util::string& util::string::append(const util::buffer &buf) {
+util::string& util::string::append(const util::buffer& buf) {
 	this->append(buf.data(), buf.size());
 	return *this;
 }

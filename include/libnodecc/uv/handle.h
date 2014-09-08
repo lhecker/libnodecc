@@ -49,7 +49,7 @@ public:
 
 	void close() {
 		if (!uv_is_closing(*this)) {
-			uv_close(*this, [](uv_handle_t *handle) {
+			uv_close(*this, [](uv_handle_t* handle) {
 				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
 				if (self && self->on_close) {
@@ -59,7 +59,7 @@ public:
 		}
 	}
 
-	void close(on_close_t &cb) {
+	void close(on_close_t& cb) {
 		this->on_close = cb;
 		this->close();
 	}
@@ -83,7 +83,7 @@ protected:
 
 template<typename T>
 struct std::hash<uv::handle<T>> {
-	size_t operator()(const uv::handle<T> &val) const {
+	size_t operator()(const uv::handle<T>& val) const {
 		std::size_t x = size_t(static_cast<const uv_handle_t*>(val));
 		return x + (x >> 3);
 	}
@@ -91,7 +91,7 @@ struct std::hash<uv::handle<T>> {
 
 template<typename T>
 struct std::equal_to<uv::handle<T>> {
-	bool operator()(const uv::handle<T> &left, const uv::handle<T> &right) const {
+	bool operator()(const uv::handle<T>& left, const uv::handle<T>& right) const {
 		return static_cast<uv_handle_t*>(left) == static_cast<uv_handle_t*>(right);
 	}
 };

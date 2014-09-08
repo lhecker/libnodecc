@@ -8,12 +8,12 @@ namespace http {
 
 class server_response : public request_response_proto {
 public:
-	explicit server_response(net::socket &socket);
+	explicit server_response(net::socket& socket);
 
 	bool end();
 
-	
-	net::socket &socket;
+
+	net::socket& socket;
 
 	uint16_t status_code;
 

@@ -7,24 +7,24 @@
 namespace util {
 
 struct buffer::control {
-	constexpr control(void *base) noexcept : base(base), use_count(1) {};
+	constexpr control(void* base) noexcept : base(base), use_count(1) {};
 
-	void *base;
+	void* base;
 	std::atomic<unsigned int> use_count;
 };
 
 }
 
 
-util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept : buffer() {
+util::buffer::buffer(const void* base, size_t size, util::flags flags) noexcept : buffer() {
 	this->reset(base, size, flags);
 }
 
-util::buffer::buffer(const buffer &other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+util::buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	this->retain();
 }
 
-util::buffer& util::buffer::operator=(const buffer &other) noexcept {
+util::buffer& util::buffer::operator=(const buffer& other) noexcept {
 	this->release();
 	this->_p = other._p;
 	this->_data = other._data;
@@ -36,8 +36,8 @@ util::buffer& util::buffer::operator=(const buffer &other) noexcept {
 
 util::buffer::buffer(size_t size) noexcept {
 	if (size > 0) {
-		uint8_t *base = (uint8_t*)malloc(sizeof(control) + size);
-		uint8_t *data = base + sizeof(control);
+		uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
+		uint8_t* data = base + sizeof(control);
 
 		if (base) {
 			this->_p = new(base) control(base);
@@ -56,7 +56,7 @@ util::buffer::~buffer() noexcept {
 	this->release();
 }
 
-void util::buffer::swap(util::buffer &other) noexcept {
+void util::buffer::swap(util::buffer& other) noexcept {
 	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
@@ -68,21 +68,21 @@ void util::buffer::reset() noexcept {
 	this->_size = 0;
 }
 
-void util::buffer::reset(const void *base, size_t size, util::flags flags) noexcept {
+void util::buffer::reset(const void* base, size_t size, util::flags flags) noexcept {
 	this->release();
 
 	this->_data = (void*)base;
 	this->_size = size;
 
 	switch (flags) {
-		case util::flags::strong:
-			this->_p = new control((void*)base);
-			break;
-		case util::flags::copy:
-			this->copy();
-			break;
-		default:
-			;
+	case util::flags::strong:
+		this->_p = new control((void*)base);
+		break;
+	case util::flags::copy:
+		this->copy();
+		break;
+	default:
+		;
 	}
 }
 
@@ -93,8 +93,8 @@ util::buffer util::buffer::copy(size_t size) const noexcept {
 		size = this->_size;
 	}
 
-	uint8_t *base = (uint8_t*)malloc(sizeof(control) + size);
-	uint8_t *data = base + sizeof(control);
+	uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
+	uint8_t* data = base + sizeof(control);
 
 	if (base) {
 		if (this->_data) {
@@ -142,7 +142,7 @@ util::buffer util::buffer::slice(ssize_t start, ssize_t end) const noexcept {
 		buffer._size = end - start;
 		buffer.retain();
 	}
-	
+
 	return buffer;
 }
 
@@ -170,6 +170,14 @@ char& util::buffer::operator[](size_t pos) const noexcept {
 	return *(this->data<char>() + pos);
 }
 
+bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept {
+	return lhs.data() == rhs.data();
+}
+
+bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept {
+	return lhs.data() != rhs.data();
+}
+
 util::buffer::operator bool() const noexcept {
 	return this->_p != nullptr;
 }
@@ -178,7 +186,7 @@ size_t util::buffer::use_count() const noexcept {
 	return this->_p ? this->_p->use_count.load(std::memory_order_relaxed) : 0;
 }
 
-uint8_t *util::buffer::get() const noexcept {
+uint8_t* util::buffer::get() const noexcept {
 	return this->data<uint8_t>();
 }
 
@@ -201,7 +209,7 @@ void util::buffer::release() noexcept {
 	if (this->_p && this->_p->use_count.fetch_sub(1, std::memory_order_release) == 1) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 
-		void *base = this->_p->base;
+		void* base = this->_p->base;
 		free(base);
 
 		if (this->_p != base) {

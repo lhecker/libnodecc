@@ -6,11 +6,11 @@
 
 
 namespace net {
-	class socket;
+class socket;
 }
 
 namespace util {
-	class buffer;
+class buffer;
 }
 
 
@@ -23,7 +23,7 @@ public:
 	virtual ~request_response_proto();
 
 
-	const std::string &header(const std::string &key);
+	const std::string& header(const std::string& key);
 
 	/**
 	 * Sets a header.
@@ -32,12 +32,12 @@ public:
 	 * either include "chunked" as the last comma-seperated entry,
 	 * or a content-length entry, as per HTTP specification.
 	 */
-	void set_header(const std::string &key, const std::string &value);
+	void set_header(const std::string& key, const std::string& value);
 
 	bool headers_sent() const;
-	
 
-	bool write(const util::buffer &buf);
+
+	bool write(const util::buffer& buf);
 	bool write(const util::buffer bufs[], size_t bufcnt);
 
 	bool end();

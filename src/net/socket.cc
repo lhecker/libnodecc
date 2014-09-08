@@ -6,23 +6,23 @@
 namespace {
 
 struct net_socket_connect {
-	explicit net_socket_connect(net::socket *socket, const std::shared_ptr<addrinfo> &ai) : socket(socket), ai(ai) {
+	explicit net_socket_connect(net::socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
 		this->req.data = this;
 		this->current_ai = this->ai.get();
 	};
 
-	addrinfo *next() {
+	addrinfo* next() {
 		this->current_ai = this->current_ai->ai_next;
 		return this->current_ai;
 	}
 
 	void connect() {
-		uv_tcp_connect(&this->req, *this->socket, this->current_ai->ai_addr, [](uv_connect_t *req, int status) {
+		uv_tcp_connect(&this->req, *this->socket, this->current_ai->ai_addr, [](uv_connect_t* req, int status) {
 			auto self = reinterpret_cast<net_socket_connect*>(req->data);
 
 			if (status == 0) {
 				// connect successful ---> call callback with true
-				if(self->socket->on_connect) {
+				if (self->socket->on_connect) {
 					self->socket->on_connect(true);
 				}
 			} else {
@@ -32,7 +32,7 @@ struct net_socket_connect {
 					return;
 				} else {
 					// connect NOT successful and NO another address available ---> call callback with false
-					if(self->socket->on_connect) {
+					if (self->socket->on_connect) {
 						self->socket->on_connect(false);
 					}
 				}
@@ -43,8 +43,8 @@ struct net_socket_connect {
 		});
 	}
 
-	net::socket *socket;
-	addrinfo *current_ai;
+	net::socket* socket;
+	addrinfo* current_ai;
 	std::shared_ptr<addrinfo> ai;
 	uv_connect_t req;
 };
@@ -55,16 +55,16 @@ struct net_socket_connect {
 net::socket::socket() : uv::stream<uv_tcp_t>() {
 }
 
-bool net::socket::init(uv::loop &loop) {
+bool net::socket::init(uv::loop& loop) {
 	return 0 == uv_tcp_init(loop, *this);
 }
 
-bool net::socket::connect(const std::string &address, uint16_t port) {
-	dns::lookup(*this, address, [this](const std::shared_ptr<addrinfo> &res) {
-		uv_connect_t *req = new uv_connect_t;
+bool net::socket::connect(const std::string& address, uint16_t port) {
+	dns::lookup(*this, address, [this](const std::shared_ptr<addrinfo>& res) {
+		uv_connect_t* req = new uv_connect_t;
 		req->data = this;
 
-		net_socket_connect *data = new net_socket_connect(this, res);
+		net_socket_connect* data = new net_socket_connect(this, res);
 		data->connect();
 	});
 

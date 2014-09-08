@@ -9,17 +9,17 @@ http::server::server() : net::server() {
 
 	this->on_connection = [this]() {
 		auto iter = this->clients.emplace().first;
-		net::socket &socket = const_cast<net::socket&>(*iter);
+		net::socket& socket = const_cast<net::socket&>(*iter);
 
 		if (!socket.init(*this) || !this->accept(socket)) {
 			this->clients.erase(iter);
 		}
 
-		http::incoming_message *req = new http::incoming_message(socket);
-		http::server_response  *res = new http::server_response(socket);
+		http::incoming_message* req = new http::incoming_message(socket);
+		http::server_response*  res = new http::server_response(socket);
 
 		socket.on_close = [this, req, res]() {
-			const net::socket &socket = req->socket;
+			const net::socket& socket = req->socket;
 			delete req;
 			delete res;
 			this->clients.erase(socket);

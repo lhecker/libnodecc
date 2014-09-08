@@ -9,11 +9,11 @@
 struct http_parser;
 
 namespace net {
-	class socket;
+class socket;
 }
 
 namespace util {
-	class buffer;
+class buffer;
 }
 
 
@@ -22,15 +22,15 @@ namespace http {
 class incoming_message {
 public:
 	typedef std::function<void()> on_complete_t;
-	typedef std::function<void(const util::buffer &buffer)> on_body_t;
+	typedef std::function<void(const util::buffer& buffer)> on_body_t;
 
 
-	explicit incoming_message(net::socket &socket);
+	explicit incoming_message(net::socket& socket);
 
 	~incoming_message();
 
 
-	net::socket &socket;
+	net::socket& socket;
 
 	uint8_t http_version_major;
 	uint8_t http_version_minor;
@@ -45,20 +45,20 @@ public:
 
 
 private:
-	static int parser_on_url(http_parser *parser, const char *at, size_t length);
-	static int parser_on_header_field(http_parser *parser, const char *at, size_t length);
-	static int parser_on_header_value(http_parser *parser, const char *at, size_t length);
-	static int parser_on_headers_complete(http_parser *parser);
-	static int parser_on_body(http_parser *parser, const char *at, size_t length);
-	static int parser_on_message_complete(http_parser *parser);
+	static int parser_on_url(http_parser* parser, const char* at, size_t length);
+	static int parser_on_header_field(http_parser* parser, const char* at, size_t length);
+	static int parser_on_header_value(http_parser* parser, const char* at, size_t length);
+	static int parser_on_headers_complete(http_parser* parser);
+	static int parser_on_body(http_parser* parser, const char* at, size_t length);
+	static int parser_on_message_complete(http_parser* parser);
 
 	void add_header_partials();
 
 	std::string _partial_header_field;
 	std::string _partial_header_value;
 
-	http_parser *_parser;
-	const util::buffer *_parserBuffer;
+	http_parser* _parser;
+	const util::buffer* _parserBuffer;
 };
 
 } // namespace http

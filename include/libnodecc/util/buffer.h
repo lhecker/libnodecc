@@ -19,7 +19,7 @@ enum flags : uint8_t {
  * A immutable buffer, with optional reference counting.
  *
  * It can either strongly manage a C buffer
- * (one which must be returned with the free() function)
+ *(one which must be returned with the free() function)
  * using reference counting similiar to std::shared_ptr,
  * or weakly reference some buffer.
  */
@@ -33,12 +33,12 @@ public:
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer(const buffer &other) noexcept;
+	buffer(const buffer& other) noexcept;
 
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer& operator=(const buffer &other) noexcept;
+	buffer& operator=(const buffer& other) noexcept;
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -54,7 +54,7 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	explicit buffer(const void *base, std::size_t size, util::flags flags) noexcept;
+	explicit buffer(const void* base, std::size_t size, util::flags flags) noexcept;
 
 
 	/**
@@ -64,7 +64,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename T>
-	explicit buffer(const std::vector<T> &vec, util::flags flags) noexcept : buffer((void*)vec.data(), vec.size(), flags) {}
+	explicit buffer(const std::vector<T>& vec, util::flags flags) noexcept : buffer((void*)vec.data(), vec.size(), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified std::basic_string.
@@ -73,7 +73,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename charT, typename traits, typename Allocator>
-	explicit buffer(const std::basic_string<charT, traits, Allocator> &str, util::flags flags) noexcept : buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
+	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, util::flags flags) noexcept : buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified vector.
@@ -81,7 +81,7 @@ public:
 	 * @param  vec   The Null-terminated byte string which should be referred to.
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	explicit buffer(const char *str, util::flags flags) noexcept : buffer((void*)str, strlen(str), flags) {}
+	explicit buffer(const char* str, util::flags flags) noexcept : buffer((void*)str, strlen(str), flags) {}
 
 
 	~buffer() noexcept;
@@ -90,7 +90,7 @@ public:
 	/**
 	 * Swaps the references of this buffer with the other one.
 	 */
-	void swap(util::buffer &other) noexcept;
+	void swap(util::buffer& other) noexcept;
 
 	/**
 	 * Releases the buffer and resets it's data and size to zero.
@@ -104,7 +104,7 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	void reset(const void *base, std::size_t size, util::flags flags) noexcept;
+	void reset(const void* base, std::size_t size, util::flags flags) noexcept;
 
 	/**
 	 * Returns a copy of the buffer, while optionally resizing it.
@@ -141,7 +141,9 @@ public:
 	uint8_t* get() const noexcept;
 
 	template<typename T = void>
-	T* data() const noexcept { return reinterpret_cast<T*>(this->_data); }
+	T* data() const noexcept {
+		return reinterpret_cast<T*>(this->_data);
+	}
 
 	std::size_t size() const noexcept;
 
@@ -151,8 +153,8 @@ protected:
 	void retain() noexcept;
 	void release() noexcept;
 
-	control *_p;
-	void *_data;
+	control* _p;
+	void* _data;
 	std::size_t _size;
 };
 
@@ -161,7 +163,7 @@ protected:
 
 template<>
 struct std::hash<util::buffer> {
-	std::size_t operator()(const util::buffer &buf) const {
+	std::size_t operator()(const util::buffer& buf) const {
 		std::size_t x = size_t(buf.data());
 		return x + (x >> 3);
 	}
@@ -169,7 +171,7 @@ struct std::hash<util::buffer> {
 
 template<>
 struct std::equal_to<util::buffer> {
-	bool operator()(const util::buffer &lhs, const util::buffer &rhs) const {
+	bool operator()(const util::buffer& lhs, const util::buffer& rhs) const {
 		return lhs.data() == rhs.data();
 	}
 };

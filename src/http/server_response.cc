@@ -95,7 +95,7 @@ uv_buf_t str_status_code(uint16_t status_code) {
 }
 
 
-http::server_response::server_response(net::socket &socket) : request_response_proto(), socket(socket), status_code(200), _shutdown_on_end(false) {
+http::server_response::server_response(net::socket& socket) : request_response_proto(), socket(socket), status_code(200), _shutdown_on_end(false) {
 }
 
 void http::server_response::send_headers() {

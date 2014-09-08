@@ -7,28 +7,28 @@
 #include "libnodecc/net/socket.h"
 
 
-int http::incoming_message::parser_on_url(http_parser *parser, const char *at, size_t length) {
-	auto self = static_cast<http::incoming_message *>(parser->data);
+int http::incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<http::incoming_message*>(parser->data);
 	self->url.append(at, length);
 	return 0;
 }
 
-int http::incoming_message::parser_on_header_field(http_parser *parser, const char *at, size_t length) {
-	auto self = static_cast<http::incoming_message *>(parser->data);
+int http::incoming_message::parser_on_header_field(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<http::incoming_message*>(parser->data);
 	self->add_header_partials();
 	self->_partial_header_field.append(at, length);
 	return 0;
 }
 
-int http::incoming_message::parser_on_header_value(http_parser *parser, const char *at, size_t length) {
-	auto self = static_cast<http::incoming_message *>(parser->data);
+int http::incoming_message::parser_on_header_value(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<http::incoming_message*>(parser->data);
 	self->add_header_partials();
 	self->_partial_header_value.append(at, length);
 	return 0;
 }
 
-int http::incoming_message::parser_on_headers_complete(http_parser *parser) {
-	auto self = static_cast<http::incoming_message *>(parser->data);
+int http::incoming_message::parser_on_headers_complete(http_parser* parser) {
+	auto self = static_cast<http::incoming_message*>(parser->data);
 
 	self->add_header_partials();
 
@@ -43,8 +43,8 @@ int http::incoming_message::parser_on_headers_complete(http_parser *parser) {
 	return 0;
 }
 
-int http::incoming_message::parser_on_body(http_parser *parser, const char *at, size_t length) {
-	auto self = static_cast<http::incoming_message *>(parser->data);
+int http::incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<http::incoming_message*>(parser->data);
 
 	if (self->on_body) {
 		ssize_t start = self->_parserBuffer->get() - (uint8_t*)at;
@@ -54,8 +54,8 @@ int http::incoming_message::parser_on_body(http_parser *parser, const char *at, 
 	return 0;
 }
 
-int http::incoming_message::parser_on_message_complete(http_parser *parser) {
-	auto self = static_cast<http::incoming_message *>(parser->data);
+int http::incoming_message::parser_on_message_complete(http_parser* parser) {
+	auto self = static_cast<http::incoming_message*>(parser->data);
 
 	if (self->on_message_complete) {
 		self->on_message_complete();
@@ -69,7 +69,7 @@ int http::incoming_message::parser_on_message_complete(http_parser *parser) {
 }
 
 
-http::incoming_message::incoming_message(net::socket &socket) : socket(socket) {
+http::incoming_message::incoming_message(net::socket& socket) : socket(socket) {
 	static const http_parser_settings http_req_parser_settings = {
 		nullptr,
 		http::incoming_message::parser_on_url,
@@ -88,7 +88,7 @@ http::incoming_message::incoming_message(net::socket &socket) : socket(socket) {
 
 	this->headers.max_load_factor(0.75);
 
-	socket.on_read = [this](int err, const util::buffer &buffer) {
+	socket.on_read = [this](int err, const util::buffer & buffer) {
 		if (err) {
 			if (err == UV_EOF) {
 				http_parser_execute(this->_parser, &http_req_parser_settings, nullptr, 0);
@@ -119,7 +119,7 @@ void http::incoming_message::add_header_partials() {
 		const auto iter = this->headers.emplace(this->_partial_header_field, this->_partial_header_value);
 
 		if (!iter.second) {
-			std::string &existingValue = iter.first->second;
+			std::string& existingValue = iter.first->second;
 			existingValue.append(", ");
 			existingValue.append(this->_partial_header_value);
 		}

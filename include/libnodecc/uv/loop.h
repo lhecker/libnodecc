@@ -17,7 +17,6 @@ public:
 
 	bool alive();
 
-
 	operator uv_loop_t*();
 	operator const uv_loop_t*() const;
 

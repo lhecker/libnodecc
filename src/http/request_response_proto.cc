@@ -13,11 +13,11 @@ http::request_response_proto::request_response_proto() : _headers_sent(false) {
 http::request_response_proto::~request_response_proto() {
 }
 
-const std::string &http::request_response_proto::header(const std::string &key) {
+const std::string& http::request_response_proto::header(const std::string& key) {
 	return this->_headers.at(key);
 }
 
-void http::request_response_proto::set_header(const std::string &key, const std::string &value) {
+void http::request_response_proto::set_header(const std::string& key, const std::string& value) {
 	this->_headers.emplace(key, value);
 }
 
@@ -25,7 +25,7 @@ bool http::request_response_proto::headers_sent() const {
 	return this->_headers_sent;
 }
 
-bool http::request_response_proto::write(const util::buffer &buf) {
+bool http::request_response_proto::write(const util::buffer& buf) {
 	return this->write(&buf, 1);
 }
 
@@ -69,7 +69,7 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 			}
 
 			{
-				static const char *hex_lookup = "0123456789abcdef";
+				static const char* hex_lookup = "0123456789abcdef";
 
 				do {
 					hexLength--;

@@ -4,7 +4,7 @@
 namespace {
 
 struct getaddrinfo_packed_req {
-	explicit getaddrinfo_packed_req(const dns::on_lookup_t &cb) {
+	explicit getaddrinfo_packed_req(const dns::on_lookup_t& cb) {
 		this->req.data = this;
 		this->cb = cb;
 	}
@@ -14,18 +14,18 @@ struct getaddrinfo_packed_req {
 };
 
 struct addrinfo_deleter {
-    void operator()(addrinfo *ptr) const {
-        uv_freeaddrinfo(ptr);
-    }
+	void operator()(addrinfo* ptr) const {
+		uv_freeaddrinfo(ptr);
+	}
 };
 
 };
 
 
-void dns::lookup(uv::loop &loop, const std::string &domain, const on_lookup_t &cb) {
+void dns::lookup(uv::loop& loop, const std::string& domain, const on_lookup_t& cb) {
 	auto packed_req = new getaddrinfo_packed_req(cb);
 
-	uv_getaddrinfo(loop, &packed_req->req, [](uv_getaddrinfo_t *req, int status, struct addrinfo *res) {
+	uv_getaddrinfo(loop, &packed_req->req, [](uv_getaddrinfo_t* req, int status, addrinfo* res) {
 		auto packed_req = reinterpret_cast<getaddrinfo_packed_req*>(req->data);
 
 		if (status == 0) {

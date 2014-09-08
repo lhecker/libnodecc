@@ -14,9 +14,9 @@ namespace uv {
 template<typename T>
 class stream : public uv::handle<T> {
 public:
-	typedef std::function<void(int err, const util::buffer &buffer)> on_read_t;
+	typedef std::function<void(int err, const util::buffer& buffer)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
-	
+
 
 	explicit stream() : uv::handle<T>() {}
 
@@ -30,10 +30,10 @@ public:
 			return false;
 		}
 
-		return 0 == uv_read_start(*this, [](uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+		return 0 == uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			buf->base = (char*)malloc(suggested_size);
 			buf->len = suggested_size;
-		}, [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			auto self = reinterpret_cast<uv::stream<T>*>(stream->data);
 
 			util::buffer buffer;
@@ -52,29 +52,29 @@ public:
 		return 0 == uv_read_stop(*this);
 	}
 
-	bool write(const util::buffer &buf, const on_write_t &on_write = nullptr) {
+	bool write(const util::buffer& buf, const on_write_t& on_write = nullptr) {
 		return this->write(&buf, 1, on_write);
 	}
 
-	bool write(const util::buffer bufs[], size_t bufcnt, const on_write_t &on_write = nullptr) {
+	bool write(const util::buffer bufs[], size_t bufcnt, const on_write_t& on_write = nullptr) {
 		struct packed_req {
-			constexpr packed_req(const util::buffer bufs[], size_t bufcnt, const on_write_t &cb) : cb(cb), bufs(bufs, bufs + bufcnt) {}
+			constexpr packed_req(const util::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(cb), bufs(bufs, bufs + bufcnt) {}
 
 			uv_write_t req;
 			on_write_t cb;
 			std::vector<util::buffer> bufs;
 		};
 
-		packed_req *pack = new packed_req(bufs, bufcnt, on_write);
-		uv_buf_t *uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
+		packed_req* pack = new packed_req(bufs, bufcnt, on_write);
+		uv_buf_t* uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
 
 		for (size_t i = 0; i < bufcnt; i++) {
 			uv_bufs[i].base = bufs[i].data<char>();
 			uv_bufs[i].len  = bufs[i].size();
 		}
 
-		return 0 == uv_write(&pack->req, *this, uv_bufs, bufcnt, [](uv_write_t *req, int status) {
-			packed_req *pack = reinterpret_cast<packed_req*>(req);
+		return 0 == uv_write(&pack->req, *this, uv_bufs, bufcnt, [](uv_write_t* req, int status) {
+			packed_req* pack = reinterpret_cast<packed_req*>(req);
 
 			if (pack->cb) {
 				pack->cb(status);
@@ -86,13 +86,13 @@ public:
 
 	void shutdown() {
 		if (!uv_is_closing(*this)) {
-			auto shutdown_cb = [](uv_shutdown_t *req, int status) {
-				uv::stream<T> *self = reinterpret_cast<uv::stream<T>*>(req->data);
+			auto shutdown_cb = [](uv_shutdown_t* req, int status) {
+				uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 				self->close();
 				delete req;
 			};
 
-			uv_shutdown_t *req = new uv_shutdown_t;
+			uv_shutdown_t* req = new uv_shutdown_t;
 			req->data = this;
 			int ret = uv_shutdown(req, *this, shutdown_cb);
 			if (ret != 0) {

@@ -23,7 +23,7 @@ void http::client_request::send_headers() {
 	}
 
 	{
-		for (const auto &iter : this->_headers) {
+		for (const auto& iter : this->_headers) {
 			buf.append(iter.first);
 			buf.append(": ");
 			buf.append(iter.second);
