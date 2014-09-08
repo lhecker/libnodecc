@@ -16,15 +16,8 @@ struct buffer::control {
 }
 
 
-util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept : _p(nullptr), _data((void*)base), _size(size) {
-	switch (flags) {
-		case util::flags::strong:
-			this->_p = new control((void*)base);
-		case util::flags::copy:
-			this->copy();
-		default:
-			;
-	}
+util::buffer::buffer(const void *base, size_t size, util::flags flags) noexcept : buffer() {
+	this->reset(base, size, flags);
 }
 
 util::buffer::buffer(const buffer &other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
@@ -54,11 +47,19 @@ util::buffer::buffer(size_t size) noexcept {
 		}
 	}
 
-	util::buffer::buffer();
+	this->_p = nullptr;
+	this->_data = nullptr;
+	this->_size = 0;
 }
 
 util::buffer::~buffer() noexcept {
 	this->release();
+}
+
+void util::buffer::swap(util::buffer &other) noexcept {
+	std::swap(this->_p, other._p);
+	std::swap(this->_data, other._data);
+	std::swap(this->_size, other._size);
 }
 
 void util::buffer::reset() noexcept {
@@ -69,43 +70,20 @@ void util::buffer::reset() noexcept {
 
 void util::buffer::reset(const void *base, size_t size, util::flags flags) noexcept {
 	this->release();
-	util::buffer::buffer(base, size, flags);
-}
 
-size_t util::buffer::use_count() const noexcept {
-	return this->_p ? this->_p->use_count.load(std::memory_order_relaxed) : 0;
-}
+	this->_data = (void*)base;
+	this->_size = size;
 
-bool util::buffer::is_strong() const noexcept {
-	return this->_p;
-}
-
-bool util::buffer::is_weak() const noexcept {
-	return !this->_p;
-}
-
-util::buffer::operator bool() const noexcept {
-	return this->_p != nullptr;
-}
-
-util::buffer::operator void*() const noexcept {
-	return this->data<void>();
-}
-
-util::buffer::operator char*() const noexcept {
-	return this->data<char>();
-}
-
-util::buffer::operator unsigned char*() const noexcept {
-	return this->data<unsigned char>();
-}
-
-uint8_t *util::buffer::get() const noexcept {
-	return this->data<uint8_t>();
-}
-
-size_t util::buffer::size() const noexcept {
-	return this->_size;
+	switch (flags) {
+		case util::flags::strong:
+			this->_p = new control((void*)base);
+			break;
+		case util::flags::copy:
+			this->copy();
+			break;
+		default:
+			;
+	}
 }
 
 util::buffer util::buffer::copy(size_t size) const noexcept {
@@ -164,14 +142,48 @@ util::buffer util::buffer::slice(ssize_t start, ssize_t end) const noexcept {
 		buffer._size = end - start;
 		buffer.retain();
 	}
-
+	
 	return buffer;
 }
 
-void util::buffer::swap(util::buffer &other) noexcept {
-	std::swap(this->_p, other._p);
-	std::swap(this->_data, other._data);
-	std::swap(this->_size, other._size);
+bool util::buffer::is_strong() const noexcept {
+	return this->_p;
+}
+
+bool util::buffer::is_weak() const noexcept {
+	return !this->_p;
+}
+
+util::buffer::operator void*() const noexcept {
+	return this->data<void>();
+}
+
+util::buffer::operator char*() const noexcept {
+	return this->data<char>();
+}
+
+util::buffer::operator unsigned char*() const noexcept {
+	return this->data<unsigned char>();
+}
+
+char& util::buffer::operator[](size_t pos) const noexcept {
+	return *(this->data<char>() + pos);
+}
+
+util::buffer::operator bool() const noexcept {
+	return this->_p != nullptr;
+}
+
+size_t util::buffer::use_count() const noexcept {
+	return this->_p ? this->_p->use_count.load(std::memory_order_relaxed) : 0;
+}
+
+uint8_t *util::buffer::get() const noexcept {
+	return this->data<uint8_t>();
+}
+
+size_t util::buffer::size() const noexcept {
+	return this->_size;
 }
 
 /*

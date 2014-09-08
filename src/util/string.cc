@@ -41,7 +41,7 @@ void util::string::reserve(size_t size) {
 		 */
 		size_t cap = this->capacity();
 		cap = cap > (size + (size >> 1)) ? size : std::max(cap + (cap >> 1), size);
-		this->_buffer.copy(cap);
+		this->_buffer = this->_buffer.copy(cap);
 	}
 }
 
@@ -72,6 +72,6 @@ void util::string::append(size_t size) {
 
 	if (size > cap) {
 		// see reserve(size_t) for details
-		this->_buffer.copy(std::max(cap + (cap >> 1), size));
+		this->_buffer = this->_buffer.copy(std::max(cap + (cap >> 1), size));
 	}
 }

@@ -129,10 +129,7 @@ public:
 	operator void*() const noexcept;
 	operator char*() const noexcept;
 	operator unsigned char*() const noexcept;
-
-	char& operator[](size_t pos) const noexcept {
-		return *(this->data<char>() + pos);
-	}
+	char& operator[](size_t pos) const noexcept;
 
 	explicit operator bool() const noexcept;
 	size_t use_count() const noexcept;
