@@ -30,3 +30,7 @@ uv::loop::operator uv_loop_t*() {
 uv::loop::operator const uv_loop_t*() const {
 	return &this->_loop;
 }
+
+bool uv::loop::alive() {
+	return uv_loop_alive(&this->_loop);
+}

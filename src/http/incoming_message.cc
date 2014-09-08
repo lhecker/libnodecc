@@ -102,7 +102,7 @@ http::incoming_message::incoming_message(net::socket &socket) : socket(socket) {
 
 			// TODO: handle upgrade
 			if (this->_parser->upgrade == 1 || nparsed != buffer.size()) {
-				this->socket.close();
+				this->socket.shutdown();
 			}
 		}
 	};

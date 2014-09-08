@@ -95,7 +95,7 @@ uv_buf_t str_status_code(uint16_t status_code) {
 }
 
 
-http::server_response::server_response(net::socket &socket) : request_response_proto(), socket(socket), status_code(200), _close_on_end(false) {
+http::server_response::server_response(net::socket &socket) : request_response_proto(), socket(socket), status_code(200), _shutdown_on_end(false) {
 }
 
 void http::server_response::send_headers() {
@@ -156,8 +156,8 @@ bool http::server_response::socket_write(const util::buffer bufs[], size_t bufcn
 bool http::server_response::end() {
 	bool ret = http::request_response_proto::end();
 
-	if (this->_close_on_end) {
-		this->socket.close();
+	if (this->_shutdown_on_end) {
+		this->socket.shutdown();
 	}
 
 	return ret;

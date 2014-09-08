@@ -18,13 +18,13 @@ public:
 	uint16_t status_code;
 
 private:
-	// http::server needs exclusive access to _close_on_end
+	// http::server needs exclusive access to _shutdown_on_end
 	friend class server;
 
 	void send_headers();
 	bool socket_write(const util::buffer bufs[], size_t bufcnt);
 
-	bool _close_on_end;
+	bool _shutdown_on_end;
 };
 
 } // namespace http

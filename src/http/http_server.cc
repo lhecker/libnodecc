@@ -32,18 +32,18 @@ http::server::server() : net::server() {
 
 			if (isHTTP11) {
 				if (!hasConnectionHeader || iter->second != "keep-alive") {
-					res->_close_on_end = true;
+					res->_shutdown_on_end = true;
 				}
 			} else {
 				if (hasConnectionHeader && iter->second == "close") {
-					res->_close_on_end = true;
+					res->_shutdown_on_end = true;
 				}
 			}
 
 			if (this->on_request) {
 				this->on_request(*req, *res);
 			} else {
-				res->socket.close();
+				res->socket.shutdown();
 			}
 		};
 

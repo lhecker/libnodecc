@@ -1,7 +1,6 @@
 #ifndef nodecc_uv_stream_h
 #define nodecc_uv_stream_h
 
-#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <vector>
@@ -15,8 +14,6 @@ namespace uv {
 template<typename T>
 class stream : public uv::handle<T> {
 public:
-	typedef stream stream_type;
-
 	typedef std::function<void(int err, const util::buffer &buffer)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
 	
@@ -45,8 +42,6 @@ public:
 				buffer.reset(buf->base, nread, util::strong);
 			}
 
-			assert(buffer.data() && buffer.size());
-
 			if (nread != 0 && self->on_read) {
 				self->on_read(nread < 0 ? nread : 0, buffer);
 			}
@@ -62,38 +57,52 @@ public:
 	}
 
 	bool write(const util::buffer bufs[], size_t bufcnt, const on_write_t &on_write = nullptr) {
-		auto packed_req = new packed_write_req(bufs, bufcnt, on_write);
-		auto uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
+		struct packed_req {
+			constexpr packed_req(const util::buffer bufs[], size_t bufcnt, const on_write_t &cb) : cb(cb), bufs(bufs, bufs + bufcnt) {}
+
+			uv_write_t req;
+			on_write_t cb;
+			std::vector<util::buffer> bufs;
+		};
+
+		packed_req *pack = new packed_req(bufs, bufcnt, on_write);
+		uv_buf_t *uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
 
 		for (size_t i = 0; i < bufcnt; i++) {
 			uv_bufs[i].base = bufs[i].data<char>();
 			uv_bufs[i].len  = bufs[i].size();
 		}
 
-		return 0 == uv_write(&packed_req->req, *this, uv_bufs, bufcnt, [](uv_write_t *req, int status) {
-			packed_write_req *packed_req = reinterpret_cast<packed_write_req*>(req);
+		return 0 == uv_write(&pack->req, *this, uv_bufs, bufcnt, [](uv_write_t *req, int status) {
+			packed_req *pack = reinterpret_cast<packed_req*>(req);
 
-			if (packed_req->cb) {
-				packed_req->cb(status);
+			if (pack->cb) {
+				pack->cb(status);
 			}
 
-			delete packed_req;
+			delete pack;
 		});
+	}
+
+	void shutdown() {
+		if (!uv_is_closing(*this)) {
+			auto shutdown_cb = [](uv_shutdown_t *req, int status) {
+				uv::stream<T> *self = reinterpret_cast<uv::stream<T>*>(req->data);
+				self->close();
+				delete req;
+			};
+
+			uv_shutdown_t *req = new uv_shutdown_t;
+			req->data = this;
+			int ret = uv_shutdown(req, *this, shutdown_cb);
+			if (ret != 0) {
+				delete req;
+			}
+		}
 	}
 
 
 	on_read_t on_read;
-
-private:
-	struct packed_write_req {
-		constexpr packed_write_req(const util::buffer bufs[], size_t bufcnt, const on_write_t &cb) : cb(cb), bufs(bufs, bufs + bufcnt) {
-			static_assert(std::is_standard_layout<packed_write_req>::value && offsetof(packed_write_req, req) == 0, "packed_write_req needs to be in standard layout!");
-		}
-
-		uv_write_t req;
-		on_write_t cb;
-		std::vector<util::buffer> bufs;
-	};
 };
 
 } // namespace uv
