@@ -1,8 +1,5 @@
 #include "libnodecc/dns/dns.h"
 
-#include <uv.h>
-#include <memory>
-
 
 namespace {
 
@@ -25,7 +22,7 @@ struct addrinfo_deleter {
 };
 
 
-void dns::lookup(uv_loop_t *loop, const std::string &domain, const on_lookup_t &cb) {
+void dns::lookup(uv::loop &loop, const std::string &domain, const on_lookup_t &cb) {
 	auto packed_req = new getaddrinfo_packed_req(cb);
 
 	uv_getaddrinfo(loop, &packed_req->req, [](uv_getaddrinfo_t *req, int status, struct addrinfo *res) {

@@ -18,8 +18,6 @@ public:
 
 	explicit server();
 
-	using net::server::init;
-
 
 	std::unordered_set<net::socket, std::hash<net::socket::handle_type>> clients;
 

@@ -105,6 +105,7 @@
 				'include/libnodecc/util/buffer.h',
 				'include/libnodecc/util/string.h',
 				'include/libnodecc/uv/handle.h',
+				'include/libnodecc/uv/loop.h',
 				'include/libnodecc/uv/stream.h',
 				'src/dns/dns.cc',
 				'src/http/client_request.cc',
@@ -117,6 +118,7 @@
 				'src/net/socket.cc',
 				'src/util/buffer.cc',
 				'src/util/string.cc',
+				'src/uv/loop.cc',
 			],
 			'dependencies': [
 				'deps/json11.gyp:json11',

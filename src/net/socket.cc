@@ -55,7 +55,7 @@ struct net_socket_connect {
 net::socket::socket() : uv::stream<uv_tcp_t>() {
 }
 
-bool net::socket::init(uv_loop_t *loop) {
+bool net::socket::init(uv::loop &loop) {
 	return 0 == uv_tcp_init(loop, *this);
 }
 

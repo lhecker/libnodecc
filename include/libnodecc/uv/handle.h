@@ -3,7 +3,8 @@
 
 #include <functional>
 #include <cmath>
-#include <uv.h>
+
+#include "loop.h"
 
 
 namespace uv {
@@ -24,10 +25,12 @@ public:
 	handle& operator=(const handle&) = delete;
 
 
+	operator uv::loop&() { return reinterpret_cast<uv::loop&>(*this->_handle.loop); }
 	operator uv_loop_t*() { return this->_handle.loop; }
 	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
 	operator T*() { return &this->_handle; }
 
+	operator const uv::loop&() const { return reinterpret_cast<const uv::loop&>(*this->_handle.loop); }
 	operator const uv_loop_t*() const { return this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 	operator const T*() const { return &this->_handle; }

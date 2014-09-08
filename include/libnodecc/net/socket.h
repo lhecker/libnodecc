@@ -15,7 +15,7 @@ public:
 
 	explicit socket();
 
-	bool init(uv_loop_t *loop);
+	bool init(uv::loop &loop);
 
 	bool connect(const std::string &address, uint16_t port);
 

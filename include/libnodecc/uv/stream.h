@@ -1,6 +1,7 @@
 #ifndef nodecc_uv_stream_h
 #define nodecc_uv_stream_h
 
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <vector>
@@ -43,6 +44,8 @@ public:
 			if (nread >= 0 && buf->base) {
 				buffer.reset(buf->base, nread, util::strong);
 			}
+
+			assert(buffer.data() && buffer.size());
 
 			if (nread != 0 && self->on_read) {
 				self->on_read(nread < 0 ? nread : 0, buffer);

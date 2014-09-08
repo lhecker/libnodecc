@@ -13,10 +13,12 @@ public:
 
 	explicit server();
 
-	bool init(uv_loop_t *loop);
+	bool init(uv::loop &loop);
 
 	bool listen(uint16_t port, const std::string &ip = "0.0.0.0", int backlog = 511);
 	bool accept(net::socket &client);
+
+	uint16_t port();
 
 
 	on_connection_t on_connection;
