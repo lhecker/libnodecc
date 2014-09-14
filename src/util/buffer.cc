@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cstdlib>
 
+#include "libnodecc/util/string.h"
+
 
 namespace util {
 
@@ -24,6 +26,10 @@ util::buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._
 	this->retain();
 }
 
+util::buffer::buffer(const util::string& other) noexcept : _p(other._p), _data(other._data), _size(other.size()) {
+	this->retain();
+}
+
 util::buffer& util::buffer::operator=(const buffer& other) noexcept {
 	this->release();
 	this->_p = other._p;
@@ -35,6 +41,24 @@ util::buffer& util::buffer::operator=(const buffer& other) noexcept {
 }
 
 util::buffer::buffer(size_t size) noexcept {
+	this->reset(size);
+}
+
+util::buffer::~buffer() noexcept {
+	this->release();
+}
+
+void util::buffer::swap(util::buffer& other) noexcept {
+	std::swap(this->_p, other._p);
+	std::swap(this->_data, other._data);
+	std::swap(this->_size, other._size);
+}
+
+void util::buffer::reset() noexcept {
+	this->release();
+}
+
+void util::buffer::reset(size_t size) noexcept {
 	if (size > 0) {
 		uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
 		uint8_t* data = base + sizeof(control);
@@ -52,22 +76,6 @@ util::buffer::buffer(size_t size) noexcept {
 	this->_size = 0;
 }
 
-util::buffer::~buffer() noexcept {
-	this->release();
-}
-
-void util::buffer::swap(util::buffer& other) noexcept {
-	std::swap(this->_p, other._p);
-	std::swap(this->_data, other._data);
-	std::swap(this->_size, other._size);
-}
-
-void util::buffer::reset() noexcept {
-	this->_p = nullptr;
-	this->_data = nullptr;
-	this->_size = 0;
-}
-
 void util::buffer::reset(const void* base, size_t size, util::flags flags) noexcept {
 	this->release();
 
@@ -79,7 +87,7 @@ void util::buffer::reset(const void* base, size_t size, util::flags flags) noexc
 		this->_p = new control((void*)base);
 		break;
 	case util::flags::copy:
-		this->copy();
+		this->copy(*this);
 		break;
 	default:
 		;
@@ -88,24 +96,7 @@ void util::buffer::reset(const void* base, size_t size, util::flags flags) noexc
 
 util::buffer util::buffer::copy(size_t size) const noexcept {
 	util::buffer buffer;
-
-	if (size == 0) {
-		size = this->_size;
-	}
-
-	uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
-	uint8_t* data = base + sizeof(control);
-
-	if (base) {
-		if (this->_data) {
-			memcpy(data, this->_data, std::min(size, this->_size));
-		}
-
-		buffer._p = new(base) control(base);
-		buffer._data = data;
-		buffer._size = size;
-	}
-
+	this->copy(buffer, size);
 	return buffer;
 }
 
@@ -170,14 +161,6 @@ char& util::buffer::operator[](size_t pos) const noexcept {
 	return *(this->data<char>() + pos);
 }
 
-bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept {
-	return lhs.data() == rhs.data();
-}
-
-bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept {
-	return lhs.data() != rhs.data();
-}
-
 util::buffer::operator bool() const noexcept {
 	return this->_p != nullptr;
 }
@@ -192,6 +175,29 @@ uint8_t* util::buffer::get() const noexcept {
 
 size_t util::buffer::size() const noexcept {
 	return this->_size;
+}
+
+void util::buffer::copy(util::buffer& target, std::size_t size) const noexcept {
+	if (size == 0) {
+		size = this->_size;
+	}
+
+	uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
+	uint8_t* data = base + sizeof(control);
+
+	if (base) {
+		if (this->_data) {
+			memcpy(data, this->_data, std::min(size, this->_size));
+		}
+
+		target._p = new(base) control(base);
+		target._data = data;
+		target._size = size;
+	} else {
+		target._p = nullptr;
+		target._data = nullptr;
+		target._size = 0;
+	}
 }
 
 /*
@@ -217,5 +223,15 @@ void util::buffer::release() noexcept {
 		}
 	}
 
-	this->reset();
+	this->_p = nullptr;
+	this->_data = nullptr;
+	this->_size = 0;
+}
+
+bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept {
+	return lhs.data() == rhs.data();
+}
+
+bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept {
+	return lhs.data() != rhs.data();
 }

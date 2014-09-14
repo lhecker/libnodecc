@@ -3,7 +3,7 @@
 
 util::string& util::string::append(const void* data, size_t size) {
 	this->append(size);
-	memcpy(this->_buffer.get() + this->_used, data, size);
+	memcpy(this->get() + this->_used, data, size);
 	this->_used += size;
 	return *this;
 }
@@ -41,12 +41,12 @@ void util::string::reserve(size_t size) {
 		 */
 		size_t cap = this->capacity();
 		cap = cap > (size + (size >> 1)) ? size : std::max(cap + (cap >> 1), size);
-		this->_buffer = this->_buffer.copy(cap);
+		this->copy(*this, cap);
 	}
 }
 
 void util::string::clear() {
-	this->_buffer.reset();
+	this->reset();
 	this->_used = 0;
 }
 
@@ -55,15 +55,7 @@ size_t util::string::size() const {
 }
 
 size_t util::string::capacity() const {
-	return this->_buffer.size();
-}
-
-util::buffer util::string::buffer() const {
-	return this->_buffer.slice(0, this->size());
-}
-
-util::string::operator util::buffer() const {
-	return this->buffer();
+	return this->size();
 }
 
 void util::string::append(size_t size) {
@@ -72,6 +64,6 @@ void util::string::append(size_t size) {
 
 	if (size > cap) {
 		// see reserve(size_t) for details
-		this->_buffer = this->_buffer.copy(std::max(cap + (cap >> 1), size));
+		this->copy(*this, std::max(cap + (cap >> 1), size));
 	}
 }

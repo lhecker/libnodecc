@@ -15,11 +15,13 @@ enum flags : uint8_t {
 	copy   = 0x02,
 };
 
+class string;
+
 /**
  * A immutable buffer, with optional reference counting.
  *
  * It can either strongly manage a C buffer
- *(one which must be returned with the free() function)
+ * (that is, one which was allocated with malloc etc.)
  * using reference counting similiar to std::shared_ptr,
  * or weakly reference some buffer.
  */
@@ -28,17 +30,22 @@ public:
 	/**
 	 * Creates an empty buffer.
 	 */
-	constexpr buffer() : _p(nullptr), _data(nullptr), _size(0) {};
+	constexpr buffer() : _p(nullptr), _data(nullptr), _size(0) {}
 
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer(const buffer& other) noexcept;
+	buffer(const util::buffer& other) noexcept;
+
+	/**
+	 * Specialized cast from util::string to it's base class util::buffer.
+	 */
+	buffer(const util::string& other) noexcept;
 
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer& operator=(const buffer& other) noexcept;
+	buffer& operator=(const util::buffer& other) noexcept;
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -64,7 +71,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename T>
-	explicit buffer(const std::vector<T>& vec, util::flags flags) noexcept : buffer((void*)vec.data(), vec.size(), flags) {}
+	explicit buffer(const std::vector<T>& vec, util::flags flags) noexcept : util::buffer((void*)vec.data(), vec.size(), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified std::basic_string.
@@ -73,7 +80,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename charT, typename traits, typename Allocator>
-	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, util::flags flags) noexcept : buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
+	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, util::flags flags) noexcept : util::buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified vector.
@@ -81,7 +88,7 @@ public:
 	 * @param  vec   The Null-terminated byte string which should be referred to.
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	explicit buffer(const char* str, util::flags flags) noexcept : buffer((void*)str, strlen(str), flags) {}
+	explicit buffer(const char* str, util::flags flags) noexcept : util::buffer((void*)str, strlen(str), flags) {}
 
 
 	~buffer() noexcept;
@@ -96,6 +103,11 @@ public:
 	 * Releases the buffer and resets it's data and size to zero.
 	 */
 	void reset() noexcept;
+
+	/**
+	 * Releases the buffer and creates a new one with the specified size.
+	 */
+	void reset(size_t size) noexcept;
 
 	/**
 	 * Releases the current buffer and sets it's new memory it should refer to.
@@ -132,25 +144,42 @@ public:
 	operator unsigned char*() const noexcept;
 	char& operator[](std::size_t pos) const noexcept;
 
-	friend bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept;
-	friend bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept;
-
 	explicit operator bool() const noexcept;
 	std::size_t use_count() const noexcept;
 
 	uint8_t* get() const noexcept;
 
-	template<typename T = void>
+	template<typename T = uint8_t>
 	T* data() const noexcept {
 		return reinterpret_cast<T*>(this->_data);
 	}
 
 	std::size_t size() const noexcept;
 
+
+	friend bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept;
+	friend bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept;
+
 protected:
 	struct control;
 
+	/**
+	 * Creates a copy of this buffer in target, while optionally resizing it.
+	 *
+	 * This method DOES NOT release() target!.
+	 */
+	void copy(util::buffer& target, std::size_t size = 0) const noexcept;
+
+	/**
+	 * Retains this buffer, incrementing it's reference count by one,
+	 * using std::memory_order_relaxed.
+	 */
 	void retain() noexcept;
+
+	/**
+	 * Releases this buffer, decrementing it's reference count by one,
+	 * using std::memory_order_release and a std::memory_order_acquire fence.
+	 */
 	void release() noexcept;
 
 	control* _p;
