@@ -1,7 +1,5 @@
 #include "libnodecc/http/request_response_proto.h"
 
-#include <cassert>
-
 #include "libnodecc/net/socket.h"
 #include "libnodecc/util/string.h"
 
@@ -30,9 +28,6 @@ bool http::request_response_proto::write(const util::buffer& buf) {
 }
 
 bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcnt) {
-	assert(bufs != nullptr);
-	assert(bufcnt > 0);
-
 	bool ret;
 
 	if (!this->headers_sent()) {
@@ -98,10 +93,52 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 }
 
 bool http::request_response_proto::end() {
+	return this->end(nullptr, 0);
+}
+
+bool http::request_response_proto::end(const util::buffer& buf) {
+	return this->end(&buf, 1);
+}
+
+bool http::request_response_proto::end(const util::buffer bufs[], size_t bufcnt) {
 	bool ret = true;
 
 	if (!this->headers_sent()) {
-		this->send_headers();
+		if (bufcnt) {
+			size_t contentLength = 0;
+			size_t i = 0;
+
+			for (; i < bufcnt; i++) {
+				size_t size = bufs[i].size();
+
+				/*
+				 * Make sure that we don't cause a integer overflow when summing buffer sizes.
+				 * If an overflow happens break this loop and
+				 * send the data using the chunked transfer encoding.
+				 */
+				if (size > SIZE_T_MAX - contentLength) {
+					break;
+				}
+
+				contentLength += bufs[i].size();
+			}
+
+			if (i == bufcnt) {
+				// the loop above finished without an overflow
+				this->set_header("content-length", std::to_string(contentLength));
+				this->send_headers();
+
+				if (bufcnt) {
+					ret = this->socket_write(bufs, bufcnt);
+				}
+			} else {
+				// the loop above finished WITH an overflow --> send it using the chunked transfer encoding
+				this->write(bufs, bufcnt);
+			}
+		} else {
+			// header-only
+			this->send_headers();
+		}
 	}
 
 	if (this->_is_chunked) {

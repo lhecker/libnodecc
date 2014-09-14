@@ -15,35 +15,27 @@ http::server::server() : net::server() {
 			this->clients.erase(iter);
 		}
 
-		http::incoming_message* req = new http::incoming_message(socket);
+		http::incoming_message* req = new http::incoming_message(socket, HTTP_REQUEST);
 		http::server_response*  res = new http::server_response(socket);
 
 		socket.on_close = [this, req, res]() {
+			if (req->on_close) {
+				req->on_close();
+			}
+
 			const net::socket& socket = req->socket;
 			delete req;
 			delete res;
 			this->clients.erase(socket);
 		};
 
-		req->on_headers_complete = [this, req, res]() {
-			const auto iter = req->headers.find("connection");
-			bool hasConnectionHeader = iter != req->headers.end();
-			bool isHTTP11 = req->http_version_major == 1 && req->http_version_major == 1;
-
-			if (isHTTP11) {
-				if (!hasConnectionHeader || iter->second != "keep-alive") {
-					res->_shutdown_on_end = true;
-				}
-			} else {
-				if (hasConnectionHeader && iter->second == "close") {
-					res->_shutdown_on_end = true;
-				}
-			}
+		req->_on_headers_complete = [this, req, res](bool keep_alive) {
+			res->_shutdown_on_end = keep_alive;
 
 			if (this->on_request) {
 				this->on_request(*req, *res);
 			} else {
-				res->socket.shutdown();
+				res->socket.close();
 			}
 		};
 

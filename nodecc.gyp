@@ -92,9 +92,14 @@
 		{
 			'target_name': 'libnodecc',
 			'type': '<(uv_library)',
-			'include_dirs': [ 'include' ],
+			'include_dirs': [
+				'include',
+				'deps',
+			],
 			'sources': [
+				'deps/http-parser/http_parser.c',
 				'include/libnodecc/dns/dns.h',
+				'include/libnodecc/fs/event.h',
 				'include/libnodecc/http/client_request.h',
 				'include/libnodecc/http/incoming_message.h',
 				'include/libnodecc/http/request_response_proto.h',
@@ -103,13 +108,15 @@
 				'include/libnodecc/net/server.h',
 				'include/libnodecc/net/socket.h',
 				'include/libnodecc/util/buffer.h',
+				'include/libnodecc/util/notification_queue.h',
 				'include/libnodecc/util/string.h',
+				'include/libnodecc/util/timer.h',
 				'include/libnodecc/uv/handle.h',
 				'include/libnodecc/uv/loop.h',
 				'include/libnodecc/uv/stream.h',
 				'src/dns/dns.cc',
+				'src/fs/event.cc',
 				'src/http/client_request.cc',
-				'src/http/http-parser/http_parser.c',
 				'src/http/http_server.cc',
 				'src/http/incoming_message.cc',
 				'src/http/request_response_proto.cc',
@@ -118,6 +125,7 @@
 				'src/net/socket.cc',
 				'src/util/buffer.cc',
 				'src/util/string.cc',
+				'src/util/timer.cc',
 				'src/uv/loop.cc',
 			],
 			'dependencies': [
@@ -125,7 +133,10 @@
 				'deps/libuv/uv.gyp:libuv',
 			],
 			'direct_dependent_settings': {
-				'include_dirs': [ 'include' ],
+				'include_dirs': [
+					'include',
+					'deps',
+				],
 			},
 			'export_dependent_settings': [
 				'deps/json11.gyp:json11',

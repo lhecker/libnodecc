@@ -1,8 +1,5 @@
 #include "libnodecc/http/server_response.h"
 
-#include <cassert>
-#include <uv.h>
-
 #include "libnodecc/net/socket.h"
 #include "libnodecc/util/string.h"
 
@@ -122,9 +119,8 @@ void http::server_response::send_headers() {
 		tm t2;
 		gmtime_r(&t, &t2);
 		size_t written = strftime(dateBuf, 38, "date: %a, %d %b %Y %H:%M:%S GMT\r\n", &t2);
-		assert(written == 37);
 
-		buf.append(dateBuf, 37);
+		buf.append(dateBuf, written);
 	}
 
 	if (this->_is_chunked) {
@@ -153,12 +149,14 @@ bool http::server_response::socket_write(const util::buffer bufs[], size_t bufcn
 	return this->socket.write(bufs, bufcnt);
 }
 
-bool http::server_response::end() {
-	bool ret = http::request_response_proto::end();
+bool http::server_response::end(const util::buffer bufs[], size_t bufcnt) {
+	bool ret = http::request_response_proto::end(bufs, bufcnt);
 
 	if (this->_shutdown_on_end) {
 		this->socket.shutdown();
 	}
+
+	this->status_code = 200;
 
 	return ret;
 }

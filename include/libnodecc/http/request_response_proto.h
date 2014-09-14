@@ -41,6 +41,8 @@ public:
 	bool write(const util::buffer bufs[], size_t bufcnt);
 
 	bool end();
+	bool end(const util::buffer& buf);
+	virtual bool end(const util::buffer bufs[], size_t bufcnt);
 
 protected:
 	virtual void send_headers() = 0;

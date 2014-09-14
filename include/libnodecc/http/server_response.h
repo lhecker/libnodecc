@@ -6,11 +6,12 @@
 
 namespace http {
 
-class server_response : public request_response_proto {
+class server_response : public http::request_response_proto {
 public:
 	explicit server_response(net::socket& socket);
 
-	bool end();
+	using http::request_response_proto::end;
+	bool end(const util::buffer bufs[], size_t bufcnt);
 
 
 	net::socket& socket;
