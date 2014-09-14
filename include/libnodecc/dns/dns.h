@@ -15,7 +15,9 @@ namespace dns {
 
 typedef std::function<void(const std::shared_ptr<addrinfo> &res)> on_lookup_t;
 
-void lookup(uv::loop& loop, const std::string& domain, const on_lookup_t& cb);
+void lookup(const on_lookup_t& cb, uv::loop& loop, const std::string& domain, const addrinfo* hints = nullptr);
+void lookup(const on_lookup_t& cb, uv::loop& loop, const std::string& domain, uint16_t port, const addrinfo* hints = nullptr);
+void lookup(const on_lookup_t& cb, uv::loop& loop, const std::string& domain, const std::string& service, const addrinfo* hints = nullptr);
 
 } // namespace dns
 
