@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cctype>
 
-#include "http-parser/http_parser.h"
 #include "libnodecc/net/socket.h"
 
 
@@ -32,12 +31,17 @@ int http::incoming_message::parser_on_headers_complete(http_parser* parser) {
 
 	self->add_header_partials();
 
-	self->http_version_major = static_cast<uint8_t>(parser->http_major);
-	self->http_version_minor = static_cast<uint8_t>(parser->http_minor);
-	self->method = http_method_str((http_method)parser->method);
+	if (parser->type == HTTP_REQUEST) {
+		self->http_version_major = static_cast<uint8_t>(parser->http_major);
+		self->http_version_minor = static_cast<uint8_t>(parser->http_minor);
+		self->method = http_method_str(static_cast<http_method>(parser->method));
+	} else {
+		// HTTP_RESPONSE
+		self->status_code = static_cast<uint16_t>(parser->status_code);
+	}
 
-	if (self->on_headers_complete) {
-		self->on_headers_complete();
+	if (self->_on_headers_complete) {
+		self->_on_headers_complete(http_should_keep_alive(parser));
 	}
 
 	return 0;
@@ -46,9 +50,9 @@ int http::incoming_message::parser_on_headers_complete(http_parser* parser) {
 int http::incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<http::incoming_message*>(parser->data);
 
-	if (self->on_body) {
-		ssize_t start = self->_parserBuffer->get() - (uint8_t*)at;
-		self->on_body(self->_parserBuffer->slice(start, start + length));
+	if (self->on_data) {
+		ssize_t start = (uint8_t*)at - self->_parserBuffer->get();
+		self->on_data(self->_parserBuffer->slice(start, start + length));
 	}
 
 	return 0;
@@ -57,8 +61,8 @@ int http::incoming_message::parser_on_body(http_parser* parser, const char* at, 
 int http::incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<http::incoming_message*>(parser->data);
 
-	if (self->on_message_complete) {
-		self->on_message_complete();
+	if (self->on_end) {
+		self->on_end();
 	}
 
 	self->method.clear();
@@ -69,7 +73,7 @@ int http::incoming_message::parser_on_message_complete(http_parser* parser) {
 }
 
 
-http::incoming_message::incoming_message(net::socket& socket) : socket(socket) {
+http::incoming_message::incoming_message(net::socket& socket, http_parser_type type) : socket(socket) {
 	static const http_parser_settings http_req_parser_settings = {
 		nullptr,
 		http::incoming_message::parser_on_url,
@@ -82,34 +86,29 @@ http::incoming_message::incoming_message(net::socket& socket) : socket(socket) {
 	};
 
 
-	this->_parser = new http_parser;
-	http_parser_init(this->_parser, HTTP_REQUEST);
-	this->_parser->data = this;
+	http_parser_init(&this->_parser, type);
+	this->_parser.data = this;
 
 	this->headers.max_load_factor(0.75);
 
-	socket.on_read = [this](int err, const util::buffer & buffer) {
+	socket.on_read = [this](int err, const util::buffer& buffer) {
 		if (err) {
 			if (err == UV_EOF) {
-				http_parser_execute(this->_parser, &http_req_parser_settings, nullptr, 0);
+				http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 			}
 
 			this->socket.close();
 		} else {
 			this->_parserBuffer = &buffer;
-			size_t nparsed = http_parser_execute(this->_parser, &http_req_parser_settings, buffer, buffer.size());
+			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
 			this->_parserBuffer = nullptr;
 
 			// TODO: handle upgrade
-			if (this->_parser->upgrade == 1 || nparsed != buffer.size()) {
+			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {
 				this->socket.shutdown();
 			}
 		}
 	};
-}
-
-http::incoming_message::~incoming_message() {
-	delete this->_parser;
 }
 
 void http::incoming_message::add_header_partials() {
