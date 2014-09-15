@@ -101,7 +101,6 @@ http::incoming_message::incoming_message(net::socket& socket, http_parser_type t
 		} else {
 			this->_parserBuffer = &buffer;
 			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
-			this->_parserBuffer = nullptr;
 
 			// TODO: handle upgrade
 			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {

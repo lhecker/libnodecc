@@ -123,12 +123,6 @@ void http::server_response::send_headers() {
 		buf.append(dateBuf, written);
 	}
 
-	if (this->_is_chunked) {
-		if (!this->_headers.count("transfer-encoding")) {
-			buf.append("transfer-encoding: chunked\r\n");
-		}
-	}
-
 	{
 		for (const auto iter : this->_headers) {
 			buf.append(iter.first);

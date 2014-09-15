@@ -31,6 +31,10 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 	bool ret;
 
 	if (!this->headers_sent()) {
+		if (!this->_headers.count("transfer-encoding")) {
+			this->set_header("transfer-encoding", "chunked");
+		}
+
 		this->send_headers();
 		this->_headers_sent = true;
 	}
@@ -124,29 +128,29 @@ bool http::request_response_proto::end(const util::buffer bufs[], size_t bufcnt)
 			}
 
 			if (i == bufcnt) {
-				// the loop above finished without an overflow
+				// the loop above finished without an integer overflow
 				this->set_header("content-length", std::to_string(contentLength));
 				this->send_headers();
 
-				if (bufcnt) {
-					ret = this->socket_write(bufs, bufcnt);
-				}
+				ret = this->socket_write(bufs, bufcnt);
 			} else {
-				// the loop above finished WITH an overflow --> send it using the chunked transfer encoding
+				// the loop above finished WITH an integer overflow
+				// --> send it using the chunked transfer encoding
 				this->write(bufs, bufcnt);
 			}
 		} else {
 			// header-only
 			this->send_headers();
+			this->_headers_sent = false;
+			return false;
 		}
 	}
 
 	if (this->_is_chunked) {
 		util::buffer buffer = util::buffer("0\r\n\r\n", util::weak);
-		ret = this->socket_write(&buffer, 1);
+		ret = ret && this->socket_write(&buffer, 1);
 	}
 
 	this->_headers_sent = false;
-
 	return ret;
 }
