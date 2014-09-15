@@ -8,14 +8,14 @@ namespace util {
 
 class string : public util::buffer {
 public:
-	explicit string() : util::buffer(), _used(0) {}
-	explicit string(size_t size) : util::buffer(size), _used(0) {}
+	explicit string();
+	explicit string(size_t size);
 
 	template<typename charT>
 	void push_back(charT ch) {
 		this->append(sizeof(charT));
-		*reinterpret_cast<charT*>(this->get() + this->_used) = ch;
-		this->_used += sizeof(charT);
+		*reinterpret_cast<charT*>(this->get() + this->_size) = ch;
+		this->_size += sizeof(charT);
 	}
 
 	template<typename charT>
@@ -52,13 +52,12 @@ public:
 	void reserve(size_t size);
 	void clear();
 
-	size_t size() const;
 	size_t capacity() const;
 
 private:
 	void append(size_t size);
 
-	size_t _used;
+	size_t _real_size;
 };
 
 } // namespace util

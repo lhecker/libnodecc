@@ -26,10 +26,6 @@ util::buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._
 	this->retain();
 }
 
-util::buffer::buffer(const util::string& other) noexcept : _p(other._p), _data(other._data), _size(other.size()) {
-	this->retain();
-}
-
 util::buffer& util::buffer::operator=(const buffer& other) noexcept {
 	this->release();
 	this->_p = other._p;

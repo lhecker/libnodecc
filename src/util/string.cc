@@ -1,10 +1,17 @@
 #include "libnodecc/util/string.h"
 
 
+util::string::string() : util::buffer(), _real_size(0) {
+}
+
+util::string::string(size_t size) : util::buffer(size), _real_size(size) {
+	this->_size = 0;
+}
+
 util::string& util::string::append(const void* data, size_t size) {
 	this->append(size);
-	memcpy(this->get() + this->_used, data, size);
-	this->_used += size;
+	memcpy(this->get() + this->_size, data, size);
+	this->_size += size;
 	return *this;
 }
 
@@ -41,29 +48,35 @@ void util::string::reserve(size_t size) {
 		 */
 		size_t cap = this->capacity();
 		cap = cap > (size + (size >> 1)) ? size : std::max(cap + (cap >> 1), size);
+
+		// util::buffer::copy modifies _size ---> create a backup
+		size_t _size = this->_size;
 		this->copy(*this, cap);
+		this->_size = _size;
 	}
 }
 
 void util::string::clear() {
 	this->reset();
-	this->_used = 0;
-}
-
-size_t util::string::size() const {
-	return this->_used;
+	this->_real_size = 0;
 }
 
 size_t util::string::capacity() const {
-	return this->size();
+	return this->_real_size;
 }
 
 void util::string::append(size_t size) {
 	size_t cap = this->capacity();
 	size += this->size();
 
+	if (size < 16) {
+		size = 16;
+	}
+
 	if (size > cap) {
 		// see reserve(size_t) for details
+		size_t _size = this->_size;
 		this->copy(*this, std::max(cap + (cap >> 1), size));
+		this->_size = _size;
 	}
 }

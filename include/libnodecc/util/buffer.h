@@ -38,11 +38,6 @@ public:
 	buffer(const util::buffer& other) noexcept;
 
 	/**
-	 * Specialized cast from util::string to it's base class util::buffer.
-	 */
-	buffer(const util::string& other) noexcept;
-
-	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
 	buffer& operator=(const util::buffer& other) noexcept;
