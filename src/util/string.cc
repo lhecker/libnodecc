@@ -4,8 +4,8 @@
 util::string::string() : util::buffer(), _real_size(0) {
 }
 
-util::string::string(size_t size) : util::buffer(size), _real_size(size) {
-	this->_size = 0;
+util::string::string(size_t size) : util::buffer(size), _real_size(0) {
+	std::swap(this->_size, this->_real_size);
 }
 
 util::string& util::string::append(const void* data, size_t size) {
@@ -49,9 +49,9 @@ void util::string::reserve(size_t size) {
 		size_t cap = this->capacity();
 		cap = cap > (size + (size >> 1)) ? size : std::max(cap + (cap >> 1), size);
 
-		// util::buffer::copy modifies _size ---> create a backup
 		size_t _size = this->_size;
 		this->copy(*this, cap);
+		this->_real_size = this->_size;
 		this->_size = _size;
 	}
 }
@@ -77,6 +77,7 @@ void util::string::append(size_t size) {
 		// see reserve(size_t) for details
 		size_t _size = this->_size;
 		this->copy(*this, std::max(cap + (cap >> 1), size));
+		this->_real_size = this->_size;
 		this->_size = _size;
 	}
 }

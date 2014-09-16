@@ -38,6 +38,11 @@ public:
 	buffer(const util::buffer& other) noexcept;
 
 	/**
+	 * Takes over another buffer.
+	 */
+	buffer(util::buffer&& other) noexcept;
+
+	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
 	buffer& operator=(const util::buffer& other) noexcept;

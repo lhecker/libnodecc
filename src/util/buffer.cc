@@ -22,11 +22,16 @@ util::buffer::buffer(const void* base, size_t size, util::flags flags) noexcept 
 	this->reset(base, size, flags);
 }
 
-util::buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+util::buffer::buffer(const util::buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	this->retain();
 }
 
-util::buffer& util::buffer::operator=(const buffer& other) noexcept {
+util::buffer::buffer(util::buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+	// prevent release() in the destructor of other
+	other._p = nullptr;
+}
+
+util::buffer& util::buffer::operator=(const util::buffer& other) noexcept {
 	this->release();
 	this->_p = other._p;
 	this->_data = other._data;
