@@ -40,4 +40,4 @@ protected:
 
 } // namespace uv
 
-#endif
+#endif // nodecc_loop_h

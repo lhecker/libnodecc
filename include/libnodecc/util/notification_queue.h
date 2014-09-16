@@ -5,21 +5,21 @@
 #include <mutex>
 #include <vector>
 
-#include "../uv/handle.h"
+#include "../uv/async.h"
 
 
 namespace util {
 
 template<typename T>
-class notification_queue : public uv::handle<uv_async_t> {
+class notification_queue : public uv::async {
 public:
 	typedef std::function<void(const T&)> on_notification_t;
 
 
-	explicit notification_queue() : uv::handle<uv_async_t>() {}
+	explicit notification_queue() : uv::async() {}
 
 	bool init(uv::loop& loop) {
-		bool ok = 0 == uv_async_init(loop, *this, [](uv_async_t* handle) {
+		bool ok = uv::async::init(loop, [](uv_async_t* handle) {
 			auto self = reinterpret_cast<util::notification_queue<T>*>(handle->data);
 
 			std::vector<T> queue;
@@ -38,8 +38,16 @@ public:
 			}
 		});
 
-		if (ok && !this->_queue.empty()) {
-			uv_async_send(*this);
+		if (ok) {
+			bool is_empty;
+			{
+				std::lock_guard<std::mutex> guard(this->_mutex);
+				is_empty = this->_queue.empty();
+			}
+
+			if (!is_empty) {
+				this->send();
+			}
 		}
 
 		return ok;
@@ -51,7 +59,7 @@ public:
 			this->_queue.push_back(value);
 		}
 
-		uv_async_send(*this);
+		this->send();
 	}
 
 	void push_back(T&& value) {
@@ -60,7 +68,7 @@ public:
 			this->_queue.push_back(std::forward<T>(value));
 		}
 
-		uv_async_send(*this);
+		this->send();
 	}
 
 	template<typename... Args>
@@ -70,7 +78,7 @@ public:
 			this->_queue.emplace_back(std::forward<Args>(args)...);
 		}
 
-		uv_async_send(*this);
+		this->send();
 	}
 
 	template<typename... Args>
