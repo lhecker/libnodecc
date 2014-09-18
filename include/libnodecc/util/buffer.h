@@ -159,6 +159,7 @@ public:
 	std::size_t size() const noexcept;
 
 
+	int compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept;
 	int compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept;
 	int compare(const void* data2, std::size_t size2) const noexcept;
 	int compare(const util::buffer& other) const noexcept;

@@ -41,7 +41,7 @@ util::buffer& util::buffer::operator=(const util::buffer& other) noexcept {
 	return *this;
 }
 
-util::buffer::buffer(size_t size) noexcept {
+util::buffer::buffer(size_t size) noexcept : _p(nullptr) {
 	this->reset(size);
 }
 
@@ -189,23 +189,31 @@ size_t util::buffer::size() const noexcept {
 	return this->_size;
 }
 
-int util::buffer::compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
-	int r = memcmp(this->get(), data2, std::min(size1, size2));
+int util::buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+	int r = 0;
 
-	if (r == 0) {
-		r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
+	if (pos1 < this->size() && size1 <= (this->size() - pos1) && data2) {
+		r = memcmp(this->get() + pos1, data2, std::min(size1, size2));
+
+		if (r == 0) {
+			r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
+		}
 	}
 
 	return r;
 
 }
 
+int util::buffer::compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+	return this->compare(0, size1, data2, size2);
+}
+
 int util::buffer::compare(const void* data2, std::size_t size2) const noexcept {
-	return this->compare(this->size(), data2, size2);
+	return this->compare(0, this->size(), data2, size2);
 }
 
 int util::buffer::compare(const util::buffer& other) const noexcept {
-	return this->compare(this->size(), other.get(), other.size());
+	return this->compare(0, this->size(), other.get(), other.size());
 }
 
 void util::buffer::copy(util::buffer& target, std::size_t size) const noexcept {
