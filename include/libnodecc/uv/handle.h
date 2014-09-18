@@ -9,6 +9,8 @@
 
 namespace uv {
 
+void handle_on_close(uv_handle_t* handle);
+
 template<typename T>
 class handle {
 public:
@@ -28,11 +30,14 @@ public:
 	operator uv::loop&() { return reinterpret_cast<uv::loop&>(*this->_handle.loop->data); }
 	operator uv_loop_t*() { return this->_handle.loop; }
 	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
-	operator T*() { return &this->_handle; }
 
 	operator const uv::loop&() const { return reinterpret_cast<const uv::loop&>(*this->_handle.loop->data); }
 	operator const uv_loop_t*() const { return this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
+
+	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>
+	operator T*() { return &this->_handle; }
+	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>
 	operator const T*() const { return &this->_handle; }
 
 
@@ -49,13 +54,7 @@ public:
 
 	void close() {
 		if (!uv_is_closing(*this)) {
-			uv_close(*this, [](uv_handle_t* handle) {
-				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
-
-				if (self && self->on_close) {
-					self->on_close();
-				}
-			});
+			uv_close(*this, uv::handle_on_close);
 		}
 	}
 

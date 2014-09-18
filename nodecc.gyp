@@ -129,6 +129,7 @@
 				'src/util/string.cc',
 				'src/util/timer.cc',
 				'src/uv/async.cc',
+				'src/uv/handle.cc',
 				'src/uv/loop.cc',
 				'src/uv/queue_work.cc',
 			],
