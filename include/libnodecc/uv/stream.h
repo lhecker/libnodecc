@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <vector>
 
-#include "../util/buffer.h"
+#include "../util/string.h"
 #include "handle.h"
 
 
@@ -25,8 +25,7 @@ public:
 	}
 
 	bool read_start() {
-		// TODO getter/setter
-		if (!this->on_read) {
+		if (static_cast<const uv_stream_t*>(*this)->read_cb) {
 			return false;
 		}
 
@@ -36,14 +35,11 @@ public:
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			auto self = reinterpret_cast<uv::stream<T>*>(stream->data);
 
-			util::buffer buffer;
-
-			if (nread >= 0 && buf->base) {
-				buffer.reset(buf->base, nread, util::strong);
-			}
-
 			if (nread != 0 && self->on_read) {
+				util::buffer buffer(buf->base, nread, util::strong);
 				self->on_read(nread < 0 ? nread : 0, buffer);
+			} else {
+				free(buf->base);
 			}
 		});
 	}

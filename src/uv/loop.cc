@@ -53,8 +53,9 @@ void uv::loop::next_tick(const on_tick_t& cb) {
 	this->_tick_callbacks.emplace_back(cb);
 	uv_async_send(&this->_tick_async);
 }
+
 void uv::loop::next_tick(on_tick_t&& cb) {
-	this->_tick_callbacks.emplace_back(std::forward<on_tick_t>(cb));
+	this->_tick_callbacks.emplace_back(std::move(cb));
 	uv_async_send(&this->_tick_async);
 }
 

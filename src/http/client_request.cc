@@ -18,6 +18,12 @@ http::client_request::client_request() : request_response_proto(), _incoming_mes
 		}
 	};
 
+	this->_socket.on_close = [this]() {
+		if (this->_incoming_message.on_close) {
+			this->_incoming_message.on_close();
+		}
+	};
+
 	this->_incoming_message.on_end = [this]() {
 		this->_socket.shutdown(); // TODO
 	};
