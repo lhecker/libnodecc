@@ -33,11 +33,6 @@ public:
 	constexpr buffer() : _p(nullptr), _data(nullptr), _size(0) {}
 
 	/**
-	 * Retains another buffer, while referring to it's data.
-	 */
-	buffer(const util::buffer& other) noexcept;
-
-	/**
 	 * Takes over another buffer.
 	 */
 	buffer(util::buffer&& other) noexcept;
@@ -45,7 +40,12 @@ public:
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer& operator=(const util::buffer& other) noexcept;
+	buffer(const util::buffer& other) noexcept;
+
+	/**
+	 * Retains another buffer, while referring to it's data.
+	 */
+	util::buffer& operator=(const util::buffer& other) noexcept;
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -88,7 +88,8 @@ public:
 	 * @param  vec   The Null-terminated byte string which should be referred to.
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	explicit buffer(const char* str, util::flags flags) noexcept : util::buffer((void*)str, strlen(str), flags) {}
+	template<typename charT>
+	explicit buffer(const charT* str, util::flags flags) noexcept : util::buffer((void*)str, std::char_traits<charT>::length(str), flags) {}
 
 
 	~buffer() noexcept;
@@ -98,6 +99,9 @@ public:
 	 * Swaps the references of this buffer with the other one.
 	 */
 	void swap(util::buffer& other) noexcept;
+
+	void assign(const util::buffer& other);
+	void assign(util::buffer&& other);
 
 	/**
 	 * Releases the buffer and resets it's data and size to zero.
@@ -150,11 +154,17 @@ public:
 	uint8_t* get() const noexcept;
 
 	template<typename T = uint8_t>
-	T* data() const noexcept {
-		return reinterpret_cast<T*>(this->_data);
-	}
+	T* data() const noexcept { return reinterpret_cast<T*>(this->_data); }
 
 	std::size_t size() const noexcept;
+
+
+	int compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept;
+	int compare(const void* data2, std::size_t size2) const noexcept;
+	int compare(const util::buffer& other) const noexcept;
+
+	template<typename charT>
+	int compare(const charT* str) const noexcept { return this->compare(static_cast<const void*>(str), std::char_traits<charT>::length(str)); }
 
 
 	friend bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept;

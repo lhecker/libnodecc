@@ -22,13 +22,13 @@ util::buffer::buffer(const void* base, size_t size, util::flags flags) noexcept 
 	this->reset(base, size, flags);
 }
 
-util::buffer::buffer(const util::buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
-	this->retain();
-}
-
 util::buffer::buffer(util::buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	// prevent release() in the destructor of other
 	other._p = nullptr;
+}
+
+util::buffer::buffer(const util::buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+	this->retain();
 }
 
 util::buffer& util::buffer::operator=(const util::buffer& other) noexcept {
@@ -55,11 +55,26 @@ void util::buffer::swap(util::buffer& other) noexcept {
 	std::swap(this->_size, other._size);
 }
 
+void util::buffer::assign(const util::buffer& other) {
+	this->release();
+	this->_p = other._p;
+	this->_data = other._data;
+	this->_size = other._size;
+	this->retain();
+}
+
+void util::buffer::assign(util::buffer&& other) {
+	this->release();
+	this->swap(other);
+}
+
 void util::buffer::reset() noexcept {
 	this->release();
 }
 
 void util::buffer::reset(size_t size) noexcept {
+	this->release();
+
 	if (size > 0) {
 		uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
 		uint8_t* data = base + sizeof(control);
@@ -68,13 +83,8 @@ void util::buffer::reset(size_t size) noexcept {
 			this->_p = new(base) control(base);
 			this->_data = data;
 			this->_size = size;
-			return;
 		}
 	}
-
-	this->_p = nullptr;
-	this->_data = nullptr;
-	this->_size = 0;
 }
 
 void util::buffer::reset(const void* base, size_t size, util::flags flags) noexcept {
@@ -101,10 +111,10 @@ util::buffer util::buffer::copy(size_t size) const noexcept {
 	return buffer;
 }
 
-util::buffer util::buffer::slice(ssize_t start, ssize_t end) const noexcept {
+util::buffer util::buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
 	util::buffer buffer;
 
-	if (this->_size < size_t(SSIZE_MAX) && this->_data) {
+	if (this->_size < size_t(PTRDIFF_MAX) && this->_data) {
 		if (start < 0) {
 			start += this->_size;
 
@@ -178,6 +188,25 @@ size_t util::buffer::size() const noexcept {
 	return this->_size;
 }
 
+int util::buffer::compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+	int r = memcmp(this->get(), data2, std::min(size1, size2));
+
+	if (r == 0) {
+		r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
+	}
+
+	return r;
+
+}
+
+int util::buffer::compare(const void* data2, std::size_t size2) const noexcept {
+	return this->compare(this->size(), data2, size2);
+}
+
+int util::buffer::compare(const util::buffer& other) const noexcept {
+	return this->compare(this->size(), other.get(), other.size());
+}
+
 void util::buffer::copy(util::buffer& target, std::size_t size) const noexcept {
 	if (size == 0) {
 		size = this->_size;
@@ -200,6 +229,7 @@ void util::buffer::copy(util::buffer& target, std::size_t size) const noexcept {
 		target._size = 0;
 	}
 }
+
 
 /*
  * Increasing the reference count is done using memory_order_relaxed,
