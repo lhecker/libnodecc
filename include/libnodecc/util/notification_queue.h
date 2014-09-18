@@ -25,7 +25,7 @@ public:
 			std::vector<T> queue;
 
 			{
-				std::lock_guard<std::mutex> guard(self->_mutex);
+				std::lock_guard<std::mutex> lock(self->_mutex);
 				std::swap(queue, self->_queue);
 			}
 
@@ -41,7 +41,7 @@ public:
 		if (ok) {
 			bool is_empty;
 			{
-				std::lock_guard<std::mutex> guard(this->_mutex);
+				std::lock_guard<std::mutex> lock(this->_mutex);
 				is_empty = this->_queue.empty();
 			}
 
@@ -55,7 +55,7 @@ public:
 
 	void push_back(const T& value) {
 		{
-			std::lock_guard<std::mutex> guard(this->_mutex);
+			std::lock_guard<std::mutex> lock(this->_mutex);
 			this->_queue.push_back(value);
 		}
 
@@ -64,7 +64,7 @@ public:
 
 	void push_back(T&& value) {
 		{
-			std::lock_guard<std::mutex> guard(this->_mutex);
+			std::lock_guard<std::mutex> lock(this->_mutex);
 			this->_queue.push_back(std::forward<T>(value));
 		}
 
@@ -74,7 +74,7 @@ public:
 	template<typename... Args>
 	void emplace(Args&&... args) {
 		{
-			std::lock_guard<std::mutex> guard(this->_mutex);
+			std::lock_guard<std::mutex> lock(this->_mutex);
 			this->_queue.emplace_back(std::forward<Args>(args)...);
 		}
 

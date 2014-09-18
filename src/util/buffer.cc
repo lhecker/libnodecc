@@ -135,14 +135,15 @@ util::buffer util::buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept 
 			end = this->_size;
 		}
 
-		if (end < start) {
-			end = start;
-		}
+		if (end >= start) {
+			buffer._size = end - start;
 
-		buffer._p = this->_p;
-		buffer._data = this->get() + start;
-		buffer._size = end - start;
-		buffer.retain();
+			if (buffer._size > 0) {
+				buffer._p = this->_p;
+				buffer._data = this->get() + start;
+				buffer.retain();
+			}
+		}
 	}
 
 	return buffer;
