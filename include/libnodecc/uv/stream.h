@@ -82,15 +82,15 @@ public:
 
 	void shutdown() {
 		if (!uv_is_closing(*this)) {
-			auto shutdown_cb = [](uv_shutdown_t* req, int status) {
+			uv_shutdown_t* req = new uv_shutdown_t;
+			req->data = this;
+
+			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
 				uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 				self->close();
 				delete req;
-			};
+			});
 
-			uv_shutdown_t* req = new uv_shutdown_t;
-			req->data = this;
-			int ret = uv_shutdown(req, *this, shutdown_cb);
 			if (ret != 0) {
 				delete req;
 			}

@@ -26,6 +26,8 @@ uv::loop::loop() noexcept {
 }
 
 uv::loop::~loop() noexcept {
+	uv_close(reinterpret_cast<uv_handle_t*>(&this->_tick_async), nullptr);
+	this->run(); // close the async handle
 	uv_loop_close(&this->_loop);
 }
 

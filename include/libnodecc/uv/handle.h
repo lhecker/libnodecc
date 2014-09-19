@@ -9,8 +9,6 @@
 
 namespace uv {
 
-void handle_on_close(uv_handle_t* handle);
-
 template<typename T>
 class handle {
 public:
@@ -54,7 +52,13 @@ public:
 
 	void close() {
 		if (!uv_is_closing(*this)) {
-			uv_close(*this, uv::handle_on_close);
+			uv_close(*this, [](uv_handle_t* handle) {
+				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
+
+				if (self && self->on_close) {
+					self->on_close();
+				}
+			});
 		}
 	}
 
