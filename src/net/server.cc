@@ -12,6 +12,7 @@ bool server::init(node::loop& loop) {
 }
 
 bool server::listen(uint16_t port, const std::string& ip, int backlog) {
+	// TODO IPv6
 	sockaddr_in addr;
 	uv_ip4_addr(ip.c_str(), port, &addr);
 
@@ -21,10 +22,7 @@ bool server::listen(uint16_t port, const std::string& ip, int backlog) {
 
 	return 0 == uv_listen(*this, backlog, [](uv_stream_t* server, int status) {
 		auto self = reinterpret_cast<node::net::server*>(server->data);
-
-		if (self && self->on_connection) {
-			self->on_connection();
-		}
+		self->emit_connection();
 	});
 }
 

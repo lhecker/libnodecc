@@ -8,10 +8,9 @@ namespace node {
 namespace net {
 
 class server : public node::uv::stream<uv_tcp_t> {
+	NODE_ADD_CALLBACK(connection)
+
 public:
-	typedef std::function<void()> on_connection_t;
-
-
 	explicit server();
 
 	bool init(node::loop& loop);
@@ -20,9 +19,6 @@ public:
 	bool accept(node::net::socket& client);
 
 	uint16_t port();
-
-
-	on_connection_t on_connection;
 };
 
 } // namespace net

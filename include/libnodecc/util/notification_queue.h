@@ -13,10 +13,9 @@ namespace util {
 
 template<typename T>
 class notification_queue : public node::uv::async {
+	NODE_ADD_CALLBACK(notification, const T&)
+
 public:
-	typedef std::function<void(const T&)> on_notification_t;
-
-
 	explicit notification_queue() : node::uv::async() {}
 
 	bool init(node::loop& loop) {
@@ -31,9 +30,7 @@ public:
 			}
 
 			for (const T& v : queue) {
-				if (self->on_notification) {
-					self->on_notification(v);
-				} else {
+				if (!self->emit_notification(v)) {
 					break;
 				}
 			}
@@ -84,12 +81,9 @@ public:
 
 	template<typename... Args>
 	void close(Args&&... args) {
-		this->on_notification = nullptr;
+		this->_on_notification = nullptr;
 		node::uv::handle<uv_async_t>::close(std::forward<Args>(args)...);
 	}
-
-
-	on_notification_t on_notification;
 
 private:
 	std::vector<T> _queue;

@@ -6,9 +6,8 @@
 namespace {
 
 struct getaddrinfo_packed_req {
-	explicit getaddrinfo_packed_req(const node::dns::on_lookup_t& cb) {
+	explicit getaddrinfo_packed_req(node::dns::on_lookup_t&& cb) : cb(std::move(cb)) {
 		this->req.data = this;
-		this->cb = cb;
 	}
 
 	uv_getaddrinfo_t req;
@@ -27,16 +26,16 @@ struct addrinfo_deleter {
 namespace node {
 namespace dns {
 
-void lookup(const on_lookup_t& cb, node::loop& loop, const std::string& domain, const addrinfo* hints) {
+void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, const addrinfo* hints) {
 	lookup(cb, loop, domain, std::string(), hints);
 }
 
-void lookup(const on_lookup_t& cb, node::loop& loop, const std::string& domain, uint16_t port, const addrinfo* hints) {
+void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, uint16_t port, const addrinfo* hints) {
 	lookup(cb, loop, domain, std::to_string(port), hints);
 }
 
-void lookup(const on_lookup_t& cb, node::loop& loop, const std::string& domain, const std::string& service, const addrinfo* hints) {
-	auto packed_req = new getaddrinfo_packed_req(cb);
+void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, const std::string& service, const addrinfo* hints) {
+	auto packed_req = new getaddrinfo_packed_req(std::move(cb));
 
 	if (!hints) {
 		static const addrinfo static_hints {

@@ -95,7 +95,19 @@ static uv_buf_t str_status_code(uint16_t status_code) {
 namespace node {
 namespace http {
 
-server_response::server_response(net::socket& socket) : request_response_proto(), socket(socket), status_code(200), _shutdown_on_end(false) {
+server_response::server_response(net::socket& socket) : request_response_proto(), _socket(socket), _status_code(200), _shutdown_on_end(false) {
+}
+
+node::net::socket& server_response::socket() const {
+	return this->_socket;
+}
+
+uint16_t server_response::status_code() const {
+	return this->_status_code;
+}
+
+void server_response::set_status_code(uint16_t code) {
+	this->_status_code = code;
 }
 
 void server_response::send_headers() {
@@ -104,7 +116,7 @@ void server_response::send_headers() {
 	node::string buf(800);
 
 	{
-		uv_buf_t status = str_status_code(this->status_code);
+		uv_buf_t status = str_status_code(this->status_code());
 
 		if (!status.base) {
 			status = str_status_code(500);
@@ -143,17 +155,17 @@ void server_response::send_headers() {
 }
 
 bool server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {
-	return this->socket.write(bufs, bufcnt);
+	return this->socket().write(bufs, bufcnt);
 }
 
 bool server_response::end(const node::buffer bufs[], size_t bufcnt) {
 	bool ret = request_response_proto::end(bufs, bufcnt);
 
 	if (this->_shutdown_on_end) {
-		this->socket.shutdown();
+		this->socket().shutdown();
 	}
 
-	this->status_code = 200;
+	this->set_status_code(200);
 
 	return ret;
 }

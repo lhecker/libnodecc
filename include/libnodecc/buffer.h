@@ -43,6 +43,11 @@ public:
 	buffer(const buffer& other) noexcept;
 
 	/**
+	 * Takes over another buffer.
+	 */
+	buffer& operator=(buffer&& other) noexcept;
+
+	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
 	buffer& operator=(const buffer& other) noexcept;
@@ -99,9 +104,6 @@ public:
 	 * Swaps the references of this buffer with the other one.
 	 */
 	void swap(buffer& other) noexcept;
-
-	void assign(const buffer& other);
-	void assign(buffer&& other);
 
 	/**
 	 * Releases the buffer and resets it's data and size to zero.

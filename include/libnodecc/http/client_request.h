@@ -11,14 +11,13 @@ namespace node {
 namespace http {
 
 class client_request : public node::http::request_response_proto {
+	NODE_ADD_CALLBACK(connect, http::client_request& req, http::incoming_message& res)
+	NODE_ADD_CALLBACK(error)
+
 public:
-	typedef std::function<void(http::client_request& req, http::incoming_message& res)> on_connect_t;
-	typedef std::function<void()> on_error_t;
-
-
 	explicit client_request();
 
-	bool init(node::loop& loop, const std::string& hostname, const uint16_t port, const on_connect_t& cb);
+	bool init(node::loop& loop, const std::string& hostname, const uint16_t port, on_connect_t cb);
 
 	void shutdown();
 	void close();
@@ -30,10 +29,6 @@ public:
 
 	void set_method(const std::string& method);
 	void set_path(const std::string& path);
-
-
-	on_connect_t on_connect;
-	on_error_t on_error;
 
 private:
 	void send_headers();

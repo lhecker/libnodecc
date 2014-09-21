@@ -7,33 +7,31 @@
 namespace node {
 namespace http {
 
-http::client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
+client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
 	this->_headers.max_load_factor(0.75);
 
-	this->_socket.on_connect = [this](bool ok) {
+	this->_socket.on_connect([this](bool ok) {
 		if (ok) {
 			this->_incoming_message.url = this->_path;
 			this->_incoming_message.method = this->_method;
 			this->_socket.read_start();
-			this->on_connect(*this, this->_incoming_message);
-		} else if (this->on_error) {
-			this->on_error();
+			this->emit_connect(*this, this->_incoming_message);
+		} else {
+			this->emit_error();
 		}
-	};
+	});
 
-	this->_socket.on_close = [this]() {
-		if (this->_incoming_message.on_close) {
-			this->_incoming_message.on_close();
-		}
-	};
+	this->_socket.on_close([this]() {
+		this->_incoming_message.emit_close();
+	});
 
-	this->_incoming_message.on_end = [this]() {
+	this->_incoming_message.on_end([this]() {
 		this->_socket.shutdown(); // TODO
-	};
+	});
 }
 
-bool http::client_request::init(node::loop& loop, const std::string& hostname, const uint16_t port, const on_connect_t& cb) {
-	this->on_connect = cb;
+bool client_request::init(node::loop& loop, const std::string& hostname, const uint16_t port, on_connect_t cb) {
+	this->_on_connect = std::move(cb);
 	this->_hostname = hostname;
 	this->_port = port;
 
@@ -44,7 +42,7 @@ bool http::client_request::init(node::loop& loop, const std::string& hostname, c
 	}
 }
 
-void http::client_request::send_headers() {
+void client_request::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
 	node::string buf(800); // average HTTP header should be between 700-800 byte
@@ -73,43 +71,41 @@ void http::client_request::send_headers() {
 	this->_headers.clear();
 }
 
-bool http::client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {
+bool client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {
 	return this->_socket.write(bufs, bufcnt);
 }
 
-void http::client_request::close() {
+void client_request::close() {
 	this->_socket.close();
 }
 
-void http::client_request::shutdown() {
+void client_request::shutdown() {
 	this->_socket.shutdown();
 }
 
-const std::string& http::client_request::method() const {
+const std::string& client_request::method() const {
 	return this->_method;
 }
 
-const std::string& http::client_request::path() const {
+const std::string& client_request::path() const {
 	return this->_path;
 }
 
-const std::string& http::client_request::hostname() const {
+const std::string& client_request::hostname() const {
 	return this->_hostname;
 }
 
-uint16_t http::client_request::port() const {
+uint16_t client_request::port() const {
 	return this->_port;
 }
 
-
-void http::client_request::set_method(const std::string& method) {
+void client_request::set_method(const std::string& method) {
 	this->_method = method;
 }
 
-void http::client_request::set_path(const std::string& path) {
+void client_request::set_path(const std::string& path) {
 	this->_path = path;
 }
 
 } // namespace node
 } // namespace http
-

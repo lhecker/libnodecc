@@ -13,17 +13,14 @@ namespace node {
 namespace http {
 
 class server : public node::net::server {
+	NODE_ADD_CALLBACK(request, http::incoming_message& req, http::server_response& res)
+
 public:
-	typedef std::function<void(http::incoming_message& req, http::server_response& res)> on_request_t;
-
-
 	explicit server();
 
-
+private:
 	// TODO: convert it to an intrusive double-linked list
 	std::unordered_set<node::net::socket, std::hash<node::net::socket::handle_type>> clients;
-
-	on_request_t on_request;
 };
 
 } // namespace http

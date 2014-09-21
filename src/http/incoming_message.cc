@@ -27,7 +27,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 
 	this->headers.max_load_factor(0.75);
 
-	socket.on_read = [this](int err, const node::buffer& buffer) {
+	socket.on_read([this](int err, const node::buffer& buffer) {
 		if (err) {
 			if (err == UV_EOF) {
 				http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
@@ -43,7 +43,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 				this->socket.shutdown();
 			}
 		}
-	};
+	});
 }
 
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
@@ -80,9 +80,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 		self->status_code = static_cast<uint16_t>(parser->status_code);
 	}
 
-	if (self->_on_headers_complete) {
-		self->_on_headers_complete(http_should_keep_alive(parser));
-	}
+	self->emit_headers_complete(http_should_keep_alive(parser));
 
 	return 0;
 }
@@ -90,9 +88,9 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	if (self->on_data) {
+	if (self->_on_data) {
 		ssize_t start = (uint8_t*)at - self->_parserBuffer->get();
-		self->on_data(self->_parserBuffer->slice(start, start + length));
+		self->_on_data(self->_parserBuffer->slice(start, start + length));
 	}
 
 	return 0;
@@ -101,9 +99,7 @@ int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t
 int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	if (self->on_end) {
-		self->on_end();
-	}
+	self->emit_end();
 
 	self->method.clear();
 	self->url.clear();

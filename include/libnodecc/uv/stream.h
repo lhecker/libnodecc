@@ -14,8 +14,9 @@ namespace uv {
 
 template<typename T>
 class stream : public node::uv::handle<T> {
+	NODE_ADD_CALLBACK(read, int err, const node::buffer& buffer)
+
 public:
-	typedef std::function<void(int err, const node::buffer& buffer)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
 
 
@@ -36,9 +37,9 @@ public:
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			auto self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 
-			if (nread != 0 && self->on_read) {
+			if (nread != 0 && self->_on_read) {
 				node::buffer buffer(buf->base, nread, node::strong);
-				self->on_read(nread < 0 ? nread : 0, buffer);
+				self->_on_read(nread < 0 ? nread : 0, buffer);
 			} else {
 				free(buf->base);
 			}
@@ -49,20 +50,20 @@ public:
 		return 0 == uv_read_stop(*this);
 	}
 
-	bool write(const node::buffer& buf, const on_write_t& on_write = nullptr) {
-		return this->write(&buf, 1, on_write);
+	bool write(const node::buffer& buf, on_write_t cb = nullptr) {
+		return this->write(&buf, 1, std::forward<on_write_t>(cb));
 	}
 
-	bool write(const node::buffer bufs[], size_t bufcnt, const on_write_t& on_write = nullptr) {
+	bool write(const node::buffer bufs[], size_t bufcnt, on_write_t cb = nullptr) {
 		struct packed_req {
-			constexpr packed_req(const node::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(cb), bufs(bufs, bufs + bufcnt) {}
+			constexpr packed_req(const node::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(std::move(cb)), bufs(bufs, bufs + bufcnt) {}
 
 			uv_write_t req;
 			on_write_t cb;
 			std::vector<node::buffer> bufs;
 		};
 
-		packed_req* pack = new packed_req(bufs, bufcnt, on_write);
+		packed_req* pack = new packed_req(bufs, bufcnt, cb);
 		uv_buf_t* uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
 
 		for (size_t i = 0; i < bufcnt; i++) {
@@ -97,9 +98,6 @@ public:
 			}
 		}
 	}
-
-
-	on_read_t on_read;
 };
 
 } // namespace uv

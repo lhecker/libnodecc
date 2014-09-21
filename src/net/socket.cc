@@ -3,10 +3,12 @@
 #include "libnodecc/dns/lookup.h"
 
 
-namespace {
+
+namespace node {
+namespace net {
 
 struct net_socket_connect {
-	explicit net_socket_connect(node::net::socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
+	explicit net_socket_connect(socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
 		this->req.data = this;
 		this->current_ai = this->ai.get();
 	};
@@ -26,9 +28,7 @@ struct net_socket_connect {
 
 				if (status == 0) {
 					// connect successful ---> call callback with true
-					if (self->socket->on_connect) {
-						self->socket->on_connect(true);
-					}
+					self->socket->emit_connect(true);
 				} else {
 					// connect NOT successful but another address is available ---> call next connect
 					if (self->next()) {
@@ -36,9 +36,7 @@ struct net_socket_connect {
 						return;
 					} else {
 						// connect NOT successful and NO another address available ---> call callback with false
-						if (self->socket->on_connect) {
-							self->socket->on_connect(false);
-						}
+						self->socket->emit_connect(false);
 					}
 				}
 
@@ -52,26 +50,18 @@ struct net_socket_connect {
 				static_cast<node::loop&>(*this->socket).next_tick(std::bind(&net_socket_connect::connect, this));
 			} else {
 				// connect NOT successful and NO another address available ---> call callback with false
-				if (this->socket->on_connect) {
-					this->socket->on_connect(false);
-				}
-
+				this->socket->emit_connect(false);
 				delete this;
 			}
 		}
 	}
 
-	node::net::socket* socket;
+	socket* socket;
 	addrinfo* current_ai;
 	std::shared_ptr<addrinfo> ai;
 	uv_connect_t req;
 };
 
-}
-
-
-namespace node {
-namespace net {
 
 socket::socket() : uv::stream<uv_tcp_t>() {
 }

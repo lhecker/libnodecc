@@ -4,6 +4,7 @@
 #include <cmath>
 #include <functional>
 
+#include "../common.h"
 #include "../loop.h"
 
 
@@ -12,10 +13,10 @@ namespace uv {
 
 template<typename T>
 class handle {
+	NODE_ADD_CALLBACK(close);
+
 public:
 	typedef handle handle_type;
-
-	typedef std::function<void()> on_close_t;
 
 
 	explicit handle() {
@@ -56,15 +57,15 @@ public:
 			uv_close(*this, [](uv_handle_t* handle) {
 				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
-				if (self && self->on_close) {
-					self->on_close();
+				if (self && self->_on_close) {
+					self->emit_close();
 				}
 			});
 		}
 	}
 
-	void close(const on_close_t& cb) {
-		this->on_close = cb;
+	void close(on_close_t cb) {
+		this->_on_close = std::move(cb);
 		this->close();
 	}
 
@@ -75,9 +76,6 @@ public:
 	void unref() {
 		uv_unref(*this);
 	}
-
-
-	on_close_t on_close;
 
 protected:
 	T _handle;

@@ -15,9 +15,10 @@ public:
 	bool end(const node::buffer bufs[], size_t bufcnt);
 
 
-	node::net::socket& socket;
+	node::net::socket& socket() const;
 
-	uint16_t status_code;
+	uint16_t status_code() const;
+	void set_status_code(uint16_t code);
 
 private:
 	// http::server needs exclusive access to _shutdown_on_end
@@ -26,6 +27,8 @@ private:
 	void send_headers();
 	bool socket_write(const node::buffer bufs[], size_t bufcnt);
 
+	node::net::socket& _socket;
+	uint16_t _status_code;
 	bool _shutdown_on_end;
 };
 

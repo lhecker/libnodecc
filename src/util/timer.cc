@@ -26,15 +26,12 @@ bool timer::again() {
 bool timer::start(uint64_t timeout, uint64_t repeat) {
 	return 0 == uv_timer_start(*this, [](uv_timer_t* timer) {
 		auto self = reinterpret_cast<node::util::timer*>(timer->data);
-
-		if (self->on_timeout) {
-			self->on_timeout();
-		}
+		self->emit_timeout();
 	}, timeout, repeat);
 }
 
 bool timer::start(uint64_t timeout, uint64_t repeat, on_timeout_t cb) {
-	this->on_timeout = cb;
+	this->_on_timeout = std::move(cb);
 	return this->start(timeout, repeat);
 }
 

@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "../common.h"
+
 
 namespace node {
 class buffer;
@@ -20,14 +22,16 @@ namespace node {
 namespace http {
 
 class incoming_message {
+	friend class client_request;
+	friend class server;
+
+	NODE_ADD_CALLBACK(data, const node::buffer& buffer)
+	NODE_ADD_CALLBACK(headers_complete, bool keep_alive)
+	NODE_ADD_CALLBACK(end)
+	NODE_ADD_CALLBACK(close)
+
 public:
-	typedef std::function<void(const node::buffer& buffer)> on_data_t;
-	typedef std::function<void(bool keep_alive)> on_headers_complete_t;
-	typedef std::function<void()> on_nil_t;
-
-
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
-
 
 	node::net::socket& socket;
 
@@ -40,13 +44,7 @@ public:
 	std::string url;
 	std::unordered_map<std::string, std::string> headers;
 
-	on_data_t on_data;
-	on_nil_t  on_end;
-	on_nil_t  on_close;
-
 private:
-	friend class server;
-
 	static int parser_on_url(http_parser* parser, const char* at, size_t length);
 	static int parser_on_header_field(http_parser* parser, const char* at, size_t length);
 	static int parser_on_header_value(http_parser* parser, const char* at, size_t length);
@@ -55,8 +53,6 @@ private:
 	static int parser_on_message_complete(http_parser* parser);
 
 	void add_header_partials();
-
-	on_headers_complete_t _on_headers_complete;
 
 	std::string _partial_header_field;
 	std::string _partial_header_value;

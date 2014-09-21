@@ -14,10 +14,7 @@ bool event::init(node::loop& loop) {
 bool event::start(const std::string& path) {
 	return 0 == uv_fs_event_start(*this, [](uv_fs_event_t* handle, const char* filename, int events, int status) {
 		auto self = reinterpret_cast<event*>(handle->data);
-
-		if (self->on_event) {
-			self->on_event(status, events, std::string(filename));
-		}
+		self->emit_event(status, events, std::string(filename));
 	}, path.c_str(), 0);
 }
 
@@ -25,4 +22,5 @@ bool event::stop() {
 	return 0 == uv_fs_event_stop(*this);
 }
 
-} } // namespace node::fs
+} // namespace fs
+} // namespace node

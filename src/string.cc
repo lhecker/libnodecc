@@ -38,7 +38,7 @@ string& string::append(const node::buffer& buf, size_t pos, size_t count) noexce
 		if (this->_p) {
 			this->append(buf.data() + pos, count);
 		} else {
-			this->assign(buf.slice(pos, count));
+			*static_cast<node::buffer*>(this) = buf.slice(pos, count);
 			this->_real_size = this->_size;
 		}
 	}

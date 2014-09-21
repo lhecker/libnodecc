@@ -10,7 +10,7 @@ namespace http {
 server::server() : net::server() {
 	this->clients.max_load_factor(0.75);
 
-	this->on_connection = [this]() {
+	this->on_connection([this]() {
 		auto iter = this->clients.emplace().first;
 		net::socket& socket = const_cast<net::socket&>(*iter);
 
@@ -21,30 +21,26 @@ server::server() : net::server() {
 		incoming_message* req = new incoming_message(socket, HTTP_REQUEST);
 		server_response*  res = new server_response(socket);
 
-		socket.on_close = [this, req, res]() {
-			if (req->on_close) {
-				req->on_close();
-			}
+		socket.on_close([this, req, res]() {
+			req->emit_close();
 
 			const net::socket& socket = req->socket;
 			delete req;
 			delete res;
 			this->clients.erase(socket);
-		};
+		});
 
-		req->_on_headers_complete = [this, req, res](bool keep_alive) {
+		req->on_headers_complete([this, req, res](bool keep_alive) {
 			res->_shutdown_on_end = keep_alive;
 
-			if (this->on_request) {
-				this->on_request(*req, *res);
-			} else {
-				res->socket.close();
+			if (!this->emit_request(*req, *res)) {
+				res->socket().close();
 			}
-		};
+		});
 
 		socket.unref();
 		socket.read_start();
-	};
+	});
 }
 
 } // namespace node

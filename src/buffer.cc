@@ -29,6 +29,13 @@ buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data),
 	this->retain();
 }
 
+buffer& buffer::operator=(buffer&& other) noexcept {
+	this->release();
+	this->swap(other);
+
+	return *this;
+}
+
 buffer& buffer::operator=(const buffer& other) noexcept {
 	this->release();
 	this->_p = other._p;
@@ -51,19 +58,6 @@ void buffer::swap(buffer& other) noexcept {
 	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
-}
-
-void buffer::assign(const buffer& other) {
-	this->release();
-	this->_p = other._p;
-	this->_data = other._data;
-	this->_size = other._size;
-	this->retain();
-}
-
-void buffer::assign(buffer&& other) {
-	this->release();
-	this->swap(other);
 }
 
 void buffer::reset() noexcept {

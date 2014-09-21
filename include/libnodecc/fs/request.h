@@ -10,10 +10,9 @@ namespace node {
 namespace fs {
 
 class request : public node::uv::handle<uv_fs_t> {
+	NODE_ADD_CALLBACK(finished, fs::request& req)
+
 public:
-	typedef std::function<void(fs::request& req) on_finished_t;
-
-
 	~request();
 
 	bool init(node::loop& loop);
@@ -53,7 +52,6 @@ public:
 
 private:
 	node::loop* loop;
-	on_finished_t _on_finished;
 };
 
 } // namespace fs

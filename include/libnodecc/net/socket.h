@@ -8,10 +8,9 @@ namespace node {
 namespace net {
 
 class socket : public node::uv::stream<uv_tcp_t> {
+	NODE_ADD_CALLBACK(connect, bool ok)
+
 public:
-	typedef std::function<void(bool ok)> on_connect_t;
-
-
 	explicit socket();
 
 	bool init(node::loop& loop);
@@ -21,8 +20,8 @@ public:
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);
 
-
-	on_connect_t on_connect;
+private:
+	friend struct net_socket_connect;
 };
 
 } // namespace net

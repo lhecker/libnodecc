@@ -8,10 +8,9 @@ namespace node {
 namespace util {
 
 class timer : public node::uv::handle<uv_timer_t> {
+	NODE_ADD_CALLBACK(timeout)
+
 public:
-	typedef std::function<void()> on_timeout_t;
-
-
 	explicit timer();
 
 	bool init(node::loop& loop);
@@ -40,9 +39,6 @@ public:
 	bool start(uint64_t timeout, uint64_t repeat, on_timeout_t cb);
 
 	bool stop();
-
-
-	on_timeout_t on_timeout;
 };
 
 } // namespace util
