@@ -4,16 +4,17 @@
 #include "../uv/handle.h"
 
 
+namespace node {
 namespace util {
 
-class timer : public uv::handle<uv_timer_t> {
+class timer : public node::uv::handle<uv_timer_t> {
 public:
 	typedef std::function<void()> on_timeout_t;
 
 
 	explicit timer();
 
-	bool init(uv::loop& loop);
+	bool init(node::loop& loop);
 
 	uint64_t repeat() const;
 
@@ -45,5 +46,6 @@ public:
 };
 
 } // namespace util
+} // namespace node
 
 #endif // nodecc_util_timer_h

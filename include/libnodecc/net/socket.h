@@ -3,19 +3,18 @@
 
 #include "../uv/stream.h"
 
-#include <cmath>
 
-
+namespace node {
 namespace net {
 
-class socket : public uv::stream<uv_tcp_t> {
+class socket : public node::uv::stream<uv_tcp_t> {
 public:
 	typedef std::function<void(bool ok)> on_connect_t;
 
 
 	explicit socket();
 
-	bool init(uv::loop& loop);
+	bool init(node::loop& loop);
 
 	bool connect(const std::string& address, uint16_t port);
 
@@ -27,5 +26,6 @@ public:
 };
 
 } // namespace net
+} // namespace node
 
 #endif // nodecc_net_socket_h

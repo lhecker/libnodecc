@@ -1,15 +1,16 @@
 #ifndef nodecc_http_client_request_h
 #define nodecc_http_client_request_h
 
-#include "request_response_proto.h"
 #include "incoming_message.h"
+#include "request_response_proto.h"
 
 #include "../net/socket.h"
 
 
+namespace node {
 namespace http {
 
-class client_request : public http::request_response_proto {
+class client_request : public node::http::request_response_proto {
 public:
 	typedef std::function<void(http::client_request& req, http::incoming_message& res)> on_connect_t;
 	typedef std::function<void()> on_error_t;
@@ -17,7 +18,7 @@ public:
 
 	explicit client_request();
 
-	bool init(uv::loop& loop, const std::string& hostname, const uint16_t port, const on_connect_t& cb);
+	bool init(node::loop& loop, const std::string& hostname, const uint16_t port, const on_connect_t& cb);
 
 	void shutdown();
 	void close();
@@ -36,10 +37,10 @@ public:
 
 private:
 	void send_headers();
-	bool socket_write(const util::buffer bufs[], size_t bufcnt);
+	bool socket_write(const node::buffer bufs[], size_t bufcnt);
 
-	net::socket _socket;
-	http::incoming_message _incoming_message;
+	node::net::socket _socket;
+	node::http::incoming_message _incoming_message;
 	std::string _method;
 	std::string _path;
 	std::string _hostname;
@@ -47,5 +48,6 @@ private:
 };
 
 } // namespace http
+} // namespace node
 
 #endif // nodecc_http_client_request_h

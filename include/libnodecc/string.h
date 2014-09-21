@@ -1,22 +1,22 @@
-#ifndef nodecc_util_string_h
-#define nodecc_util_string_h
+#ifndef nodecc_string_h
+#define nodecc_string_h
 
 #include "buffer.h"
 
 
-namespace util {
+namespace node {
 
-class string : public util::buffer {
+class string : public node::buffer {
 public:
 	explicit string() noexcept;
 	explicit string(size_t size) noexcept;
 
-	string(util::string&& other) noexcept;
-	string(const util::string& other) noexcept;
-	util::string& operator=(const util::string& other) noexcept;
+	string(string&& other) noexcept;
+	string(const string& other) noexcept;
+	string& operator=(const string& other) noexcept;
 
 	string& append(const void* data, size_t size) noexcept;
-	string& append(const util::buffer& buf, size_t pos = 0, size_t count = SIZE_T_MAX) noexcept;
+	string& append(const node::buffer& buf, size_t pos = 0, size_t count = SIZE_T_MAX) noexcept;
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {
@@ -46,7 +46,7 @@ public:
 	template<typename charT, typename traits, typename Allocator>
 	string& append(const std::basic_string<charT, traits, Allocator>& str, size_t pos, size_t count) noexcept {
 		if (pos >= str.size()) {
-			throw std::out_of_range("util::string");
+			throw std::out_of_range("string");
 		}
 
 		this->append(str.data() + pos, std::min(count, str.size() - pos) * sizeof(charT));
@@ -64,6 +64,6 @@ private:
 	size_t _real_size;
 };
 
-} // namespace util
+} // namespace node
 
-#endif // nodecc_util_string_h
+#endif // nodecc_string_h

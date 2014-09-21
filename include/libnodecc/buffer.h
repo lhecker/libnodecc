@@ -1,5 +1,5 @@
-#ifndef nodecc_util_buffer_h
-#define nodecc_util_buffer_h
+#ifndef nodecc_buffer_h
+#define nodecc_buffer_h
 
 #include <cmath>
 #include <functional>
@@ -7,7 +7,7 @@
 #include <vector>
 
 
-namespace util {
+namespace node {
 
 enum flags : uint8_t {
 	weak   = 0x00,
@@ -35,17 +35,17 @@ public:
 	/**
 	 * Takes over another buffer.
 	 */
-	buffer(util::buffer&& other) noexcept;
+	buffer(buffer&& other) noexcept;
 
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer(const util::buffer& other) noexcept;
+	buffer(const buffer& other) noexcept;
 
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	util::buffer& operator=(const util::buffer& other) noexcept;
+	buffer& operator=(const buffer& other) noexcept;
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -61,7 +61,7 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	explicit buffer(const void* base, std::size_t size, util::flags flags) noexcept;
+	explicit buffer(const void* base, std::size_t size, node::flags flags) noexcept;
 
 
 	/**
@@ -71,7 +71,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename T>
-	explicit buffer(const std::vector<T>& vec, util::flags flags) noexcept : util::buffer((void*)vec.data(), vec.size(), flags) {}
+	explicit buffer(const std::vector<T>& vec, node::flags flags) noexcept : buffer((void*)vec.data(), vec.size(), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified std::basic_string.
@@ -80,7 +80,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename charT, typename traits, typename Allocator>
-	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, util::flags flags) noexcept : util::buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
+	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, node::flags flags) noexcept : buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified vector.
@@ -89,7 +89,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
 	template<typename charT>
-	explicit buffer(const charT* str, util::flags flags) noexcept : util::buffer((void*)str, std::char_traits<charT>::length(str), flags) {}
+	explicit buffer(const charT* str, node::flags flags) noexcept : buffer((void*)str, std::char_traits<charT>::length(str), flags) {}
 
 
 	~buffer() noexcept;
@@ -98,10 +98,10 @@ public:
 	/**
 	 * Swaps the references of this buffer with the other one.
 	 */
-	void swap(util::buffer& other) noexcept;
+	void swap(buffer& other) noexcept;
 
-	void assign(const util::buffer& other);
-	void assign(util::buffer&& other);
+	void assign(const buffer& other);
+	void assign(buffer&& other);
 
 	/**
 	 * Releases the buffer and resets it's data and size to zero.
@@ -120,14 +120,14 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
 	 */
-	void reset(const void* base, std::size_t size, util::flags flags) noexcept;
+	void reset(const void* base, std::size_t size, node::flags flags) noexcept;
 
 	/**
 	 * Returns a copy of the buffer, while optionally resizing it.
 	 *
 	 * @param size If zero (the default), the new size will be equal to the old one.
 	 */
-	util::buffer copy(std::size_t size = 0) const noexcept;
+	buffer copy(std::size_t size = 0) const noexcept;
 
 	/**
 	 * Returns a buffer, referencing this buffer, but offset and cropped.
@@ -137,7 +137,7 @@ public:
 	 * @param start The new buffer is offset by the index start.
 	 * @param start The new buffer is cropped to the index end.
 	 */
-	util::buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = SSIZE_MAX) const noexcept;
+	buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = SSIZE_MAX) const noexcept;
 
 
 	bool is_strong() const noexcept;
@@ -149,6 +149,8 @@ public:
 	char& operator[](std::size_t pos) const noexcept;
 
 	explicit operator bool() const noexcept;
+	bool empty() const noexcept;
+
 	std::size_t use_count() const noexcept;
 
 	uint8_t* get() const noexcept;
@@ -162,14 +164,14 @@ public:
 	int compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept;
 	int compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept;
 	int compare(const void* data2, std::size_t size2) const noexcept;
-	int compare(const util::buffer& other) const noexcept;
+	int compare(const buffer& other) const noexcept;
 
 	template<typename charT>
 	int compare(const charT* str) const noexcept { return this->compare(static_cast<const void*>(str), std::char_traits<charT>::length(str)); }
 
 
-	friend bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept;
-	friend bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept;
+	friend bool operator==(const buffer& lhs, const buffer& rhs) noexcept;
+	friend bool operator!=(const buffer& lhs, const buffer& rhs) noexcept;
 
 protected:
 	struct control;
@@ -179,7 +181,7 @@ protected:
 	 *
 	 * This method DOES NOT release() target!.
 	 */
-	void copy(util::buffer& target, std::size_t size = 0) const noexcept;
+	void copy(buffer& target, std::size_t size = 0) const noexcept;
 
 	/**
 	 * Retains this buffer, incrementing it's reference count by one,
@@ -198,22 +200,22 @@ protected:
 	std::size_t _size;
 };
 
-} // namespace util
+} // namespace node
 
 
 template<>
-struct std::hash<util::buffer> {
-	std::size_t operator()(const util::buffer& buf) const {
+struct std::hash<node::buffer> {
+	std::size_t operator()(const node::buffer& buf) const {
 		std::size_t x = size_t(buf.data());
 		return x + (x >> 3);
 	}
 };
 
 template<>
-struct std::equal_to<util::buffer> {
-	bool operator()(const util::buffer& lhs, const util::buffer& rhs) const {
+struct std::equal_to<node::buffer> {
+	bool operator()(const node::buffer& lhs, const node::buffer& rhs) const {
 		return lhs.data() == rhs.data();
 	}
 };
 
-#endif // nodecc_util_buffer_h
+#endif // nodecc_buffer_h

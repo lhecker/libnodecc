@@ -6,7 +6,7 @@
 #include <uv.h>
 
 
-namespace uv {
+namespace node {
 
 class loop {
 public:
@@ -38,6 +38,6 @@ protected:
 	std::vector<on_tick_t> _tick_callbacks;
 };
 
-} // namespace uv
+} // namespace node
 
 #endif // nodecc_loop_h

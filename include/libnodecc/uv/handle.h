@@ -1,12 +1,13 @@
 #ifndef nodecc_uv_handle_h
 #define nodecc_uv_handle_h
 
-#include <functional>
 #include <cmath>
+#include <functional>
 
-#include "loop.h"
+#include "../loop.h"
 
 
+namespace node {
 namespace uv {
 
 template<typename T>
@@ -25,11 +26,11 @@ public:
 	handle& operator=(const handle&) = delete;
 
 
-	operator uv::loop&() { return reinterpret_cast<uv::loop&>(*this->_handle.loop->data); }
+	operator node::loop&() { return reinterpret_cast<node::loop&>(*this->_handle.loop->data); }
 	operator uv_loop_t*() { return this->_handle.loop; }
 	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
 
-	operator const uv::loop&() const { return reinterpret_cast<const uv::loop&>(*this->_handle.loop->data); }
+	operator const node::loop&() const { return reinterpret_cast<const node::loop&>(*this->_handle.loop->data); }
 	operator const uv_loop_t*() const { return this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 
@@ -83,18 +84,19 @@ protected:
 };
 
 } // namespace uv
+} // namespace node
 
 template<typename T>
-struct std::hash<uv::handle<T>> {
-	size_t operator()(const uv::handle<T>& val) const {
+struct std::hash<node::uv::handle<T>> {
+	size_t operator()(const node::uv::handle<T>& val) const {
 		std::size_t x = size_t(static_cast<const uv_handle_t*>(val));
 		return x + (x >> 3);
 	}
 };
 
 template<typename T>
-struct std::equal_to<uv::handle<T>> {
-	bool operator()(const uv::handle<T>& left, const uv::handle<T>& right) const {
+struct std::equal_to<node::uv::handle<T>> {
+	bool operator()(const node::uv::handle<T>& left, const node::uv::handle<T>& right) const {
 		return static_cast<uv_handle_t*>(left) == static_cast<uv_handle_t*>(right);
 	}
 };

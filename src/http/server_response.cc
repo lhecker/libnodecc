@@ -1,7 +1,7 @@
 #include "libnodecc/http/server_response.h"
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/util/string.h"
+#include "libnodecc/string.h"
 
 
 #ifndef _POSIX_C_SOURCE
@@ -13,7 +13,7 @@
 #endif
 
 
-uv_buf_t str_status_code(uint16_t status_code) {
+static uv_buf_t str_status_code(uint16_t status_code) {
 	uv_buf_t ret;
 
 	switch (status_code) {
@@ -92,13 +92,16 @@ uv_buf_t str_status_code(uint16_t status_code) {
 }
 
 
-http::server_response::server_response(net::socket& socket) : request_response_proto(), socket(socket), status_code(200), _shutdown_on_end(false) {
+namespace node {
+namespace http {
+
+server_response::server_response(net::socket& socket) : request_response_proto(), socket(socket), status_code(200), _shutdown_on_end(false) {
 }
 
-void http::server_response::send_headers() {
+void server_response::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
-	util::string buf(800);
+	node::string buf(800);
 
 	{
 		uv_buf_t status = str_status_code(this->status_code);
@@ -134,17 +137,17 @@ void http::server_response::send_headers() {
 		buf.append("\r\n");
 	}
 
-	util::buffer buffer = buf;
+	node::buffer buffer = buf;
 	this->socket_write(&buffer, 1);
 	this->_headers.clear();
 }
 
-bool http::server_response::socket_write(const util::buffer bufs[], size_t bufcnt) {
+bool server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {
 	return this->socket.write(bufs, bufcnt);
 }
 
-bool http::server_response::end(const util::buffer bufs[], size_t bufcnt) {
-	bool ret = http::request_response_proto::end(bufs, bufcnt);
+bool server_response::end(const node::buffer bufs[], size_t bufcnt) {
+	bool ret = request_response_proto::end(bufs, bufcnt);
 
 	if (this->_shutdown_on_end) {
 		this->socket.shutdown();
@@ -154,3 +157,6 @@ bool http::server_response::end(const util::buffer bufs[], size_t bufcnt) {
 
 	return ret;
 }
+
+} // namespace node
+} // namespace http

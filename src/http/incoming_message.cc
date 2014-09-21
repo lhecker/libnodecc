@@ -6,28 +6,68 @@
 #include "libnodecc/net/socket.h"
 
 
-int http::incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
-	auto self = static_cast<http::incoming_message*>(parser->data);
+namespace node {
+namespace http {
+
+incoming_message::incoming_message(net::socket& socket, http_parser_type type) : socket(socket) {
+	static const http_parser_settings http_req_parser_settings = {
+		nullptr,
+		incoming_message::parser_on_url,
+		nullptr,
+		incoming_message::parser_on_header_field,
+		incoming_message::parser_on_header_value,
+		incoming_message::parser_on_headers_complete,
+		incoming_message::parser_on_body,
+		incoming_message::parser_on_message_complete,
+	};
+
+
+	http_parser_init(&this->_parser, type);
+	this->_parser.data = this;
+
+	this->headers.max_load_factor(0.75);
+
+	socket.on_read = [this](int err, const node::buffer& buffer) {
+		if (err) {
+			if (err == UV_EOF) {
+				http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
+			}
+
+			this->socket.close();
+		} else {
+			this->_parserBuffer = &buffer;
+			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
+
+			// TODO: handle upgrade
+			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {
+				this->socket.shutdown();
+			}
+		}
+	};
+}
+
+int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<incoming_message*>(parser->data);
 	self->url.append(at, length);
 	return 0;
 }
 
-int http::incoming_message::parser_on_header_field(http_parser* parser, const char* at, size_t length) {
-	auto self = static_cast<http::incoming_message*>(parser->data);
+int incoming_message::parser_on_header_field(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<incoming_message*>(parser->data);
 	self->add_header_partials();
 	self->_partial_header_field.append(at, length);
 	return 0;
 }
 
-int http::incoming_message::parser_on_header_value(http_parser* parser, const char* at, size_t length) {
-	auto self = static_cast<http::incoming_message*>(parser->data);
+int incoming_message::parser_on_header_value(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<incoming_message*>(parser->data);
 	self->add_header_partials();
 	self->_partial_header_value.append(at, length);
 	return 0;
 }
 
-int http::incoming_message::parser_on_headers_complete(http_parser* parser) {
-	auto self = static_cast<http::incoming_message*>(parser->data);
+int incoming_message::parser_on_headers_complete(http_parser* parser) {
+	auto self = static_cast<incoming_message*>(parser->data);
 
 	self->add_header_partials();
 
@@ -47,8 +87,8 @@ int http::incoming_message::parser_on_headers_complete(http_parser* parser) {
 	return 0;
 }
 
-int http::incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
-	auto self = static_cast<http::incoming_message*>(parser->data);
+int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
+	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->on_data) {
 		ssize_t start = (uint8_t*)at - self->_parserBuffer->get();
@@ -58,8 +98,8 @@ int http::incoming_message::parser_on_body(http_parser* parser, const char* at, 
 	return 0;
 }
 
-int http::incoming_message::parser_on_message_complete(http_parser* parser) {
-	auto self = static_cast<http::incoming_message*>(parser->data);
+int incoming_message::parser_on_message_complete(http_parser* parser) {
+	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->on_end) {
 		self->on_end();
@@ -72,45 +112,7 @@ int http::incoming_message::parser_on_message_complete(http_parser* parser) {
 	return 0;
 }
 
-
-http::incoming_message::incoming_message(net::socket& socket, http_parser_type type) : socket(socket) {
-	static const http_parser_settings http_req_parser_settings = {
-		nullptr,
-		http::incoming_message::parser_on_url,
-		nullptr,
-		http::incoming_message::parser_on_header_field,
-		http::incoming_message::parser_on_header_value,
-		http::incoming_message::parser_on_headers_complete,
-		http::incoming_message::parser_on_body,
-		http::incoming_message::parser_on_message_complete,
-	};
-
-
-	http_parser_init(&this->_parser, type);
-	this->_parser.data = this;
-
-	this->headers.max_load_factor(0.75);
-
-	socket.on_read = [this](int err, const util::buffer& buffer) {
-		if (err) {
-			if (err == UV_EOF) {
-				http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
-			}
-
-			this->socket.close();
-		} else {
-			this->_parserBuffer = &buffer;
-			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
-
-			// TODO: handle upgrade
-			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {
-				this->socket.shutdown();
-			}
-		}
-	};
-}
-
-void http::incoming_message::add_header_partials() {
+void incoming_message::add_header_partials() {
 	if (!this->_partial_header_field.empty() && !this->_partial_header_value.empty()) {
 		std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
 
@@ -126,3 +128,6 @@ void http::incoming_message::add_header_partials() {
 		this->_partial_header_value.clear();
 	}
 }
+
+} // namespace node
+} // namespace http

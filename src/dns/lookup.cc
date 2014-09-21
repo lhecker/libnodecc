@@ -1,16 +1,18 @@
-#include "libnodecc/dns/dns.h"
+#include "libnodecc/dns/lookup.h"
+
+#include "libnodecc/loop.h"
 
 
 namespace {
 
 struct getaddrinfo_packed_req {
-	explicit getaddrinfo_packed_req(const dns::on_lookup_t& cb) {
+	explicit getaddrinfo_packed_req(const node::dns::on_lookup_t& cb) {
 		this->req.data = this;
 		this->cb = cb;
 	}
 
 	uv_getaddrinfo_t req;
-	dns::on_lookup_t cb;
+	node::dns::on_lookup_t cb;
 };
 
 struct addrinfo_deleter {
@@ -19,18 +21,21 @@ struct addrinfo_deleter {
 	}
 };
 
-};
-
-
-void dns::lookup(const dns::on_lookup_t& cb, uv::loop& loop, const std::string& domain, const addrinfo* hints) {
-	dns::lookup(cb, loop, domain, std::string(), hints);
 }
 
-void dns::lookup(const dns::on_lookup_t& cb, uv::loop& loop, const std::string& domain, uint16_t port, const addrinfo* hints) {
-	dns::lookup(cb, loop, domain, std::to_string(port), hints);
+
+namespace node {
+namespace dns {
+
+void lookup(const on_lookup_t& cb, node::loop& loop, const std::string& domain, const addrinfo* hints) {
+	lookup(cb, loop, domain, std::string(), hints);
 }
 
-void dns::lookup(const dns::on_lookup_t& cb, uv::loop& loop, const std::string& domain, const std::string& service, const addrinfo* hints) {
+void lookup(const on_lookup_t& cb, node::loop& loop, const std::string& domain, uint16_t port, const addrinfo* hints) {
+	lookup(cb, loop, domain, std::to_string(port), hints);
+}
+
+void lookup(const on_lookup_t& cb, node::loop& loop, const std::string& domain, const std::string& service, const addrinfo* hints) {
 	auto packed_req = new getaddrinfo_packed_req(cb);
 
 	if (!hints) {
@@ -58,3 +63,5 @@ void dns::lookup(const dns::on_lookup_t& cb, uv::loop& loop, const std::string& 
 		}
 	}, domain.c_str(), service.empty() ? nullptr : service.c_str(), hints);
 }
+
+} } // namespace node::dns

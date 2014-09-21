@@ -9,9 +9,10 @@
 #include "server_response.h"
 
 
+namespace node {
 namespace http {
 
-class server : public net::server {
+class server : public node::net::server {
 public:
 	typedef std::function<void(http::incoming_message& req, http::server_response& res)> on_request_t;
 
@@ -20,11 +21,12 @@ public:
 
 
 	// TODO: convert it to an intrusive double-linked list
-	std::unordered_set<net::socket, std::hash<net::socket::handle_type>> clients;
+	std::unordered_set<node::net::socket, std::hash<node::net::socket::handle_type>> clients;
 
 	on_request_t on_request;
 };
 
 } // namespace http
+} // namespace node
 
 #endif // nodecc_http_server_h

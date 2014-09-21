@@ -4,17 +4,18 @@
 #include "request_response_proto.h"
 
 
+namespace node {
 namespace http {
 
-class server_response : public http::request_response_proto {
+class server_response : public node::http::request_response_proto {
 public:
-	explicit server_response(net::socket& socket);
+	explicit server_response(node::net::socket& socket);
 
 	using http::request_response_proto::end;
-	bool end(const util::buffer bufs[], size_t bufcnt);
+	bool end(const node::buffer bufs[], size_t bufcnt);
 
 
-	net::socket& socket;
+	node::net::socket& socket;
 
 	uint16_t status_code;
 
@@ -23,11 +24,12 @@ private:
 	friend class server;
 
 	void send_headers();
-	bool socket_write(const util::buffer bufs[], size_t bufcnt);
+	bool socket_write(const node::buffer bufs[], size_t bufcnt);
 
 	bool _shutdown_on_end;
 };
 
 } // namespace http
+} // namespace node
 
 #endif // nodecc_http_server_response_h

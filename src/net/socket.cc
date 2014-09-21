@@ -1,12 +1,12 @@
 #include "libnodecc/net/socket.h"
 
-#include "libnodecc/dns/dns.h"
+#include "libnodecc/dns/lookup.h"
 
 
 namespace {
 
 struct net_socket_connect {
-	explicit net_socket_connect(net::socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
+	explicit net_socket_connect(node::net::socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
 		this->req.data = this;
 		this->current_ai = this->ai.get();
 	};
@@ -32,7 +32,7 @@ struct net_socket_connect {
 				} else {
 					// connect NOT successful but another address is available ---> call next connect
 					if (self->next()) {
-						static_cast<uv::loop&>(*self->socket).next_tick(std::bind(&net_socket_connect::connect, self));
+						static_cast<node::loop&>(*self->socket).next_tick(std::bind(&net_socket_connect::connect, self));
 						return;
 					} else {
 						// connect NOT successful and NO another address available ---> call callback with false
@@ -49,7 +49,7 @@ struct net_socket_connect {
 
 		if (err != 0) {
 			if (this->next()) {
-				static_cast<uv::loop&>(*this->socket).next_tick(std::bind(&net_socket_connect::connect, this));
+				static_cast<node::loop&>(*this->socket).next_tick(std::bind(&net_socket_connect::connect, this));
 			} else {
 				// connect NOT successful and NO another address available ---> call callback with false
 				if (this->socket->on_connect) {
@@ -61,7 +61,7 @@ struct net_socket_connect {
 		}
 	}
 
-	net::socket* socket;
+	node::net::socket* socket;
 	addrinfo* current_ai;
 	std::shared_ptr<addrinfo> ai;
 	uv_connect_t req;
@@ -70,14 +70,17 @@ struct net_socket_connect {
 }
 
 
-net::socket::socket() : uv::stream<uv_tcp_t>() {
+namespace node {
+namespace net {
+
+socket::socket() : uv::stream<uv_tcp_t>() {
 }
 
-bool net::socket::init(uv::loop& loop) {
+bool socket::init(node::loop& loop) {
 	return 0 == uv_tcp_init(loop, *this);
 }
 
-bool net::socket::connect(const std::string& address, uint16_t port) {
+bool socket::connect(const std::string& address, uint16_t port) {
 	dns::lookup([this](const std::shared_ptr<addrinfo>& res) {
 		if (res) {
 			net_socket_connect* data = new net_socket_connect(this, res);
@@ -88,10 +91,13 @@ bool net::socket::connect(const std::string& address, uint16_t port) {
 	return true;
 }
 
-bool net::socket::keepalive(unsigned int delay) {
+bool socket::keepalive(unsigned int delay) {
 	return 0 == uv_tcp_keepalive(*this, delay > 0 ? 1 : 0, delay);
 }
 
-bool net::socket::nodelay(bool enable) {
+bool socket::nodelay(bool enable) {
 	return 0 == uv_tcp_nodelay(*this, enable ? 1 : 0);
 }
+
+} // namespace node
+} // namespace net

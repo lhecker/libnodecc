@@ -1,12 +1,12 @@
-#include "libnodecc/util/buffer.h"
+#include "libnodecc/buffer.h"
 
 #include <atomic>
 #include <cstdlib>
 
-#include "libnodecc/util/string.h"
+#include "libnodecc/string.h"
 
 
-namespace util {
+namespace node {
 
 struct buffer::control {
 	constexpr control(void* base) noexcept : base(base), use_count(1) {};
@@ -15,23 +15,21 @@ struct buffer::control {
 	std::atomic<unsigned int> use_count;
 };
 
-}
 
-
-util::buffer::buffer(const void* base, size_t size, util::flags flags) noexcept : buffer() {
+buffer::buffer(const void* base, size_t size, node::flags flags) noexcept : buffer() {
 	this->reset(base, size, flags);
 }
 
-util::buffer::buffer(util::buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+buffer::buffer(buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	// prevent release() in the destructor of other
 	other._p = nullptr;
 }
 
-util::buffer::buffer(const util::buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	this->retain();
 }
 
-util::buffer& util::buffer::operator=(const util::buffer& other) noexcept {
+buffer& buffer::operator=(const buffer& other) noexcept {
 	this->release();
 	this->_p = other._p;
 	this->_data = other._data;
@@ -41,21 +39,21 @@ util::buffer& util::buffer::operator=(const util::buffer& other) noexcept {
 	return *this;
 }
 
-util::buffer::buffer(size_t size) noexcept : _p(nullptr) {
+buffer::buffer(size_t size) noexcept : _p(nullptr) {
 	this->reset(size);
 }
 
-util::buffer::~buffer() noexcept {
+buffer::~buffer() noexcept {
 	this->release();
 }
 
-void util::buffer::swap(util::buffer& other) noexcept {
+void buffer::swap(buffer& other) noexcept {
 	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
 }
 
-void util::buffer::assign(const util::buffer& other) {
+void buffer::assign(const buffer& other) {
 	this->release();
 	this->_p = other._p;
 	this->_data = other._data;
@@ -63,16 +61,16 @@ void util::buffer::assign(const util::buffer& other) {
 	this->retain();
 }
 
-void util::buffer::assign(util::buffer&& other) {
+void buffer::assign(buffer&& other) {
 	this->release();
 	this->swap(other);
 }
 
-void util::buffer::reset() noexcept {
+void buffer::reset() noexcept {
 	this->release();
 }
 
-void util::buffer::reset(size_t size) noexcept {
+void buffer::reset(size_t size) noexcept {
 	this->release();
 
 	if (size > 0) {
@@ -87,17 +85,17 @@ void util::buffer::reset(size_t size) noexcept {
 	}
 }
 
-void util::buffer::reset(const void* base, size_t size, util::flags flags) noexcept {
+void buffer::reset(const void* base, size_t size, node::flags flags) noexcept {
 	this->release();
 
 	this->_data = (void*)base;
 	this->_size = size;
 
 	switch (flags) {
-	case util::flags::strong:
+	case node::flags::strong:
 		this->_p = new control((void*)base);
 		break;
-	case util::flags::copy:
+	case node::flags::copy:
 		this->copy(*this);
 		break;
 	default:
@@ -105,14 +103,14 @@ void util::buffer::reset(const void* base, size_t size, util::flags flags) noexc
 	}
 }
 
-util::buffer util::buffer::copy(size_t size) const noexcept {
-	util::buffer buffer;
+buffer buffer::copy(size_t size) const noexcept {
+	buffer buffer;
 	this->copy(buffer, size);
 	return buffer;
 }
 
-util::buffer util::buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
-	util::buffer buffer;
+buffer buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
+	buffer buffer;
 
 	if (this->_size < size_t(PTRDIFF_MAX) && this->_data) {
 		if (start < 0) {
@@ -149,47 +147,51 @@ util::buffer util::buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept 
 	return buffer;
 }
 
-bool util::buffer::is_strong() const noexcept {
+bool buffer::is_strong() const noexcept {
 	return this->_p;
 }
 
-bool util::buffer::is_weak() const noexcept {
+bool buffer::is_weak() const noexcept {
 	return !this->_p;
 }
 
-util::buffer::operator void*() const noexcept {
+buffer::operator void*() const noexcept {
 	return this->data<void>();
 }
 
-util::buffer::operator char*() const noexcept {
+buffer::operator char*() const noexcept {
 	return this->data<char>();
 }
 
-util::buffer::operator unsigned char*() const noexcept {
+buffer::operator unsigned char*() const noexcept {
 	return this->data<unsigned char>();
 }
 
-char& util::buffer::operator[](size_t pos) const noexcept {
+char& buffer::operator[](size_t pos) const noexcept {
 	return *(this->data<char>() + pos);
 }
 
-util::buffer::operator bool() const noexcept {
-	return this->_p != nullptr;
+buffer::operator bool() const noexcept {
+	return this->_data;
 }
 
-size_t util::buffer::use_count() const noexcept {
+bool buffer::empty() const noexcept {
+	return !this->_data;
+}
+
+size_t buffer::use_count() const noexcept {
 	return this->_p ? this->_p->use_count.load(std::memory_order_relaxed) : 0;
 }
 
-uint8_t* util::buffer::get() const noexcept {
+uint8_t* buffer::get() const noexcept {
 	return this->data<uint8_t>();
 }
 
-size_t util::buffer::size() const noexcept {
+size_t buffer::size() const noexcept {
 	return this->_size;
 }
 
-int util::buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
 	int r = 0;
 
 	if (pos1 < this->size() && size1 <= (this->size() - pos1) && data2) {
@@ -204,19 +206,19 @@ int util::buffer::compare(std::size_t pos1, std::size_t size1, const void* data2
 
 }
 
-int util::buffer::compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+int buffer::compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
 	return this->compare(0, size1, data2, size2);
 }
 
-int util::buffer::compare(const void* data2, std::size_t size2) const noexcept {
+int buffer::compare(const void* data2, std::size_t size2) const noexcept {
 	return this->compare(0, this->size(), data2, size2);
 }
 
-int util::buffer::compare(const util::buffer& other) const noexcept {
+int buffer::compare(const buffer& other) const noexcept {
 	return this->compare(0, this->size(), other.get(), other.size());
 }
 
-void util::buffer::copy(util::buffer& target, std::size_t size) const noexcept {
+void buffer::copy(buffer& target, std::size_t size) const noexcept {
 	if (size == 0) {
 		size = this->_size;
 	}
@@ -245,13 +247,13 @@ void util::buffer::copy(util::buffer& target, std::size_t size) const noexcept {
  * since new references can only be formed from an existing reference and
  * passing an existing one already requires synchronization.
  */
-void util::buffer::retain() noexcept {
+void buffer::retain() noexcept {
 	if (this->_p) {
 		this->_p->use_count.fetch_add(1, std::memory_order_relaxed);
 	}
 }
 
-void util::buffer::release() noexcept {
+void buffer::release() noexcept {
 	if (this->_p && this->_p->use_count.fetch_sub(1, std::memory_order_release) == 1) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 
@@ -268,10 +270,12 @@ void util::buffer::release() noexcept {
 	this->_size = 0;
 }
 
-bool operator==(const util::buffer& lhs, const util::buffer& rhs) noexcept {
+} // namespace node
+
+bool operator==(const node::buffer& lhs, const node::buffer& rhs) noexcept {
 	return lhs.data() == rhs.data();
 }
 
-bool operator!=(const util::buffer& lhs, const util::buffer& rhs) noexcept {
+bool operator!=(const node::buffer& lhs, const node::buffer& rhs) noexcept {
 	return lhs.data() != rhs.data();
 }

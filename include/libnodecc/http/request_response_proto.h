@@ -5,15 +5,16 @@
 #include <unordered_map>
 
 
+namespace node {
+class buffer;
+
 namespace net {
 class socket;
 }
-
-namespace util {
-class buffer;
 }
 
 
+namespace node {
 namespace http {
 
 class request_response_proto {
@@ -37,16 +38,16 @@ public:
 	bool headers_sent() const;
 
 
-	bool write(const util::buffer& buf);
-	bool write(const util::buffer bufs[], size_t bufcnt);
+	bool write(const node::buffer& buf);
+	bool write(const node::buffer bufs[], size_t bufcnt);
 
 	bool end();
-	bool end(const util::buffer& buf);
-	virtual bool end(const util::buffer bufs[], size_t bufcnt);
+	bool end(const node::buffer& buf);
+	virtual bool end(const node::buffer bufs[], size_t bufcnt);
 
 protected:
 	virtual void send_headers() = 0;
-	virtual bool socket_write(const util::buffer bufs[], size_t bufcnt) = 0;
+	virtual bool socket_write(const node::buffer bufs[], size_t bufcnt) = 0;
 
 	std::unordered_map<std::string, std::string> _headers;
 	bool _headers_sent;
@@ -54,5 +55,6 @@ protected:
 };
 
 } // namespace http
+} // namespace node
 
 #endif // nodecc_http_request_response_proto_h

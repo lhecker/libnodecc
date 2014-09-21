@@ -1,33 +1,35 @@
-#include "libnodecc/util/string.h"
+#include "libnodecc/string.h"
 
 
-util::string::string() noexcept : util::buffer(), _real_size(0) {
+namespace node {
+
+string::string() noexcept : node::buffer(), _real_size(0) {
 }
 
-util::string::string(size_t size) noexcept : util::buffer(size), _real_size(0) {
+string::string(size_t size) noexcept : node::buffer(size), _real_size(0) {
 	std::swap(this->_size, this->_real_size);
 }
 
-util::string::string(util::string&& other) noexcept : util::buffer(std::move(other)), _real_size(other._real_size) {
+string::string(string&& other) noexcept : node::buffer(std::move(other)), _real_size(other._real_size) {
 }
 
-util::string::string(const util::string& other) noexcept : util::buffer(other), _real_size(other._real_size) {
+string::string(const string& other) noexcept : node::buffer(other), _real_size(other._real_size) {
 }
 
-util::string& util::string::operator=(const util::string& other) noexcept {
-	util::buffer::operator=(other);
+string& string::operator=(const string& other) noexcept {
+	node::buffer::operator=(other);
 	this->_real_size = other._real_size;
 	return *this;
 }
 
-util::string& util::string::append(const void* data, size_t size) noexcept {
+string& string::append(const void* data, size_t size) noexcept {
 	this->append(size);
 	memcpy(this->get() + this->_size, data, size);
 	this->_size += size;
 	return *this;
 }
 
-util::string& util::string::append(const util::buffer& buf, size_t pos, size_t count) noexcept {
+string& string::append(const node::buffer& buf, size_t pos, size_t count) noexcept {
 	if (pos < buf.size() && count > 0) {
 		if (count > buf.size() - pos) {
 			count = buf.size() - pos;
@@ -44,7 +46,7 @@ util::string& util::string::append(const util::buffer& buf, size_t pos, size_t c
 	return *this;
 }
 
-void util::string::reserve(size_t size) noexcept {
+void string::reserve(size_t size) noexcept {
 	if (size > this->capacity()) {
 		/*
 		 * The growth rate should be exponential, that is that if we need to resize,
@@ -80,16 +82,16 @@ void util::string::reserve(size_t size) noexcept {
 	}
 }
 
-void util::string::clear() noexcept {
+void string::clear() noexcept {
 	this->reset();
 	this->_real_size = 0;
 }
 
-size_t util::string::capacity() const noexcept {
+size_t string::capacity() const noexcept {
 	return this->_real_size;
 }
 
-void util::string::append(size_t size) noexcept {
+void string::append(size_t size) noexcept {
 	size_t cap = this->capacity();
 	size += this->size();
 
@@ -105,3 +107,5 @@ void util::string::append(size_t size) noexcept {
 		this->_size = _size;
 	}
 }
+
+} // namespace node

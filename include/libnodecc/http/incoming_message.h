@@ -2,34 +2,34 @@
 #define nodecc_http_incoming_message_h
 
 #include <functional>
+#include <http-parser/http_parser.h>
 #include <string>
 #include <unordered_map>
 
-#include <http-parser/http_parser.h>
 
+namespace node {
+class buffer;
 
 namespace net {
 class socket;
 }
-
-namespace util {
-class buffer;
 }
 
 
+namespace node {
 namespace http {
 
 class incoming_message {
 public:
-	typedef std::function<void(const util::buffer& buffer)> on_data_t;
+	typedef std::function<void(const node::buffer& buffer)> on_data_t;
 	typedef std::function<void(bool keep_alive)> on_headers_complete_t;
 	typedef std::function<void()> on_nil_t;
 
 
-	explicit incoming_message(net::socket& socket, http_parser_type type);
+	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
 
-	net::socket& socket;
+	node::net::socket& socket;
 
 	uint8_t http_version_major;
 	uint8_t http_version_minor;
@@ -62,9 +62,10 @@ private:
 	std::string _partial_header_value;
 
 	http_parser _parser;
-	const util::buffer* _parserBuffer;
+	const node::buffer* _parserBuffer;
 };
 
 } // namespace http
+} // namespace node
 
 #endif // nodecc_http_incoming_message_h

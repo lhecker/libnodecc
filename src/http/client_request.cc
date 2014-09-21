@@ -1,8 +1,11 @@
 #include "libnodecc/http/client_request.h"
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/util/string.h"
+#include "libnodecc/string.h"
 
+
+namespace node {
+namespace http {
 
 http::client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
 	this->_headers.max_load_factor(0.75);
@@ -29,7 +32,7 @@ http::client_request::client_request() : request_response_proto(), _incoming_mes
 	};
 }
 
-bool http::client_request::init(uv::loop& loop, const std::string& hostname, const uint16_t port, const on_connect_t& cb) {
+bool http::client_request::init(node::loop& loop, const std::string& hostname, const uint16_t port, const on_connect_t& cb) {
 	this->on_connect = cb;
 	this->_hostname = hostname;
 	this->_port = port;
@@ -44,7 +47,7 @@ bool http::client_request::init(uv::loop& loop, const std::string& hostname, con
 void http::client_request::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
-	util::string buf(800); // average HTTP header should be between 700-800 byte
+	node::string buf(800); // average HTTP header should be between 700-800 byte
 
 	{
 		buf.append(this->_method);
@@ -70,7 +73,7 @@ void http::client_request::send_headers() {
 	this->_headers.clear();
 }
 
-bool http::client_request::socket_write(const util::buffer bufs[], size_t bufcnt) {
+bool http::client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {
 	return this->_socket.write(bufs, bufcnt);
 }
 
@@ -106,4 +109,7 @@ void http::client_request::set_method(const std::string& method) {
 void http::client_request::set_path(const std::string& path) {
 	this->_path = path;
 }
+
+} // namespace node
+} // namespace http
 

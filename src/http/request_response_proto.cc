@@ -1,33 +1,36 @@
 #include "libnodecc/http/request_response_proto.h"
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/util/string.h"
+#include "libnodecc/string.h"
 
 
-http::request_response_proto::request_response_proto() : _headers_sent(false) {
+namespace node {
+namespace http {
+
+request_response_proto::request_response_proto() : _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 
-http::request_response_proto::~request_response_proto() {
+request_response_proto::~request_response_proto() {
 }
 
-const std::string& http::request_response_proto::header(const std::string& key) {
+const std::string& request_response_proto::header(const std::string& key) {
 	return this->_headers.at(key);
 }
 
-void http::request_response_proto::set_header(const std::string& key, const std::string& value) {
+void request_response_proto::set_header(const std::string& key, const std::string& value) {
 	this->_headers.emplace(key, value);
 }
 
-bool http::request_response_proto::headers_sent() const {
+bool request_response_proto::headers_sent() const {
 	return this->_headers_sent;
 }
 
-bool http::request_response_proto::write(const util::buffer& buf) {
+bool request_response_proto::write(const node::buffer& buf) {
 	return this->write(&buf, 1);
 }
 
-bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcnt) {
+bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
 	bool ret;
 
 	if (!this->headers_sent()) {
@@ -49,10 +52,10 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 		size_t chunked_bufcnt = 2 * bufcnt + 1;
 		size_t chunked_pos = 0;
 
-		auto chunked_bufs = static_cast<util::buffer*>(alloca(chunked_bufcnt * sizeof(util::buffer)));
-		new(chunked_bufs) util::buffer[chunked_bufcnt]();
+		auto chunked_bufs = static_cast<node::buffer*>(alloca(chunked_bufcnt * sizeof(node::buffer)));
+		new(chunked_bufs) node::buffer[chunked_bufcnt]();
 
-		util::string chunkedStr;
+		node::string chunkedStr;
 
 		for (size_t i = 0; i < bufcnt; i++) {
 			size_t size = bufs[i].size();
@@ -82,7 +85,7 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 			chunked_bufs[chunked_pos++] = bufs[i];
 		}
 
-		chunked_bufs[chunked_pos] = util::buffer("\r\n", util::weak);
+		chunked_bufs[chunked_pos] = node::buffer("\r\n", node::weak);
 
 		ret = this->socket_write(chunked_bufs, chunked_bufcnt);
 
@@ -96,15 +99,15 @@ bool http::request_response_proto::write(const util::buffer bufs[], size_t bufcn
 	return ret;
 }
 
-bool http::request_response_proto::end() {
+bool request_response_proto::end() {
 	return this->end(nullptr, 0);
 }
 
-bool http::request_response_proto::end(const util::buffer& buf) {
+bool request_response_proto::end(const node::buffer& buf) {
 	return this->end(&buf, 1);
 }
 
-bool http::request_response_proto::end(const util::buffer bufs[], size_t bufcnt) {
+bool request_response_proto::end(const node::buffer bufs[], size_t bufcnt) {
 	bool ret = true;
 
 	if (!this->headers_sent()) {
@@ -147,10 +150,13 @@ bool http::request_response_proto::end(const util::buffer bufs[], size_t bufcnt)
 	}
 
 	if (this->_is_chunked) {
-		util::buffer buffer = util::buffer("0\r\n\r\n", util::weak);
+		node::buffer buffer = node::buffer("0\r\n\r\n", node::weak);
 		ret = ret && this->socket_write(&buffer, 1);
 	}
 
 	this->_headers_sent = false;
 	return ret;
 }
+
+} // namespace node
+} // namespace http

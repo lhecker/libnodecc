@@ -4,7 +4,10 @@
 #include <string>
 
 
-http::server::server() : net::server() {
+namespace node {
+namespace http {
+
+server::server() : net::server() {
 	this->clients.max_load_factor(0.75);
 
 	this->on_connection = [this]() {
@@ -15,8 +18,8 @@ http::server::server() : net::server() {
 			this->clients.erase(iter);
 		}
 
-		http::incoming_message* req = new http::incoming_message(socket, HTTP_REQUEST);
-		http::server_response*  res = new http::server_response(socket);
+		incoming_message* req = new incoming_message(socket, HTTP_REQUEST);
+		server_response*  res = new server_response(socket);
 
 		socket.on_close = [this, req, res]() {
 			if (req->on_close) {
@@ -43,3 +46,6 @@ http::server::server() : net::server() {
 		socket.read_start();
 	};
 }
+
+} // namespace node
+} // namespace http

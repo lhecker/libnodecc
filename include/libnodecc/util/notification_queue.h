@@ -8,18 +8,19 @@
 #include "../uv/async.h"
 
 
+namespace node {
 namespace util {
 
 template<typename T>
-class notification_queue : public uv::async {
+class notification_queue : public node::uv::async {
 public:
 	typedef std::function<void(const T&)> on_notification_t;
 
 
-	explicit notification_queue() : uv::async() {}
+	explicit notification_queue() : node::uv::async() {}
 
-	bool init(uv::loop& loop) {
-		bool ok = uv::async::init(loop, [](uv_async_t* handle) {
+	bool init(node::loop& loop) {
+		bool ok = node::uv::async::init(loop, [](uv_async_t* handle) {
 			auto self = reinterpret_cast<util::notification_queue<T>*>(handle->data);
 
 			std::vector<T> queue;
@@ -84,7 +85,7 @@ public:
 	template<typename... Args>
 	void close(Args&&... args) {
 		this->on_notification = nullptr;
-		uv::handle<uv_async_t>::close(std::forward<Args>(args)...);
+		node::uv::handle<uv_async_t>::close(std::forward<Args>(args)...);
 	}
 
 
@@ -96,5 +97,6 @@ private:
 };
 
 } // namespace util
+} // namespace node
 
 #endif // nodecc_util_notification_queue_h

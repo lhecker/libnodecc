@@ -5,20 +5,21 @@
 #include <cstdlib>
 #include <vector>
 
-#include "../util/string.h"
+#include "../buffer.h"
 #include "handle.h"
 
 
+namespace node {
 namespace uv {
 
 template<typename T>
-class stream : public uv::handle<T> {
+class stream : public node::uv::handle<T> {
 public:
-	typedef std::function<void(int err, const util::buffer& buffer)> on_read_t;
+	typedef std::function<void(int err, const node::buffer& buffer)> on_read_t;
 	typedef std::function<void(int err)> on_write_t;
 
 
-	explicit stream() : uv::handle<T>() {}
+	explicit stream() : node::uv::handle<T>() {}
 
 	operator uv_stream_t*() {
 		return reinterpret_cast<uv_stream_t*>(&this->_handle);
@@ -33,10 +34,10 @@ public:
 			buf->base = (char*)malloc(suggested_size);
 			buf->len = suggested_size;
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-			auto self = reinterpret_cast<uv::stream<T>*>(stream->data);
+			auto self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 
 			if (nread != 0 && self->on_read) {
-				util::buffer buffer(buf->base, nread, util::strong);
+				node::buffer buffer(buf->base, nread, node::strong);
 				self->on_read(nread < 0 ? nread : 0, buffer);
 			} else {
 				free(buf->base);
@@ -48,17 +49,17 @@ public:
 		return 0 == uv_read_stop(*this);
 	}
 
-	bool write(const util::buffer& buf, const on_write_t& on_write = nullptr) {
+	bool write(const node::buffer& buf, const on_write_t& on_write = nullptr) {
 		return this->write(&buf, 1, on_write);
 	}
 
-	bool write(const util::buffer bufs[], size_t bufcnt, const on_write_t& on_write = nullptr) {
+	bool write(const node::buffer bufs[], size_t bufcnt, const on_write_t& on_write = nullptr) {
 		struct packed_req {
-			constexpr packed_req(const util::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(cb), bufs(bufs, bufs + bufcnt) {}
+			constexpr packed_req(const node::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(cb), bufs(bufs, bufs + bufcnt) {}
 
 			uv_write_t req;
 			on_write_t cb;
-			std::vector<util::buffer> bufs;
+			std::vector<node::buffer> bufs;
 		};
 
 		packed_req* pack = new packed_req(bufs, bufcnt, on_write);
@@ -86,7 +87,7 @@ public:
 			req->data = this;
 
 			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
-				uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
+				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
 				self->close();
 				delete req;
 			});
@@ -102,5 +103,6 @@ public:
 };
 
 } // namespace uv
+} // namespace node
 
 #endif // nodecc_uv_stream_h
