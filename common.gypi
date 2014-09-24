@@ -30,6 +30,7 @@
 				},
 				'xcode_settings': {
 					'GCC_OPTIMIZATION_LEVEL': '0',
+					'ONLY_ACTIVE_ARCH': 'YES',
 				},
 			},
 			'Release': {
@@ -39,9 +40,6 @@
 				'cflags': [
 					'-O3',
 				],
-				'xcode_settings': {
-					'GCC_OPTIMIZATION_LEVEL': '3',
-				},
 				'msvs_settings': {
 					'VCCLCompilerTool': {
 						'target_conditions': [
@@ -65,6 +63,10 @@
 						'EnableCOMDATFolding': 2,
 						'LinkIncremental': 1,
 					},
+				},
+				'xcode_settings': {
+					'GCC_OPTIMIZATION_LEVEL': '3',
+					'ONLY_ACTIVE_ARCH': 'NO',
 				},
 			}
 		},
