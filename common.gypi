@@ -1,4 +1,8 @@
 {
+	'variables': {
+		'uv_library%': '<(library)',
+	},
+
 	'target_defaults': {
 		'default_configuration': 'Debug',
 		'configurations': {
@@ -13,7 +17,7 @@
 				'msvs_settings': {
 					'VCCLCompilerTool': {
 						'target_conditions': [
-							['uv_library=="static_library"', {
+							['library=="static_library"', {
 								'RuntimeLibrary': 1,
 							}, {
 								'RuntimeLibrary': 3,
@@ -43,7 +47,7 @@
 				'msvs_settings': {
 					'VCCLCompilerTool': {
 						'target_conditions': [
-							['uv_library=="static_library"', {
+							['library=="static_library"', {
 								'RuntimeLibrary': 0,
 							}, {
 								'RuntimeLibrary': 2,
@@ -110,7 +114,7 @@
 				'-Wno-unused-parameter',
 			],
 			'target_conditions': [
-				['uv_library=="static_library"', {
+				['library=="static_library"', {
 					'GCC_DYNAMIC_NO_PIC': 'YES',
 				}, {
 					'GCC_DYNAMIC_NO_PIC': 'NO',

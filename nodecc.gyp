@@ -2,7 +2,7 @@
 	'targets': [
 		{
 			'target_name': 'libnodecc',
-			'type': '<(uv_library)',
+			'type': '<(library)',
 			'include_dirs': [
 				'include',
 				'deps',
