@@ -15,18 +15,22 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 			this->_incoming_message.url = this->_path;
 			this->_incoming_message.method = this->_method;
 			this->_socket.read_start();
-			this->emit_connect(*this, this->_incoming_message);
+			this->emit_connect_s(*this, this->_incoming_message);
 		} else {
-			this->emit_error();
+			this->emit_error_s();
+			this->on_connect(nullptr);
+			this->on_error(nullptr);
 		}
 	});
 
 	this->_socket.on_close([this]() {
-		this->_incoming_message.emit_close();
+		this->_incoming_message.emit_close_s();
+		this->on_connect(nullptr);
+		this->on_error(nullptr);
 	});
 
 	this->_incoming_message.on_end([this]() {
-		this->_socket.shutdown(); // TODO
+		this->_socket.shutdown(); // TODO keep-alive
 	});
 }
 

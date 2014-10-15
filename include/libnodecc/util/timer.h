@@ -8,7 +8,7 @@ namespace node {
 namespace util {
 
 class timer : public node::uv::handle<uv_timer_t> {
-	NODE_ADD_CALLBACK(timeout)
+	NODE_ADD_CALLBACK(timeout, void)
 
 public:
 	explicit timer();

@@ -22,12 +22,16 @@ bool server::listen(uint16_t port, const std::string& ip, int backlog) {
 
 	return 0 == uv_listen(*this, backlog, [](uv_stream_t* server, int status) {
 		auto self = reinterpret_cast<node::net::server*>(server->data);
-		self->emit_connection();
+		self->emit_connection_s();
+
+		if (status != 0) {
+			self->on_connection(nullptr);
+		}
 	});
 }
 
 bool server::accept(socket& client) {
-	return 0 == uv_accept(*this, static_cast<uv_stream_t*>(client));
+	return client.init(*this) && 0 == uv_accept(*this, static_cast<uv_stream_t*>(client));
 }
 
 uint16_t server::port() {

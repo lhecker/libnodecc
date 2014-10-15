@@ -13,7 +13,7 @@ namespace uv {
 
 template<typename T>
 class handle {
-	NODE_ADD_CALLBACK(close);
+	NODE_ADD_CALLBACK(close, void);
 
 public:
 	typedef handle handle_type;
@@ -52,13 +52,18 @@ public:
 	}
 
 
+	bool is_closing() const {
+		return uv_is_closing(*this);
+	}
+
 	void close() {
-		if (!uv_is_closing(*this)) {
+		if (!this->is_closing()) {
 			uv_close(*this, [](uv_handle_t* handle) {
 				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
 				if (self && self->_on_close) {
-					self->emit_close();
+					self->emit_close_s();
+					self->on_close(nullptr);
 				}
 			});
 		}

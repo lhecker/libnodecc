@@ -25,10 +25,10 @@ class incoming_message {
 	friend class client_request;
 	friend class server;
 
-	NODE_ADD_CALLBACK(data, const node::buffer& buffer)
-	NODE_ADD_CALLBACK(headers_complete, bool keep_alive)
-	NODE_ADD_CALLBACK(end)
-	NODE_ADD_CALLBACK(close)
+	NODE_ADD_CALLBACK(data, void, const node::buffer& buffer)
+	NODE_ADD_CALLBACK(headers_complete, void, bool keep_alive)
+	NODE_ADD_CALLBACK(end, void)
+	NODE_ADD_CALLBACK(close, void)
 
 public:
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);

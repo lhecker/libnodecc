@@ -14,7 +14,7 @@ server::server() : net::server() {
 		auto iter = this->clients.emplace().first;
 		net::socket& socket = const_cast<net::socket&>(*iter);
 
-		if (!socket.init(*this) || !this->accept(socket)) {
+		if (!this->accept(socket)) {
 			this->clients.erase(iter);
 		}
 
@@ -22,7 +22,8 @@ server::server() : net::server() {
 		server_response*  res = new server_response(socket);
 
 		socket.on_close([this, req, res]() {
-			req->emit_close();
+			req->emit_close_s();
+			this->on_request(nullptr);
 
 			const net::socket& socket = req->socket;
 			delete req;
@@ -33,7 +34,7 @@ server::server() : net::server() {
 		req->on_headers_complete([this, req, res](bool keep_alive) {
 			res->_shutdown_on_end = keep_alive;
 
-			if (!this->emit_request(*req, *res)) {
+			if (!this->emit_request_s(*req, *res)) {
 				res->socket().close();
 			}
 		});

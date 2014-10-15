@@ -34,6 +34,10 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 			}
 
 			this->socket.close();
+			this->on_data(nullptr);
+			this->on_headers_complete(nullptr);
+			this->on_end(nullptr);
+			this->on_close(nullptr);
 		} else {
 			this->_parserBuffer = &buffer;
 			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
@@ -80,7 +84,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 		self->status_code = static_cast<uint16_t>(parser->status_code);
 	}
 
-	self->emit_headers_complete(http_should_keep_alive(parser));
+	self->emit_headers_complete_s(http_should_keep_alive(parser));
 
 	return 0;
 }
@@ -99,7 +103,7 @@ int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t
 int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	self->emit_end();
+	self->emit_end_s();
 
 	self->method.clear();
 	self->url.clear();

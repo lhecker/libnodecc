@@ -28,7 +28,7 @@ struct net_socket_connect {
 
 				if (status == 0) {
 					// connect successful ---> call callback with true
-					self->socket->emit_connect(true);
+					self->socket->emit_connect_s(true);
 				} else {
 					// connect NOT successful but another address is available ---> call next connect
 					if (self->next()) {
@@ -36,7 +36,8 @@ struct net_socket_connect {
 						return;
 					} else {
 						// connect NOT successful and NO another address available ---> call callback with false
-						self->socket->emit_connect(false);
+						self->socket->emit_connect_s(false);
+						self->socket->on_connect(nullptr);
 					}
 				}
 
@@ -50,7 +51,8 @@ struct net_socket_connect {
 				static_cast<node::loop&>(*this->socket).next_tick(std::bind(&net_socket_connect::connect, this));
 			} else {
 				// connect NOT successful and NO another address available ---> call callback with false
-				this->socket->emit_connect(false);
+				this->socket->emit_connect_s(false);
+				this->socket->on_connect(nullptr);
 				delete this;
 			}
 		}
@@ -75,6 +77,10 @@ bool socket::connect(const std::string& address, uint16_t port) {
 		if (res) {
 			net_socket_connect* data = new net_socket_connect(this, res);
 			data->connect();
+		} else {
+			// TODO error
+			this->emit_connect_s(false);
+			this->on_connect(nullptr);
 		}
 	}, *this, address, port);
 

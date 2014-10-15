@@ -13,7 +13,7 @@ namespace util {
 
 template<typename T>
 class notification_queue : public node::uv::async {
-	NODE_ADD_CALLBACK(notification, const T&)
+	NODE_ADD_CALLBACK(notification, void, const T&)
 
 public:
 	explicit notification_queue() : node::uv::async() {}
@@ -30,7 +30,7 @@ public:
 			}
 
 			for (const T& v : queue) {
-				if (!self->emit_notification(v)) {
+				if (!self->emit_notification_s(v)) {
 					break;
 				}
 			}

@@ -10,7 +10,7 @@ namespace node {
 namespace fs {
 
 class request : public node::uv::handle<uv_fs_t> {
-	NODE_ADD_CALLBACK(finished, fs::request& req)
+	NODE_ADD_CALLBACK(finished, void, fs::request& req)
 
 public:
 	~request();
