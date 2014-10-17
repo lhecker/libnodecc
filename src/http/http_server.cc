@@ -22,10 +22,10 @@ server::server() : net::server() {
 		server_response*  res = new server_response(socket);
 
 		socket.on_close([this, req, res]() {
-			req->emit_close_s();
-			this->on_request(nullptr);
+			req->_close();
 
 			const net::socket& socket = req->socket;
+
 			delete req;
 			delete res;
 			this->clients.erase(socket);

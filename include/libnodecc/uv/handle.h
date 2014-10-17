@@ -62,15 +62,24 @@ public:
 				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
 				if (self && self->_on_close) {
-					self->emit_close_s();
-					self->on_close(nullptr);
+					/*
+					 * After emitting the close event the std::function
+					 * owning the callback should be cleared.
+					 * This will ensure that smart pointers are reset.
+					 * But swap the std::function just in case that
+					 * the handle gets deleted within the close callback.
+					 */
+					on_close_t close;
+					std::swap(close, self->_on_close);
+					close();
 				}
 			});
 		}
 	}
 
-	void close(on_close_t cb) {
-		this->_on_close = std::move(cb);
+	template<typename F>
+	void close(F&& f) {
+		this->on_close(std::forward<F>(f));
 		this->close();
 	}
 

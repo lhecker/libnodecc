@@ -18,15 +18,15 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 			this->emit_connect_s(*this, this->_incoming_message);
 		} else {
 			this->emit_error_s();
-			this->on_connect(nullptr);
 			this->on_error(nullptr);
+			this->on_connect(nullptr);
 		}
 	});
 
 	this->_socket.on_close([this]() {
-		this->_incoming_message.emit_close_s();
-		this->on_connect(nullptr);
+		this->_incoming_message._close();
 		this->on_error(nullptr);
+		this->on_connect(nullptr);
 	});
 
 	this->_incoming_message.on_end([this]() {

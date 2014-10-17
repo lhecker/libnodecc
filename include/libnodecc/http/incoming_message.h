@@ -53,6 +53,7 @@ private:
 	static int parser_on_message_complete(http_parser* parser);
 
 	void add_header_partials();
+	void _close();
 
 	std::string _partial_header_field;
 	std::string _partial_header_value;

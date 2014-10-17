@@ -46,14 +46,13 @@ public:
 
 			if (nread < 0) {
 				self->emit_read_s(static_cast<int>(nread), buffer);
+				self->on_read(nullptr);
 
 				if (nread == UV_EOF) {
 					self->shutdown();
 				} else {
 					self->close();
 				}
-
-				self->on_read(nullptr);
 			}
 
 			free(buf->base);
