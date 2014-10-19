@@ -66,11 +66,10 @@ public:
 					 * After emitting the close event the std::function
 					 * owning the callback should be cleared.
 					 * This will ensure that smart pointers are reset.
-					 * But swap the std::function just in case that
+					 * But move the std::function to the stack just in case that
 					 * the handle gets deleted within the close callback.
 					 */
-					on_close_t close;
-					std::swap(close, self->_on_close);
+					on_close_t close = std::move(self->_on_close);
 					close();
 				}
 			});
