@@ -220,18 +220,17 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 	uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
 	uint8_t* data = base + sizeof(control);
 
-	if (base) {
-		if (this->_data) {
-			memcpy(data, this->_data, std::min(size, this->_size));
-		}
+	// do this upfront in case of target == *this
+	if (base && this->_data) {
+		memcpy(data, this->_data, std::min(size, this->_size));
+	}
 
+	target.release();
+
+	if (base) {
 		target._p = new(base) control(base);
 		target._data = data;
 		target._size = size;
-	} else {
-		target._p = nullptr;
-		target._data = nullptr;
-		target._size = 0;
 	}
 }
 

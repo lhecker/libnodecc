@@ -180,8 +180,6 @@ protected:
 
 	/**
 	 * Creates a copy of this buffer in target, while optionally resizing it.
-	 *
-	 * This method DOES NOT release() target!.
 	 */
 	void copy(buffer& target, std::size_t size = 0) const noexcept;
 
