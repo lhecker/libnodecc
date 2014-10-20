@@ -34,13 +34,23 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 	});
 }
 
+bool client_request::init(node::loop& loop, const sockaddr& addr, const std::string& hostname, on_connect_t cb) {
+	this->_on_connect = std::move(cb);
+	this->_hostname = hostname;
+
+	if (!this->_hostname.empty()) {
+		return this->_socket.init(loop) && this->_socket.connect(addr);
+	} else {
+		return false;
+	}
+}
+
 bool client_request::init(node::loop& loop, const std::string& hostname, const uint16_t port, on_connect_t cb) {
 	this->_on_connect = std::move(cb);
 	this->_hostname = hostname;
-	this->_port = port;
 
 	if (!this->_hostname.empty()) {
-		return this->_socket.init(loop) && this->_socket.connect(this->_hostname, this->_port);
+		return this->_socket.init(loop) && this->_socket.connect(this->_hostname, port);
 	} else {
 		return false;
 	}
@@ -97,10 +107,6 @@ const std::string& client_request::path() const {
 
 const std::string& client_request::hostname() const {
 	return this->_hostname;
-}
-
-uint16_t client_request::port() const {
-	return this->_port;
 }
 
 void client_request::set_method(const std::string& method) {

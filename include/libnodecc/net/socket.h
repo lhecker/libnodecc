@@ -15,6 +15,8 @@ public:
 
 	bool init(node::loop& loop);
 
+	bool connect(const sockaddr& addr);
+	bool connect(const addrinfo& info);
 	bool connect(const std::string& address, uint16_t port);
 
 	bool keepalive(unsigned int delay);

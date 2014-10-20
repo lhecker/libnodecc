@@ -13,6 +13,11 @@ struct net_socket_connect {
 		this->current_ai = this->ai.get();
 	};
 
+	explicit net_socket_connect(socket* socket, const addrinfo& ai) : socket(socket) {
+		this->req.data = this;
+		this->current_ai = const_cast<addrinfo*>(&ai);
+	};
+
 	addrinfo* next() {
 		this->current_ai = this->current_ai->ai_next;
 		return this->current_ai;
@@ -20,31 +25,28 @@ struct net_socket_connect {
 
 	void connect() {
 		sockaddr* addr = this->current_ai->ai_addr;
-		int err = INT_MAX;
 
-		if (addr->sa_family == AF_INET || addr->sa_family == AF_INET6) {
-			err = uv_tcp_connect(&this->req, *this->socket, addr, [](uv_connect_t* req, int status) {
-				auto self = reinterpret_cast<net_socket_connect*>(req->data);
+		int err = uv_tcp_connect(&this->req, *this->socket, addr, [](uv_connect_t* req, int status) {
+			auto self = reinterpret_cast<net_socket_connect*>(req->data);
 
-				if (status == 0) {
-					// connect successful ---> call callback with true
-					self->socket->emit_connect_s(true);
+			if (status == 0) {
+				// connect successful ---> call callback with true
+				self->socket->emit_connect_s(true);
+			} else {
+				// connect NOT successful but another address is available ---> call next connect
+				if (self->next()) {
+					static_cast<node::loop&>(*self->socket).next_tick(std::bind(&net_socket_connect::connect, self));
+					return;
 				} else {
-					// connect NOT successful but another address is available ---> call next connect
-					if (self->next()) {
-						static_cast<node::loop&>(*self->socket).next_tick(std::bind(&net_socket_connect::connect, self));
-						return;
-					} else {
-						// connect NOT successful and NO another address available ---> call callback with false
-						self->socket->emit_connect_s(false);
-						self->socket->on_connect(nullptr);
-					}
+					// connect NOT successful and NO another address available ---> call callback with false
+					self->socket->emit_connect_s(false);
+					self->socket->on_connect(nullptr);
 				}
+			}
 
-				// delete this instance if it finished connecting (if it tries again, it will return; above)
-				delete self;
-			});
-		}
+			// delete this instance if it finished connecting (if it tries again, it will return; above)
+			delete self;
+		});
 
 		if (err != 0) {
 			if (this->next()) {
@@ -70,6 +72,31 @@ socket::socket() : uv::stream<uv_tcp_t>() {
 
 bool socket::init(node::loop& loop) {
 	return 0 == uv_tcp_init(loop, *this);
+}
+
+bool socket::connect(const sockaddr& addr) {
+	uv_connect_t* req = new uv_connect_t;
+	req->data = this;
+
+	return 0 != uv_tcp_connect(req, *this, &addr, [](uv_connect_t* req, int status) {
+		auto self = reinterpret_cast<net::socket*>(req->data);
+		delete req;
+
+		bool ok = status == 0;
+
+		self->emit_connect_s(ok);
+
+		if (!ok) {
+			self->on_connect(nullptr);
+		}
+	});
+}
+
+bool socket::connect(const addrinfo& info) {
+	net_socket_connect* data = new net_socket_connect(this, info);
+	data->connect();
+
+	return true;
 }
 
 bool socket::connect(const std::string& address, uint16_t port) {
