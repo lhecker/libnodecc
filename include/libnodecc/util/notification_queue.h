@@ -12,7 +12,7 @@ namespace node {
 namespace util {
 
 template<typename T>
-class notification_queue : public node::uv::async {
+class notification_queue : private node::uv::async {
 	NODE_ADD_CALLBACK(notification, void, const T&)
 
 public:

@@ -14,7 +14,6 @@ public:
 
 
 	explicit loop() noexcept;
-
 	~loop() noexcept;
 
 	void run();
@@ -25,8 +24,11 @@ public:
 
 	bool alive();
 
-	void next_tick(const on_tick_t& cb);
-	void next_tick(on_tick_t&& cb);
+	template<typename T>
+	void next_tick(T t) {
+		this->_tick_callbacks.emplace_back(std::forward<T>(t));
+		uv_async_send(&this->_tick_async);
+	}
 
 
 	operator uv_loop_t*();

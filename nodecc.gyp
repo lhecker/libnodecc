@@ -10,6 +10,7 @@
 			'sources': [
 				'deps/http-parser/http_parser.c',
 				'include/libnodecc/buffer.h',
+				'include/libnodecc/common.h',
 				'include/libnodecc/dns/lookup.h',
 				'include/libnodecc/fs/event.h',
 				'include/libnodecc/http/client_request.h',

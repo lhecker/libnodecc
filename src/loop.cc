@@ -53,16 +53,6 @@ bool loop::alive() {
 	return uv_loop_alive(&this->_loop);
 }
 
-void loop::next_tick(const on_tick_t& cb) {
-	this->_tick_callbacks.emplace_back(cb);
-	uv_async_send(&this->_tick_async);
-}
-
-void loop::next_tick(on_tick_t&& cb) {
-	this->_tick_callbacks.emplace_back(std::move(cb));
-	uv_async_send(&this->_tick_async);
-}
-
 loop::operator uv_loop_t*() {
 	return &this->_loop;
 }

@@ -35,7 +35,7 @@ public:
 			buf->base = (char*)malloc(suggested_size);
 			buf->len = suggested_size;
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-			auto self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
+			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 			node::buffer buffer;
 
 			if (nread > 0 && self->has_read_callback()) {
@@ -63,11 +63,27 @@ public:
 		return 0 == uv_read_stop(*this);
 	}
 
-	bool write(const node::buffer& buf, on_write_t cb = nullptr) {
-		return this->write(&buf, 1, std::forward<on_write_t>(cb));
+	int write(const node::buffer& buf) {
+		return this->write(&buf, 1);
 	}
 
-	bool write(const node::buffer bufs[], size_t bufcnt, on_write_t cb = nullptr) {
+	template<typename F>
+	int write(const node::buffer& buf, F f, bool sync_allowed = true) {
+		return this->write(&buf, 1, std::forward<F>(f), sync_allowed);
+	}
+
+	/**
+	 * Writes the bufs array of the size bufcnt to the stream.
+	 *
+	 * If the data cannot be sent immediately it will be queued for later.
+	 * In that case if cb is provided it will be called on completion.
+	 *
+	 * If the data could be sent synchronously, cb will only be called
+	 * if sync_allowed is true. Passing a value of true (the default)
+	 * tells this function that it's safe to call cb synchronously.
+	 * Be aware that this may cause stack overflows due to recursion.
+	 */
+	int write(const node::buffer bufs[], size_t bufcnt, on_write_t cb = nullptr, bool sync_allowed = true) {
 		struct packed_req {
 			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(std::move(cb)), bufs(bufs, bufs + bufcnt) {
 				this->req.data = &stream;
@@ -78,15 +94,65 @@ public:
 			std::vector<node::buffer> bufs;
 		};
 
-		packed_req* pack = new packed_req(*this, bufs, bufcnt, cb);
 		uv_buf_t* uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
+		size_t total = 0;
+		size_t i;
 
-		for (size_t i = 0; i < bufcnt; i++) {
-			uv_bufs[i].base = bufs[i].data<char>();
-			uv_bufs[i].len  = bufs[i].size();
+		for (i = 0; i < bufcnt; i++) {
+			uv_buf_t* a = uv_bufs + i;
+			const node::buffer* b = bufs + i;
+
+			a->base = b->data<char>();
+			a->len  = b->size();
+
+			total += b->size();
 		}
 
-		return 0 == uv_write(&pack->req, *this, uv_bufs, static_cast<unsigned int>(bufcnt), [](uv_write_t* req, int status) {
+		const int wi = uv_try_write(*this, uv_bufs, static_cast<unsigned int>(bufcnt));
+		size_t wu = size_t(wi);
+
+		// if uv_try_write() sent all data
+		if (wi > 0) {
+			if (wu == total) {
+				if (cb) {
+					if (sync_allowed) {
+						cb(0);
+					}
+				}
+
+				return wi;
+			}
+
+			// check if for some reason wu contains an erroneous value just in case
+			if (wu > total) {
+				return -EINVAL;
+			}
+
+			// count how many buffers have been fully written...
+			for (i = 0; i < bufcnt; i++) {
+				size_t len = uv_bufs[i].len;
+
+				if (len > wu) {
+					break;
+				}
+
+				wu -= len;
+			}
+
+			// ...remove them from the lists...
+			bufs += i;
+			uv_bufs += i;
+			bufcnt -= i;
+
+			// ...and remove the bytes not fully written from the (now) first buffer
+			uv_bufs[0].base += wu;
+			uv_bufs[0].len  -= wu;
+		}
+
+
+		packed_req* pack = new packed_req(*this, bufs, bufcnt, cb);
+
+		return uv_write(&pack->req, *this, uv_bufs, static_cast<unsigned int>(bufcnt), [](uv_write_t* req, int status) {
 			packed_req* pack = reinterpret_cast<packed_req*>(req);
 			uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 
