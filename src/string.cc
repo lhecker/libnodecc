@@ -10,7 +10,31 @@ string::string(size_t size) noexcept : node::buffer(size), _real_size(0) {
 	std::swap(this->_size, this->_real_size);
 }
 
+string::string(node::buffer&& other) noexcept : node::buffer(std::move(other)), _real_size(other._size) {
+}
+
+string& string::operator=(node::buffer&& other) noexcept {
+	node::buffer::operator=(std::move(other));
+	this->_real_size = other.size();
+	return *this;
+}
+
+string::string(const node::buffer& other) noexcept : node::buffer(other), _real_size(other._size) {
+}
+
+string& string::operator=(const node::buffer& other) noexcept {
+	node::buffer::operator=(other);
+	this->_real_size = other._size;
+	return *this;
+}
+
 string::string(string&& other) noexcept : node::buffer(std::move(other)), _real_size(other._real_size) {
+}
+
+string& string::operator=(string&& other) noexcept {
+	node::buffer::operator=(std::move(other));
+	this->_real_size = other._real_size;
+	return *this;
 }
 
 string::string(const string& other) noexcept : node::buffer(other), _real_size(other._real_size) {
@@ -35,10 +59,10 @@ string& string::append(const node::buffer& buf, size_t pos, size_t count) noexce
 			count = buf.size() - pos;
 		}
 
-		if (this->_p) {
+		if (this->_size > 0) {
 			this->append(buf.data() + pos, count);
 		} else {
-			*static_cast<node::buffer*>(this) = buf.slice(pos, count);
+			node::buffer::operator=(buf.slice(pos, count));
 			this->_real_size = this->_size;
 		}
 	}

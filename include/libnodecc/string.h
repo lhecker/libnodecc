@@ -7,11 +7,21 @@
 namespace node {
 
 class string : public node::buffer {
+	friend class node::buffer;
+
 public:
 	explicit string() noexcept;
 	explicit string(size_t size) noexcept;
 
+	string(node::buffer&& other) noexcept;
+	string& operator=(node::buffer&& other) noexcept;
+
+	string(const node::buffer& other) noexcept;
+	string& operator=(const node::buffer& other) noexcept;
+
 	string(string&& other) noexcept;
+	string& operator=(string&& other) noexcept;
+
 	string(const string& other) noexcept;
 	string& operator=(const string& other) noexcept;
 

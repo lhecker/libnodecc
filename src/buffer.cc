@@ -21,12 +21,20 @@ buffer::buffer(const void* base, size_t size, node::flags flags) noexcept : buff
 }
 
 buffer::buffer(buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
-	// prevent release() in the destructor of other
 	other._p = nullptr;
+	other._data = nullptr;
+	other._size = 0;
 }
 
 buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	this->retain();
+}
+
+buffer::buffer(node::string&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+	other._p = nullptr;
+	other._data = nullptr;
+	other._size = 0;
+	other._real_size = 0;
 }
 
 buffer& buffer::operator=(buffer&& other) noexcept {
@@ -46,6 +54,13 @@ buffer& buffer::operator=(const buffer& other) noexcept {
 	return *this;
 }
 
+buffer& buffer::operator=(node::string&& other) noexcept {
+	this->release();
+	this->swap(other);
+
+	return *this;
+}
+
 buffer::buffer(size_t size) noexcept : _p(nullptr) {
 	this->reset(size);
 }
@@ -58,6 +73,13 @@ void buffer::swap(buffer& other) noexcept {
 	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
+}
+
+void buffer::swap(node::string& other) noexcept {
+	std::swap(this->_p, other._p);
+	std::swap(this->_data, other._data);
+	std::swap(this->_size, other._size);
+	other._real_size = other._size;
 }
 
 void buffer::reset() noexcept {

@@ -26,6 +26,8 @@ class string;
  * or weakly reference some buffer.
  */
 class buffer {
+	friend class node::string;
+
 public:
 	/**
 	 * Creates an empty buffer.
@@ -43,6 +45,11 @@ public:
 	buffer(const buffer& other) noexcept;
 
 	/**
+	 * Takes over another string.
+	 */
+	buffer(node::string&& other) noexcept;
+
+	/**
 	 * Takes over another buffer.
 	 */
 	buffer& operator=(buffer&& other) noexcept;
@@ -51,6 +58,11 @@ public:
 	 * Retains another buffer, while referring to it's data.
 	 */
 	buffer& operator=(const buffer& other) noexcept;
+
+	/**
+	 * Takes over another string.
+	 */
+	buffer& operator=(node::string&& other) noexcept;
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -106,6 +118,11 @@ public:
 	void swap(buffer& other) noexcept;
 
 	/**
+	 * Swaps the references of this buffer with a string.
+	 */
+	void swap(node::string& other) noexcept;
+
+	/**
 	 * Releases the buffer and resets it's data and size to zero.
 	 */
 	void reset() noexcept;
@@ -139,7 +156,7 @@ public:
 	 * @param start The new buffer is offset by the index start.
 	 * @param start The new buffer is cropped to the index end.
 	 */
-	buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = SSIZE_MAX) const noexcept;
+	buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = PTRDIFF_MAX) const noexcept;
 
 
 	bool is_strong() const noexcept;
