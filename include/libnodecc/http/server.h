@@ -13,7 +13,8 @@ namespace node {
 namespace http {
 
 class server : public node::net::server {
-	NODE_ADD_CALLBACK(request, void, http::incoming_message& req, http::server_response& res)
+public:
+	NODE_ADD_CALLBACK(public, request, void, http::incoming_message& req, http::server_response& res)
 
 public:
 	explicit server();

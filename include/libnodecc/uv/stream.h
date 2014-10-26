@@ -14,7 +14,8 @@ namespace uv {
 
 template<typename T>
 class stream : public node::uv::handle<T> {
-	NODE_ADD_CALLBACK(read, void, int err, const node::buffer& buffer)
+public:
+	NODE_ADD_CALLBACK(public, read, void, int err, const node::buffer& buffer)
 
 public:
 	typedef std::function<void(int err)> on_write_t;

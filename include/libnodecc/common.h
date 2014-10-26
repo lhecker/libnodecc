@@ -1,20 +1,14 @@
 #ifndef libnodecc_common_h
 #define libnodecc_common_h
 
-#define NODE_ADD_CALLBACK(name, ret, ...)                         \
-	public:                                                       \
+#define NODE_ADD_CALLBACK(vis, name, ret, ...)                    \
+	vis:                                                          \
 		typedef std::function<ret(__VA_ARGS__)> on_##name##_t;    \
 		                                                          \
-		template<typename nacF>                                   \
-		void on_##name(nacF&& nacf) {                             \
-			_on_##name = std::forward<nacF>(nacf);                \
-		}                                                         \
+	private:                                                      \
+		on_##name##_t _on_##name;                                 \
 		                                                          \
 	protected:                                                    \
-		bool has_##name##_callback() const {                      \
-			return static_cast<bool>(_on_##name);                 \
-		}                                                         \
-		                                                          \
 		template<typename... nacArgs>                             \
 		ret emit_##name(nacArgs&&... nacargs) {                   \
 			return _on_##name(std::forward<nacArgs>(nacargs)...); \
@@ -29,24 +23,24 @@
 			return false;                                         \
 		}                                                         \
 		                                                          \
-	private:                                                      \
-		on_##name##_t _on_##name;
-
-#define NODE_ADD_CALLBACK_WITH_MUTEX(name, mutex, ret, ...)       \
-	public:                                                       \
-		typedef std::function<ret(__VA_ARGS__)> on_##name##_t;    \
-		                                                          \
+	vis:                                                          \
 		template<typename nacF>                                   \
 		void on_##name(nacF&& nacf) {                             \
-			std::lock_guard<decltype(mutex)> lock(mutex);         \
 			_on_##name = std::forward<nacF>(nacf);                \
 		}                                                         \
 		                                                          \
-	protected:                                                    \
 		bool has_##name##_callback() const {                      \
 			return static_cast<bool>(_on_##name);                 \
-		}                                                         \
+		}
+
+#define NODE_ADD_CALLBACK_WITH_MUTEX(vis, name, mutex, ret, ...)  \
+	vis:                                                          \
+		typedef std::function<ret(__VA_ARGS__)> on_##name##_t;    \
 		                                                          \
+	private:                                                      \
+		on_##name##_t _on_##name;                                 \
+		                                                          \
+	protected:                                                    \
 		template<typename... nacArgs>                             \
 		ret emit_##name(nacArgs&&... nacargs) {                   \
 			std::lock_guard<decltype(mutex)> lock(mutex);         \
@@ -63,12 +57,21 @@
 			return false;                                         \
 		}                                                         \
 		                                                          \
-	private:                                                      \
-		on_##name##_t _on_##name;
+	vis:                                                          \
+		template<typename nacF>                                   \
+		void on_##name(nacF&& nacf) {                             \
+			std::lock_guard<decltype(mutex)> lock(mutex);         \
+			_on_##name = std::forward<nacF>(nacf);                \
+		}                                                         \
+		                                                          \
+		bool has_##name##_callback() const {                      \
+			return static_cast<bool>(_on_##name);                 \
+		}
 
-#define NODE_ADD_CALLBACK_SAFE(name, ...)                            \
-	private:                                                         \
-		 std::recursive_mutex _##name##_mutex;                       \
-	NODE_ADD_CALLBACK_WITH_MUTEX(name, _##name##_mutex, __VA_ARGS__)
+
+#define NODE_ADD_CALLBACK_SAFE(vis, name, ...)                            \
+	private:                                                              \
+		std::recursive_mutex _##name##_mutex;                             \
+	NODE_ADD_CALLBACK_WITH_MUTEX(vis, name, _##name##_mutex, __VA_ARGS__)
 
 #endif // libnodecc_common_h

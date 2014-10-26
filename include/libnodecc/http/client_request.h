@@ -11,10 +11,10 @@ namespace node {
 namespace http {
 
 class client_request : public node::http::request_response_proto {
-	NODE_ADD_CALLBACK(connect, void, http::client_request& req, http::incoming_message& res)
-	NODE_ADD_CALLBACK(error, void)
+	NODE_ADD_CALLBACK(public, connect, void, http::client_request& req, http::incoming_message& res)
+	NODE_ADD_CALLBACK(public, error, void)
 
-public:
+	
 	explicit client_request();
 
 	bool init(node::loop& loop, const sockaddr& addr, const std::string& hostname, on_connect_t cb);

@@ -13,7 +13,8 @@ namespace util {
 
 template<typename T>
 class notification_queue : private node::uv::async {
-	NODE_ADD_CALLBACK(notification, void, const T&)
+public:
+	NODE_ADD_CALLBACK(public, notification, void, const T&)
 
 public:
 	explicit notification_queue() : node::uv::async() {}

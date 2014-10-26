@@ -13,7 +13,8 @@ namespace uv {
 
 template<typename T>
 class handle {
-	NODE_ADD_CALLBACK(close, void);
+public:
+	NODE_ADD_CALLBACK(public, close, void);
 
 public:
 	typedef handle handle_type;
