@@ -34,8 +34,16 @@ server::server() : net::server() {
 		req->on_headers_complete([this, req, res](bool keep_alive) {
 			res->_shutdown_on_end = keep_alive;
 
+			// RFC 2616 - 14.23
+			if (!req->headers.count("host")) {
+				res->set_status_code(400);
+				res->end();
+				return;
+			}
+
 			if (!this->emit_request_s(*req, *res)) {
-				res->socket().close();
+				res->set_status_code(500);
+				res->end();
 			}
 		});
 
