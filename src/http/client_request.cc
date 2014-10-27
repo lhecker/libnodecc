@@ -10,16 +10,16 @@ namespace http {
 client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
 	this->_headers.max_load_factor(0.75);
 
-	this->_socket.on_connect([this](bool ok) {
-		if (ok) {
+	this->_socket.on_connect([this](int err) {
+		if (err) {
+			this->emit_error_s();
+			this->on_error(nullptr);
+			this->on_connect(nullptr);
+		} else {
 			this->_incoming_message.url = this->_path;
 			this->_incoming_message.method = this->_method;
 			this->_socket.read_start();
 			this->emit_connect_s(*this, this->_incoming_message);
-		} else {
-			this->emit_error_s();
-			this->on_error(nullptr);
-			this->on_connect(nullptr);
 		}
 	});
 
@@ -38,17 +38,14 @@ bool client_request::init(node::loop& loop, const sockaddr& addr, const std::str
 	this->_on_connect = std::move(cb);
 	this->_hostname = hostname;
 
-	if (!this->_hostname.empty()) {
-		return this->_socket.init(loop) && this->_socket.connect(addr);
-	} else {
-		return false;
-	}
+	return this->_socket.init(loop) && this->_socket.connect(addr);
 }
 
 bool client_request::init(node::loop& loop, const std::string& hostname, const uint16_t port, on_connect_t cb) {
 	this->_on_connect = std::move(cb);
-	this->_hostname = hostname;
+	this->_hostname = hostname; // TODO: this should be hostname:port or [hostname]:port (IPv6)
 
+	// hostname needed for name resolution
 	if (!this->_hostname.empty()) {
 		return this->_socket.init(loop) && this->_socket.connect(this->_hostname, port);
 	} else {

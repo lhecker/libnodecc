@@ -31,15 +31,15 @@ struct net_socket_connect {
 
 			if (status == 0) {
 				// connect successful ---> call callback with true
-				self->socket->emit_connect_s(true);
+				self->socket->emit_connect_s(status);
 			} else {
 				// connect NOT successful but another address is available ---> call next connect
 				if (self->next()) {
-					static_cast<node::loop&>(*self->socket).next_tick(std::bind(&net_socket_connect::connect, self));
+					self->connect();
 					return;
 				} else {
 					// connect NOT successful and NO another address available ---> call callback with false
-					self->socket->emit_connect_s(false);
+					self->socket->emit_connect_s(status);
 					self->socket->on_connect(nullptr);
 				}
 			}
@@ -48,12 +48,12 @@ struct net_socket_connect {
 			delete self;
 		});
 
-		if (err != 0) {
+		if (err) {
 			if (this->next()) {
-				static_cast<node::loop&>(*this->socket).next_tick(std::bind(&net_socket_connect::connect, this));
+				this->connect();
 			} else {
 				// connect NOT successful and NO another address available ---> call callback with false
-				this->socket->emit_connect_s(false);
+				this->socket->emit_connect_s(err);
 				this->socket->on_connect(nullptr);
 				delete this;
 			}
@@ -82,11 +82,9 @@ bool socket::connect(const sockaddr& addr) {
 		auto self = reinterpret_cast<net::socket*>(req->data);
 		delete req;
 
-		bool ok = status == 0;
+		self->emit_connect_s(status);
 
-		self->emit_connect_s(ok);
-
-		if (!ok) {
+		if (status) {
 			self->on_connect(nullptr);
 		}
 	});
@@ -100,14 +98,13 @@ bool socket::connect(const addrinfo& info) {
 }
 
 bool socket::connect(const std::string& address, uint16_t port) {
-	dns::lookup([this](const std::shared_ptr<addrinfo>& res) {
-		if (res) {
+	dns::lookup([this](int err, const std::shared_ptr<addrinfo>& res) {
+		if (err) {
+			this->emit_connect_s(err);
+			this->on_connect(nullptr);
+		} else {
 			net_socket_connect* data = new net_socket_connect(this, res);
 			data->connect();
-		} else {
-			// TODO error
-			this->emit_connect_s(false);
-			this->on_connect(nullptr);
 		}
 	}, *this, address, port);
 
@@ -115,7 +112,7 @@ bool socket::connect(const std::string& address, uint16_t port) {
 }
 
 bool socket::keepalive(unsigned int delay) {
-	return 0 == uv_tcp_keepalive(*this, delay > 0 ? 1 : 0, delay);
+	return 0 == uv_tcp_keepalive(*this, delay ? 1 : 0, delay);
 }
 
 bool socket::nodelay(bool enable) {

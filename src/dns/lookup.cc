@@ -54,12 +54,13 @@ void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, const s
 
 	uv_getaddrinfo(loop, &packed_req->req, [](uv_getaddrinfo_t* req, int status, addrinfo* res) {
 		auto packed_req = reinterpret_cast<getaddrinfo_packed_req*>(req->data);
+		std::shared_ptr<addrinfo> ptr;
 
 		if (status == 0) {
-			packed_req->cb(std::shared_ptr<addrinfo>(res, addrinfo_deleter()));
-		} else {
-			packed_req->cb(std::shared_ptr<addrinfo>());
+			ptr.reset(res, addrinfo_deleter());
 		}
+
+		packed_req->cb(status, ptr);
 	}, domain.c_str(), service.empty() ? nullptr : service.c_str(), hints);
 }
 
