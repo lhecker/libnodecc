@@ -1,7 +1,6 @@
 #include "libnodecc/http/client_request.h"
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/string.h"
 
 
 namespace node {
@@ -56,7 +55,7 @@ bool client_request::init(node::loop& loop, const std::string& hostname, const u
 void client_request::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
-	node::string buf(800); // average HTTP header should be between 700-800 byte
+	node::mutable_buffer buf(800); // average HTTP header should be between 700-800 byte
 
 	{
 		buf.append(this->_method);

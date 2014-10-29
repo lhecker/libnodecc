@@ -1,7 +1,6 @@
 #include "libnodecc/http/request_response_proto.h"
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/string.h"
 
 
 namespace node {
@@ -55,7 +54,7 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
 		auto chunked_bufs = static_cast<node::buffer*>(alloca(chunked_bufcnt * sizeof(node::buffer)));
 		new(chunked_bufs) node::buffer[chunked_bufcnt]();
 
-		node::string chunkedStr;
+		node::mutable_buffer chunkedStr;
 
 		for (size_t i = 0; i < bufcnt; i++) {
 			size_t size = bufs[i].size();

@@ -1,7 +1,6 @@
 #include "libnodecc/http/server_response.h"
 
 #include "libnodecc/net/socket.h"
-#include "libnodecc/string.h"
 
 
 #ifndef _POSIX_C_SOURCE
@@ -113,7 +112,7 @@ void server_response::set_status_code(uint16_t code) {
 void server_response::send_headers() {
 	this->_is_chunked = !this->_headers.count("content-length");
 
-	node::string buf(800);
+	node::mutable_buffer buf(800);
 
 	{
 		uv_buf_t status = str_status_code(this->status_code());
