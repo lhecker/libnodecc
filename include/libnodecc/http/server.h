@@ -19,9 +19,17 @@ public:
 public:
 	explicit server();
 
+	void close();
+
+	template<typename F>
+	void close(F f) {
+		this->on_close(std::forward<F>(f));
+		this->close();
+	}
+
 private:
-	// TODO: convert it to an intrusive double-linked list
-	std::unordered_set<node::net::socket, std::hash<node::net::socket::handle_type>> clients;
+	class req_res_pack;
+	req_res_pack* _clients_head;
 };
 
 } // namespace http
