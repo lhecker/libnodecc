@@ -15,6 +15,7 @@ namespace uv {
 template<typename T>
 class stream : public node::uv::handle<T> {
 public:
+	NODE_ADD_CALLBACK(public, alloc, node::buffer, size_t suggested_size)
 	NODE_ADD_CALLBACK(public, read, void, int err, const node::buffer& buffer)
 
 public:
@@ -33,30 +34,35 @@ public:
 		}
 
 		return 0 == uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-			buf->base = (char*)malloc(suggested_size);
-			buf->len = suggested_size;
-		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
-			node::buffer buffer;
+			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
-			if (nread > 0 && self->has_read_callback()) {
-				buffer.reset(buf->base, nread, node::strong);
-				self->emit_read_s(0, buffer);
-				return;
+			if (self->has_alloc_callback()) {
+				self->_alloc_buffer = self->emit_alloc(suggested_size);
+			} else {
+				self->_alloc_buffer.reset(suggested_size);
 			}
 
-			if (nread < 0) {
-				self->emit_read_s(static_cast<int>(nread), buffer);
-				self->on_read(nullptr);
+			buf->base = self->_alloc_buffer.template data<char>();
+			buf->len = self->_alloc_buffer.size();
+		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
+			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
+
+			if (nread > 0 && self->has_read_callback()) {
+				self->emit_read_s(0, self->_alloc_buffer.slice(0, nread));
+			} else if (nread < 0) {
+				self->emit_read_s(static_cast<int>(nread), node::buffer());
 
 				if (nread == UV_EOF) {
 					self->shutdown();
 				} else {
 					self->close();
 				}
+
+				self->on_alloc(nullptr);
+				self->on_read(nullptr);
 			}
 
-			free(buf->base);
+			self->_alloc_buffer.reset();
 		});
 	}
 
@@ -163,6 +169,7 @@ public:
 
 			if (status != 0) {
 				self->close();
+				self->on_alloc(nullptr);
 				self->on_read(nullptr);
 			}
 
@@ -178,6 +185,8 @@ public:
 			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
 				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
 				self->close();
+				self->on_alloc(nullptr);
+				self->on_read(nullptr);
 				delete req;
 			});
 
@@ -186,6 +195,9 @@ public:
 			}
 		}
 	}
+
+private:
+	node::buffer _alloc_buffer;
 };
 
 } // namespace uv
