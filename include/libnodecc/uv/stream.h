@@ -85,10 +85,10 @@ public:
 	 * If the data cannot be sent immediately it will be queued for later.
 	 * In that case if cb is provided it will be called on completion.
 	 *
-	 * If the data could be sent synchronously, cb will only be called
-	 * if sync_allowed is true. Passing a value of true (the default)
-	 * tells this function that it's safe to call cb synchronously.
-	 * Be aware that this may cause stack overflows due to recursion.
+	 * If sync_allowed is true (the default) the data might get sent immediately
+	 * and the callback will be sent *synchronously*. This is important in case
+	 * you call write() again in the callback. This might lead to stackoverflows,
+	 * due to infinite recursion.
 	 */
 	int write(const node::buffer bufs[], size_t bufcnt, on_write_t cb = nullptr, bool sync_allowed = true) {
 		struct packed_req {
@@ -115,47 +115,46 @@ public:
 			total += b->size();
 		}
 
-		const int wi = uv_try_write(*this, uv_bufs, static_cast<unsigned int>(bufcnt));
-		size_t wu = size_t(wi);
+		if (sync_allowed) {
+			const int wi = uv_try_write(*this, uv_bufs, static_cast<unsigned int>(bufcnt));
+			size_t wu = size_t(wi);
 
-		// if uv_try_write() sent all data
-		if (wi > 0) {
-			if (wu == total) {
-				if (cb) {
-					if (sync_allowed) {
+			// if uv_try_write() sent all data
+			if (wi > 0) {
+				if (wu == total) {
+					if (cb) {
 						cb(0);
 					}
+
+					return 0;
 				}
 
-				return wi;
-			}
-
-			// check if for some reason wu contains an erroneous value just in case
-			if (wu > total) {
-				return -EINVAL;
-			}
-
-			// count how many buffers have been fully written...
-			for (i = 0; i < bufcnt; i++) {
-				size_t len = uv_bufs[i].len;
-
-				if (len > wu) {
-					break;
+				// check if for some reason wu contains an erroneous value just in case
+				if (wu > total) {
+					return -EINVAL;
 				}
 
-				wu -= len;
+				// count how many buffers have been fully written...
+				for (i = 0; i < bufcnt; i++) {
+					size_t len = uv_bufs[i].len;
+
+					if (len > wu) {
+						break;
+					}
+
+					wu -= len;
+				}
+
+				// ...remove them from the lists...
+				bufs    += i;
+				uv_bufs += i;
+				bufcnt  -= i;
+
+				// ...and remove the bytes not fully written from the (now) first buffer
+				uv_bufs[0].base += wu;
+				uv_bufs[0].len  -= wu;
 			}
-
-			// ...remove them from the lists...
-			bufs += i;
-			uv_bufs += i;
-			bufcnt -= i;
-
-			// ...and remove the bytes not fully written from the (now) first buffer
-			uv_bufs[0].base += wu;
-			uv_bufs[0].len  -= wu;
 		}
-
 
 		packed_req* pack = new packed_req(*this, bufs, bufcnt, cb);
 
