@@ -245,7 +245,7 @@ public:
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {
-		this->append(sizeof(charT));
+		this->expand_noinit(sizeof(charT));
 		*reinterpret_cast<charT*>(this->get() + this->_size) = ch;
 		this->_size += sizeof(charT);
 	}
@@ -278,13 +278,15 @@ public:
 		return *this;
 	}
 
+	mutable_buffer& append_number(uintmax_t n, uint8_t base = 10);
+
 	void reserve(size_t size) noexcept;
 	void clear() noexcept;
 
 	size_t capacity() const noexcept;
 
 private:
-	void append(size_t size) noexcept;
+	void expand_noinit(size_t size) noexcept;
 
 	size_t _real_size;
 };
@@ -303,7 +305,7 @@ struct std::hash<node::buffer> {
 template<>
 struct std::equal_to<node::buffer> {
 	bool operator()(const node::buffer& lhs, const node::buffer& rhs) const {
-		return lhs.data() == rhs.data();
+		return lhs.data() == rhs.data() && lhs.size() == rhs.size();
 	}
 };
 

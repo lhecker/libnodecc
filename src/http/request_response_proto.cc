@@ -59,25 +59,13 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
 		for (size_t i = 0; i < bufcnt; i++) {
 			size_t size = bufs[i].size();
 
-			// output length after converting to hex is log() to the base of 16
-			unsigned int hexLength = std::ceil(std::log(size) / std::log(16));
-
 			chunkedStr.clear();
-			chunkedStr.reserve(hexLength + 2 + 2); // +2+2 for those 2 "\r\n" below
 
 			if (i > 0) {
 				chunkedStr.append("\r\n");
 			}
 
-			{
-				static const char* hex_lookup = "0123456789abcdef";
-
-				do {
-					hexLength--;
-					chunkedStr.push_back(hex_lookup[(size >> (4 * hexLength)) & 0x0f]);
-				} while (hexLength > 0);
-			}
-
+			chunkedStr.append_number(size, 16);
 			chunkedStr.append("\r\n");
 
 			chunked_bufs[chunked_pos++] = chunkedStr;

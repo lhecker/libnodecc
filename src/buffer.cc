@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cstdlib>
 
+#include "libnodecc/util/math.h"
+
 
 namespace node {
 
@@ -329,7 +331,7 @@ mutable_buffer& mutable_buffer::operator=(const mutable_buffer& other) noexcept 
 }
 
 mutable_buffer& mutable_buffer::append(const void* data, size_t size) noexcept {
-	this->append(size);
+	this->expand_noinit(size);
 	memcpy(this->get() + this->_size, data, size);
 	this->_size += size;
 	return *this;
@@ -346,6 +348,32 @@ mutable_buffer& mutable_buffer::append(const node::buffer& buf, size_t pos, size
 		} else {
 			node::buffer::operator=(buf.slice(pos, count));
 			this->_real_size = this->_size;
+		}
+	}
+
+	return *this;
+}
+
+mutable_buffer& mutable_buffer::append_number(size_t n, uint8_t base) {
+	if (base >= 2 || base <= 36) {
+		size_t length = node::util::digits(n, base);
+
+		if (length) {
+			size_t div = node::util::ipow(base, length - 1);
+
+			this->expand_noinit(length);
+
+			do {
+				static const char chars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+				const char c = chars[(n / div) % base];
+				div /= base;
+
+				*reinterpret_cast<char*>(this->get() + this->_size) = c;
+				this->_size++;
+			} while (div > 0);
+		} else {
+			this->push_back('0');
 		}
 	}
 
@@ -397,7 +425,7 @@ size_t mutable_buffer::capacity() const noexcept {
 	return this->_real_size;
 }
 
-void mutable_buffer::append(size_t size) noexcept {
+void mutable_buffer::expand_noinit(size_t size) noexcept {
 	size_t cap = this->capacity();
 	size += this->size();
 
