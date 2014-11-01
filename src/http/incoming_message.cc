@@ -9,7 +9,7 @@
 namespace node {
 namespace http {
 
-incoming_message::incoming_message(net::socket& socket, http_parser_type type) : socket(socket) {
+incoming_message::incoming_message(net::socket& socket, http_parser_type type) : _socket(socket) {
 	static const http_parser_settings http_req_parser_settings = {
 		nullptr,
 		incoming_message::parser_on_url,
@@ -33,7 +33,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 				http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 			}
 
-			this->socket.close();
+			this->_socket.close();
 			this->_close();
 		} else {
 			this->_parserBuffer = &buffer;
@@ -41,10 +41,14 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 
 			// TODO: handle upgrade
 			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {
-				this->socket.shutdown();
+				this->_socket.shutdown();
 			}
 		}
 	});
+}
+
+const node::net::socket& incoming_message::socket() const {
+	return this->_socket;
 }
 
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {

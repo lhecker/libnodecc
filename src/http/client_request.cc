@@ -113,5 +113,9 @@ void client_request::set_path(const std::string& path) {
 	this->_path = path;
 }
 
+const node::net::socket& client_request::socket() const {
+	return this->_socket;
+}
+
 } // namespace node
 } // namespace http

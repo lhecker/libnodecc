@@ -14,7 +14,6 @@ public:
 	using http::request_response_proto::end;
 	bool end(const node::buffer bufs[], size_t bufcnt);
 
-
 	node::net::socket& socket() const;
 
 	uint16_t status_code() const;

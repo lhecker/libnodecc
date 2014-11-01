@@ -32,8 +32,8 @@ public:
 	operator uv_loop_t*() { return this->_handle.loop; }
 	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
 
-	operator const node::loop&() const { return reinterpret_cast<const node::loop&>(*this->_handle.loop->data); }
-	operator const uv_loop_t*() const { return this->_handle.loop; }
+	operator node::loop&() const { return (node::loop&)(*this->_handle.loop->data); }
+	operator uv_loop_t*() const { return (uv_loop_t*)this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 
 	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>

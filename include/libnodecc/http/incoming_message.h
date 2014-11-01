@@ -34,7 +34,7 @@ class incoming_message {
 public:
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
-	node::net::socket& socket;
+	const node::net::socket& socket() const;
 
 	uint8_t http_version_major;
 	uint8_t http_version_minor;
@@ -55,6 +55,8 @@ private:
 
 	void add_header_partials();
 	void _close();
+
+	node::net::socket& _socket;
 
 	std::string _partial_header_field;
 	std::string _partial_header_value;
