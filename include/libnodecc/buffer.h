@@ -278,16 +278,15 @@ public:
 		return *this;
 	}
 
-	mutable_buffer& append_number(uintmax_t n, uint8_t base = 10);
+	mutable_buffer& append_number(size_t n, uint8_t base = 10);
 
+	void expand_noinit(size_t size) noexcept;
 	void reserve(size_t size) noexcept;
 	void clear() noexcept;
 
 	size_t capacity() const noexcept;
 
 private:
-	void expand_noinit(size_t size) noexcept;
-
 	size_t _real_size;
 };
 

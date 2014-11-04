@@ -21,7 +21,10 @@
 				'include/libnodecc/loop.h',
 				'include/libnodecc/net/server.h',
 				'include/libnodecc/net/socket.h',
+				'include/libnodecc/util/base64.h',
 				'include/libnodecc/util/crc32c.h',
+				'include/libnodecc/util/endian.h',
+				'include/libnodecc/util/math.h',
 				'include/libnodecc/util/notification_queue.h',
 				'include/libnodecc/util/timer.h',
 				'include/libnodecc/uv/async.h',
@@ -39,7 +42,9 @@
 				'src/loop.cc',
 				'src/net/server.cc',
 				'src/net/socket.cc',
+				'src/util/base64.cc',
 				'src/util/crc32c.cc',
+				'src/util/math.cc',
 				'src/util/timer.cc',
 				'src/uv/async.cc',
 				'src/uv/queue_work.cc',
@@ -47,6 +52,7 @@
 			'dependencies': [
 				'deps/json11.gyp:json11',
 				'deps/libuv/uv.gyp:libuv',
+				'deps/wslay.gyp:wslay',
 			],
 			'direct_dependent_settings': {
 				'include_dirs': [
@@ -61,6 +67,7 @@
 			'export_dependent_settings': [
 				'deps/json11.gyp:json11',
 				'deps/libuv/uv.gyp:libuv',
+				'deps/wslay.gyp:wslay',
 			],
 			'xcode_settings': {
 				'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',

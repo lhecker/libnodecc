@@ -5,7 +5,7 @@
 #include <cstdint>
 
 
-#if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
+#if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
 # define NODE_HAS_BUILTIN_CLZ // __builtin_clz() defined
 #elif _MSC_VER >= 1400
 # define NODE_HAS_BUILTIN_BSR // _BitScanReverse() defined
