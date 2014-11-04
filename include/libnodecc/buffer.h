@@ -248,7 +248,7 @@ public:
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {
-		this->expand_noinit(sizeof(charT));
+		this->_expand(sizeof(charT));
 		*reinterpret_cast<charT*>(this->get() + this->_size) = ch;
 		this->_size += sizeof(charT);
 	}
@@ -291,6 +291,8 @@ public:
 	size_t capacity() const noexcept;
 
 private:
+	void _expand(size_t size) noexcept;
+
 	size_t _real_size;
 };
 

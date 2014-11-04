@@ -331,7 +331,7 @@ mutable_buffer& mutable_buffer::operator=(const mutable_buffer& other) noexcept 
 }
 
 mutable_buffer& mutable_buffer::append(const void* data, size_t size) noexcept {
-	this->expand_noinit(size);
+	this->_expand(size);
 	memcpy(this->get() + this->_size, data, size);
 	this->_size += size;
 	return *this;
@@ -430,6 +430,11 @@ size_t mutable_buffer::capacity() const noexcept {
 }
 
 void mutable_buffer::expand_noinit(size_t size) noexcept {
+	this->_expand(size);
+	this->_size = this->_real_size;
+}
+
+void mutable_buffer::_expand(size_t size) noexcept {
 	size_t cap = this->capacity();
 	size += this->size();
 
