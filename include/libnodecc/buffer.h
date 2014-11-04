@@ -179,6 +179,9 @@ public:
 	template<typename T = uint8_t>
 	T* data() const noexcept { return reinterpret_cast<T*>(this->_data); }
 
+	template<typename CharT = char, typename Traits = std::char_traits<CharT>, typename Allocator = std::allocator<CharT>>
+	std::basic_string<CharT, Traits, Allocator> string() const { return std::basic_string<CharT, Traits, Allocator>(reinterpret_cast<CharT*>(this->_data), this->_size); }
+
 	std::size_t size() const noexcept;
 
 
@@ -283,6 +286,7 @@ public:
 	void expand_noinit(size_t size) noexcept;
 	void reserve(size_t size) noexcept;
 	void clear() noexcept;
+	void reset() noexcept;
 
 	size_t capacity() const noexcept;
 

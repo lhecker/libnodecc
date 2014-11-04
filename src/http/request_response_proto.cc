@@ -59,8 +59,6 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
 		for (size_t i = 0; i < bufcnt; i++) {
 			size_t size = bufs[i].size();
 
-			chunkedStr.clear();
-
 			if (i > 0) {
 				chunkedStr.append("\r\n");
 			}
@@ -70,6 +68,8 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
 
 			chunked_bufs[chunked_pos++] = chunkedStr;
 			chunked_bufs[chunked_pos++] = bufs[i];
+
+			chunkedStr.reset();
 		}
 
 		chunked_bufs[chunked_pos] = node::buffer("\r\n", node::weak);

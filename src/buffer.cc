@@ -417,6 +417,10 @@ void mutable_buffer::reserve(size_t size) noexcept {
 }
 
 void mutable_buffer::clear() noexcept {
+	this->_size = 0;
+}
+
+void mutable_buffer::reset() noexcept {
 	this->reset();
 	this->_real_size = 0;
 }
