@@ -50,6 +50,7 @@
 				'src/uv/queue_work.cc',
 			],
 			'dependencies': [
+				'deps/boringssl.gyp:boringssl',
 				'deps/json11.gyp:json11',
 				'deps/libuv/uv.gyp:libuv',
 				'deps/wslay.gyp:wslay',
@@ -67,7 +68,6 @@
 			'export_dependent_settings': [
 				'deps/json11.gyp:json11',
 				'deps/libuv/uv.gyp:libuv',
-				'deps/wslay.gyp:wslay',
 			],
 			'xcode_settings': {
 				'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
