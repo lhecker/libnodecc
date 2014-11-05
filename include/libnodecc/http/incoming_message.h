@@ -64,7 +64,6 @@ private:
 	void _close();
 
 	node::net::socket& _socket;
-	request_response_proto& _req_res;
 
 	std::string _method;
 	std::string _url;

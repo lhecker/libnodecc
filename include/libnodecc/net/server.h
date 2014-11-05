@@ -17,8 +17,8 @@ public:
 	bool init(node::loop& loop);
 
 	bool listen(const sockaddr& addr, int backlog = 511, bool dualstack = true);
-	bool listen4(uint16_t port, const std::string& ip = "0.0.0.0", int backlog = 511);
-	bool listen6(uint16_t port, const std::string& ip = "::", int backlog = 511, bool dualstack = true);
+	bool listen4(uint16_t port = 0, const std::string& ip = "0.0.0.0", int backlog = 511);
+	bool listen6(uint16_t port = 0, const std::string& ip = "::", int backlog = 511, bool dualstack = true);
 
 	bool accept(node::net::socket& client);
 
