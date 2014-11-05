@@ -97,6 +97,8 @@
 			},
 		},
 		'cflags': [
+			'-fdata-sections',
+			'-ffunction-sections',
 			'-fno-common',
 			'-std=c++11',
 			'-stdlib=libc++',
@@ -104,10 +106,14 @@
 			'-Wextra',
 			'-Wno-unused-parameter',
 		],
+		'ldflags': [
+			'-Wl,--gc-sections',
+		],
 		'xcode_settings': {
 			'ALWAYS_SEARCH_USER_PATHS': 'NO',
 			'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
 			'CLANG_CXX_LIBRARY': 'libc++',
+			'DEAD_CODE_STRIPPING': 'YES',
 			'GCC_INLINES_ARE_PRIVATE_EXTERN': 'YES',
 			'GCC_NO_COMMON_BLOCKS': 'YES',
 			'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES',

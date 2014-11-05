@@ -94,7 +94,7 @@ static uv_buf_t str_status_code(uint16_t status_code) {
 namespace node {
 namespace http {
 
-server_response::server_response(net::socket& socket) : request_response_proto(), _socket(socket), _status_code(200), _shutdown_on_end(false) {
+server_response::server_response(net::socket& socket) : request_response_proto(), _socket(socket), _status_code(200), _shutdown_on_end(true) {
 }
 
 node::net::socket& server_response::socket() const {
@@ -148,8 +148,7 @@ void server_response::send_headers() {
 		buf.append("\r\n");
 	}
 
-	node::buffer buffer = buf;
-	this->socket_write(&buffer, 1);
+	this->socket_write(&buf, 1);
 	this->_headers.clear();
 }
 

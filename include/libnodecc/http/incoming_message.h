@@ -15,6 +15,10 @@ class buffer;
 namespace net {
 class socket;
 }
+
+namespace http {
+class request_response_proto;
+}
 }
 
 
@@ -28,22 +32,25 @@ class incoming_message {
 	NODE_ADD_CALLBACK(public, data, void, const node::buffer& buffer)
 	NODE_ADD_CALLBACK(public, close, void)
 
-	NODE_ADD_CALLBACK(private, headers_complete, void, bool keep_alive)
+	// for node::http::server/client_request
+	NODE_ADD_CALLBACK(private, headers_complete, void, bool upgrade, bool keep_alive)
 	NODE_ADD_CALLBACK(private, end, void)
 
 public:
+	typedef std::unordered_map<std::string, std::string> headers_t;
+
+
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
 	const node::net::socket& socket() const;
+	const std::string& method() const;
+	const std::string& url() const;
+	const headers_t& headers() const;
+	uint8_t http_version_major() const;
+	uint8_t http_version_minor() const;
+	uint8_t status_code() const;
 
-	uint8_t http_version_major;
-	uint8_t http_version_minor;
-
-	uint8_t status_code;
-
-	std::string method;
-	std::string url;
-	std::unordered_map<std::string, std::string> headers;
+	bool is_websocket_request();
 
 private:
 	static int parser_on_url(http_parser* parser, const char* at, size_t length);
@@ -57,12 +64,22 @@ private:
 	void _close();
 
 	node::net::socket& _socket;
+	request_response_proto& _req_res;
+
+	std::string _method;
+	std::string _url;
+	headers_t _headers;
 
 	std::string _partial_header_field;
 	std::string _partial_header_value;
 
-	http_parser _parser;
 	const node::buffer* _parserBuffer;
+	http_parser _parser;
+
+	uint8_t _http_version_major;
+	uint8_t _http_version_minor;
+	uint8_t _status_code;
+	uint8_t _is_websocket;
 };
 
 } // namespace http

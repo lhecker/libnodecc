@@ -1,6 +1,9 @@
 #include "libnodecc/http/server.h"
 
-#include <uv.h>
+#include <openssl/sha.h>
+#include <wslay/wslay.h>
+
+#include "libnodecc/util/base64.h"
 
 
 namespace node {
@@ -8,9 +11,10 @@ namespace http {
 
 class server::req_res_pack {
 public:
-	explicit req_res_pack() : req(socket, HTTP_REQUEST), res(socket) {
+	explicit req_res_pack(server* server) : server(server), req(socket, HTTP_REQUEST), res(socket) {
 	}
 
+	server* server;
 	req_res_pack* prev;
 	req_res_pack* next;
 	node::net::socket socket;
@@ -20,7 +24,7 @@ public:
 
 server::server() : net::server(), _clients_head(nullptr) {
 	this->on_connection([this]() {
-		req_res_pack* pack = new req_res_pack();
+		req_res_pack* pack = new req_res_pack(this);
 
 		if (!this->accept(pack->socket)) {
 			delete pack;
@@ -38,12 +42,12 @@ server::server() : net::server(), _clients_head(nullptr) {
 			this->_clients_head = pack;
 		}
 
-		pack->socket.on_close([this, pack]() {
+		pack->socket.on_close([pack]() {
 			if (pack->prev) {
 				pack->prev->next = pack->next;
-			} else {
+			} else if (pack->server) {
 				// pack has no previous element ---> it must be head
-				this->_clients_head = pack->next;
+				pack->server->_clients_head = pack->next;
 			}
 
 			if (pack->next) {
@@ -53,18 +57,45 @@ server::server() : net::server(), _clients_head(nullptr) {
 			delete pack;
 		});
 
-		pack->req.on_headers_complete([this, pack](bool keep_alive) {
+		pack->req.on_headers_complete([pack](bool upgrade, bool keep_alive) {
 			pack->res._shutdown_on_end = keep_alive;
 
 			// RFC 2616 - 14.23
-			if (!pack->req.headers.count("host")) {
+			if (!pack->req.headers().count("host")) {
 				pack->res.set_status_code(400);
 				pack->res.end();
 				return;
 			}
 
-			if (!this->emit_request_s(pack->req, pack->res)) {
+			if (!pack->server || !pack->server->emit_request_s(pack->req, pack->res)) {
 				pack->res.set_status_code(500);
+				pack->res.end();
+				return;
+			}
+
+			if (upgrade) {
+				if (pack->req._is_websocket == 1) {
+					uint8_t digest[SHA_DIGEST_LENGTH];
+					const char websocketMagic[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+					const auto& key = pack->req._headers.at("sec-websocket-key");
+
+					node::mutable_buffer buffer;
+					buffer.reserve(key.length() + strlen(websocketMagic));
+					buffer.append(key);
+					buffer.append(websocketMagic);
+
+					if (SHA1(buffer.data<const uint8_t>(), buffer.size(), digest)) {
+						pack->res._shutdown_on_end = true;
+						pack->res.set_status_code(101);
+						pack->res.set_header("connection", "upgrade");
+						pack->res.set_header("upgrade", "websocket");
+						pack->res.set_header("sec-websocket-accept", node::util::base64::encode(node::buffer(digest, node::weak)).string());
+						pack->res.send_headers();
+						return;
+					}
+				}
+
+				pack->res.set_status_code(501);
 				pack->res.end();
 			}
 		});
@@ -77,6 +108,7 @@ void server::close() {
 	req_res_pack* pack = this->_clients_head;
 
 	while (pack) {
+		pack->server = nullptr;
 		pack->socket.close();
 		pack = pack->next;
 	}
