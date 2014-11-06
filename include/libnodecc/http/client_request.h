@@ -18,7 +18,7 @@ class client_request : public node::http::request_response_proto {
 	explicit client_request();
 
 	bool init(node::loop& loop, const sockaddr& addr, const std::string& hostname, on_connect_t cb);
-	bool init(node::loop& loop, const std::string& hostname, const uint16_t port, on_connect_t cb);
+	bool init(node::loop& loop, const std::string& url, on_connect_t cb);
 
 	void shutdown();
 	void close();

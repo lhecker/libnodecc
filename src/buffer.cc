@@ -359,9 +359,9 @@ mutable_buffer& mutable_buffer::append_number(size_t n, uint8_t base) {
 		size_t length = node::util::digits(n, base);
 
 		if (length) {
-			size_t div = node::util::ipow(base, length - 1);
+			size_t div = node::util::ipow(size_t(base), length - 1);
 
-			this->expand_noinit(length);
+			this->_expand(length);
 
 			do {
 				static const char chars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -384,7 +384,7 @@ void mutable_buffer::reserve(size_t size) noexcept {
 	if (size > this->capacity()) {
 		/*
 		 * The growth rate should be exponential, that is that if we need to resize,
-		 * we allocate more that we need and thus prevent reallocations at every small append.
+		 * we allocate more that we need and thus prevent unneeded reallocations.
 		 *
 		 * Thus the growth function after n resizes with the starting size T is:
 		 *   T*x^n <= T + T*x + T*x^2 + ... + T*x^(n-1)
@@ -421,7 +421,7 @@ void mutable_buffer::clear() noexcept {
 }
 
 void mutable_buffer::reset() noexcept {
-	this->reset();
+	node::buffer::reset();
 	this->_real_size = 0;
 }
 

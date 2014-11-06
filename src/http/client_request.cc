@@ -1,5 +1,7 @@
 #include "libnodecc/http/client_request.h"
 
+#include <http-parser/http_parser.h>
+
 #include "libnodecc/net/socket.h"
 
 
@@ -40,13 +42,33 @@ bool client_request::init(node::loop& loop, const sockaddr& addr, const std::str
 	return this->_socket.init(loop) && this->_socket.connect(addr);
 }
 
-bool client_request::init(node::loop& loop, const std::string& hostname, const uint16_t port, on_connect_t cb) {
+bool client_request::init(node::loop& loop, const std::string& url, on_connect_t cb) {
+	http_parser_url u;
+	http_parser_parse_url(url.data(), url.size(), 0, &u);
+
+	if (!(u.field_set & UF_SCHEMA) || url.compare(u.field_data[UF_SCHEMA].off, u.field_data[UF_SCHEMA].len, "http") != 0) {
+		return false;
+	}
+
+	if (u.field_set & UF_HOST) {
+		// include ":port" if it exists
+		size_t count = u.field_set & UF_PORT ? (u.field_data[UF_PORT].off + u.field_data[UF_PORT].len) - u.field_data[UF_HOST].off : u.field_data[UF_HOST].len;
+		this->_hostname = url.substr(u.field_data[UF_HOST].off, count);
+	} else {
+		this->_hostname = "localhost";
+	}
+
+	if (u.field_set & UF_PATH) {
+		this->_path = url.substr(u.field_data[UF_PATH].off);
+	} else {
+		this->_path = "/";
+	}
+
 	this->_on_connect = std::move(cb);
-	this->_hostname = hostname; // TODO: this should be hostname:port or [hostname]:port (IPv6)
 
 	// hostname needed for name resolution
 	if (!this->_hostname.empty()) {
-		return this->_socket.init(loop) && this->_socket.connect(this->_hostname, port);
+		return this->_socket.init(loop) && this->_socket.connect(this->_hostname, u.port ? u.port : 80);
 	} else {
 		return false;
 	}

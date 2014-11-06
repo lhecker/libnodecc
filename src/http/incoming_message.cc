@@ -35,16 +35,14 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 
 			this->_socket.close();
 			this->_close();
-		} else if (this->_is_websocket) {
 		} else {
 			this->_parserBuffer = &buffer;
 			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
 
-			if ((this->_parser.upgrade != 0 && !this->_is_websocket) || nparsed != buffer.size()) {
+			// TODO: handle upgrade
+			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {
 				this->_socket.shutdown();
 			}
-
-			this->emit_data(buffer.slice(nparsed));
 		}
 	});
 }
