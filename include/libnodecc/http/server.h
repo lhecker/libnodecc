@@ -2,7 +2,6 @@
 #define nodecc_http_server_h
 
 #include <functional>
-#include <unordered_set>
 
 #include "../net/server.h"
 #include "incoming_message.h"
@@ -14,7 +13,7 @@ namespace http {
 
 class server : public node::net::server {
 public:
-	NODE_ADD_CALLBACK(public, request, void, http::incoming_message& req, http::server_response& res)
+	NODE_ADD_CALLBACK(public, request, void, node::http::incoming_message& req, node::http::server_response& res)
 
 public:
 	explicit server();

@@ -58,7 +58,7 @@ server::server() : net::server(), _clients_head(nullptr) {
 		});
 
 		pack->req.on_headers_complete([pack](bool upgrade, bool keep_alive) {
-			pack->res._shutdown_on_end = keep_alive;
+			pack->res._shutdown_on_end = !keep_alive;
 
 			// RFC 2616 - 14.23
 			if (!pack->req.headers().count("host")) {
