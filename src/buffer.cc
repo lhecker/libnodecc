@@ -269,6 +269,12 @@ void buffer::retain() noexcept {
 }
 
 void buffer::release() noexcept {
+	/*
+	 * Normally std::memory_order_acq_rel should be used for the fetch_sub operation,
+	 * but this results in an unneeded "acquire" operation, when the reference counter
+	 * does not yet reach zero and may impose a performance penalty.
+	 * (Taken from the boost::atomic docs.)
+	 */
 	if (this->_p && this->_p->use_count.fetch_sub(1, std::memory_order_release) == 1) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 

@@ -163,6 +163,7 @@ bool server_response::end(const node::buffer bufs[], size_t bufcnt) {
 		this->socket().shutdown();
 	}
 
+	// reset fields for the next response in a keepalive connection
 	this->set_status_code(200);
 
 	return ret;
