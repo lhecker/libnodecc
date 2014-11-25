@@ -408,7 +408,7 @@ void mutable_buffer::reserve(size_t size) noexcept {
 		 * Here we use a growth rate of x = 1.5.
 		 * If size is less than the "previous" capacity (e.g. divided by 1.5),
 		 * then the allocation will be reset to exactly size,
-		 * since it's smaller by a factor of over 1.5 and thus this buffer much too large.
+		 * since it's smaller by a factor of over 1.5 (e.g. this buffer is much too big).
 		 * If that's not the case either a growth rate of 1.5 is choosen, or if size
 		 * is much larger than the current capacity (more than 1.5 times) size will be choosen.
 		 */

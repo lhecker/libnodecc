@@ -1,18 +1,18 @@
+[submodule "deps/boringssl"]
+	path = deps/boringssl
+	url = https://boringssl.googlesource.com/boringssl/
 [submodule "src/http/http-parser"]
 	path = deps/http-parser
 	url = https://github.com/joyent/http-parser.git
-	ignore = untracked
-[submodule "deps/libuv"]
-	path = deps/libuv
-	url = https://github.com/joyent/libuv.git
 	ignore = untracked
 [submodule "deps/json11"]
 	path = deps/json11
 	url = https://github.com/dropbox/json11.git
     ignore = untracked
+[submodule "deps/libuv"]
+	path = deps/libuv
+	url = https://github.com/libuv/libuv.git
+	ignore = untracked
 [submodule "deps/wslay"]
 	path = deps/wslay
 	url = https://github.com/tatsuhiro-t/wslay.git
-[submodule "deps/boringssl"]
-	path = deps/boringssl
-	url = https://boringssl.googlesource.com/boringssl/
