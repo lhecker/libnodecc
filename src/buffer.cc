@@ -6,6 +6,13 @@
 #include "libnodecc/util/math.h"
 
 
+#if PTRDIFF_MAX > SIZE_T_MAX
+# define PTRDIFF_GREATER_SIZE(ptrdiff, size) ((ptrdiff) > ptrdiff_t(size))
+#else
+# define PTRDIFF_GREATER_SIZE(ptrdiff, size) (size_t(ptrdiff) > (size))
+#endif
+
+
 namespace node {
 
 struct buffer::control {
@@ -128,14 +135,14 @@ buffer buffer::copy(size_t size) const noexcept {
 buffer buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
 	buffer buffer;
 
-	if (this->_size < size_t(PTRDIFF_MAX) && this->_data) {
+	if (PTRDIFF_GREATER_SIZE(PTRDIFF_MAX, this->_size) && this->_data) {
 		if (start < 0) {
 			start += this->_size;
 
 			if (start < 0) {
 				start = 0;
 			}
-		} else if (size_t(start) > this->_size) {
+		} else if (PTRDIFF_GREATER_SIZE(start, this->_size)) {
 			start = this->_size;
 		}
 
@@ -145,18 +152,15 @@ buffer buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
 			if (end < 0) {
 				end = 0;
 			}
-		} else if (size_t(end) > this->_size) {
+		} else if (PTRDIFF_GREATER_SIZE(end, this->_size)) {
 			end = this->_size;
 		}
 
-		if (end >= start) {
+		if (end > start) {
 			buffer._size = end - start;
-
-			if (buffer._size > 0) {
-				buffer._p = this->_p;
-				buffer._data = this->get() + start;
-				buffer.retain();
-			}
+			buffer._p = this->_p;
+			buffer._data = this->get() + start;
+			buffer.retain();
 		}
 	}
 
