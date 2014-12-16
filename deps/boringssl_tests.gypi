@@ -67,6 +67,16 @@
       ],
     },
     {
+      'target_name': 'boringssl_constant_time_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'boringssl/crypto/constant_time_test.c',
+      ],
+    },
+    {
       'target_name': 'boringssl_dh_test',
       'type': 'executable',
       'dependencies': [
@@ -77,6 +87,16 @@
       ],
     },
     {
+      'target_name': 'boringssl_digest_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'boringssl/crypto/digest/digest_test.c',
+      ],
+    },
+    {
       'target_name': 'boringssl_dsa_test',
       'type': 'executable',
       'dependencies': [
@@ -84,6 +104,16 @@
       ],
       'sources': [
         'boringssl/crypto/dsa/dsa_test.c',
+      ],
+    },
+    {
+      'target_name': 'boringssl_ec_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'boringssl/crypto/ec/ec_test.c',
       ],
     },
     {
@@ -117,13 +147,13 @@
       ],
     },
     {
-      'target_name': 'boringssl_example_sign',
+      'target_name': 'boringssl_evp_test',
       'type': 'executable',
       'dependencies': [
         'boringssl.gyp:boringssl',
       ],
       'sources': [
-        'boringssl/crypto/evp/example_sign.c',
+        'boringssl/crypto/evp/evp_test.c',
       ],
     },
     {
@@ -144,16 +174,6 @@
       ],
       'sources': [
         'boringssl/crypto/lhash/lhash_test.c',
-      ],
-    },
-    {
-      'target_name': 'boringssl_md5_test',
-      'type': 'executable',
-      'dependencies': [
-        'boringssl.gyp:boringssl',
-      ],
-      'sources': [
-        'boringssl/crypto/md5/md5_test.c',
       ],
     },
     {
@@ -187,16 +207,6 @@
       ],
     },
     {
-      'target_name': 'boringssl_sha1_test',
-      'type': 'executable',
-      'dependencies': [
-        'boringssl.gyp:boringssl',
-      ],
-      'sources': [
-        'boringssl/crypto/sha/sha1_test.c',
-      ],
-    },
-    {
       'target_name': 'boringssl_pkcs7_test',
       'type': 'executable',
       'dependencies': [
@@ -215,20 +225,21 @@
       'boringssl_bn_test',
       'boringssl_bytestring_test',
       'boringssl_cipher_test',
+      'boringssl_constant_time_test',
       'boringssl_dh_test',
+      'boringssl_digest_test',
       'boringssl_dsa_test',
+      'boringssl_ec_test',
       'boringssl_ecdsa_test',
       'boringssl_err_test',
+      'boringssl_evp_test',
       'boringssl_example_mul',
-      'boringssl_example_sign',
       'boringssl_gcm_test',
       'boringssl_hmac_test',
       'boringssl_lhash_test',
-      'boringssl_md5_test',
       'boringssl_pkcs12_test',
       'boringssl_pkcs7_test',
       'boringssl_rsa_test',
-      'boringssl_sha1_test',
     ],
   }
 }
