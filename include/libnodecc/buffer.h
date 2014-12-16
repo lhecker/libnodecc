@@ -167,7 +167,7 @@ public:
 	operator void*() const noexcept;
 	operator char*() const noexcept;
 	operator unsigned char*() const noexcept;
-	char& operator[](std::size_t pos) const noexcept;
+	uint8_t& operator[](std::size_t pos) const noexcept;
 
 	explicit operator bool() const noexcept;
 	bool empty() const noexcept;

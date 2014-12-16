@@ -187,8 +187,8 @@ buffer::operator unsigned char*() const noexcept {
 	return this->data<unsigned char>();
 }
 
-char& buffer::operator[](size_t pos) const noexcept {
-	return *(this->data<char>() + pos);
+uint8_t& buffer::operator[](size_t pos) const noexcept {
+	return this->data<uint8_t>()[pos];
 }
 
 buffer::operator bool() const noexcept {

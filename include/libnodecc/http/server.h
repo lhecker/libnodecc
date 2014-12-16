@@ -13,7 +13,10 @@ namespace http {
 
 class server : public node::net::server {
 public:
-	NODE_ADD_CALLBACK(public, request, void, node::http::incoming_message& req, node::http::server_response& res)
+	typedef std::shared_ptr<node::http::incoming_message> request;
+	typedef std::shared_ptr<node::http::server_response> response;
+
+	NODE_ADD_CALLBACK(public, request, void, const node::http::server::request& req, const node::http::server::response& res)
 
 public:
 	explicit server();
@@ -28,7 +31,7 @@ public:
 
 private:
 	class req_res_pack;
-	req_res_pack* _clients_head;
+	std::weak_ptr<req_res_pack> _clients_head;
 };
 
 } // namespace http

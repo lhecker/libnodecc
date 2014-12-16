@@ -14,49 +14,42 @@ public:
 	explicit req_res_pack(server* server) : server(server), req(socket, HTTP_REQUEST), res(socket) {
 	}
 
+	~req_res_pack() {
+		printf("req_res_pack::~req_res_pack\n");
+		fflush(stdout);
+	}
+
 	server* server;
-	req_res_pack* prev;
-	req_res_pack* next;
+	std::weak_ptr<req_res_pack> next;
 	node::net::socket socket;
 	node::http::incoming_message req;
 	node::http::server_response res;
 };
 
-server::server() : net::server(), _clients_head(nullptr) {
+server::server() : net::server() {
 	this->on_connection([this]() {
-		req_res_pack* pack = new req_res_pack(this);
+		auto pack = std::make_shared<req_res_pack>(this);
 
 		if (!this->accept(pack->socket)) {
-			delete pack;
+			return;
 		}
 
-		// enqueue pack at the head of the double-linked list of clients
+		// enqueue pack at the head of the single-linked list of clients
 		{
-			if (this->_clients_head) {
-				this->_clients_head->prev = pack;
+			auto currentHead = this->_clients_head.lock();
+
+			if (currentHead) {
+				currentHead->next = pack;
 			}
-
-			pack->prev = nullptr;
-			pack->next = this->_clients_head;
-
-			this->_clients_head = pack;
 		}
+
+		this->_clients_head = pack;
 
 		pack->socket.on_close([pack]() {
-			if (pack->prev) {
-				pack->prev->next = pack->next;
-			} else if (pack->server) {
-				// pack has no previous element ---> it must be head
-				pack->server->_clients_head = pack->next;
-			}
-
-			if (pack->next) {
-				pack->next->prev = pack->prev;
-			}
-
-			delete pack;
+			pack->req._close();
 		});
 
+		// callback (and thus the reference to pack) will be released if an error in socket.on_read() is returned (e.g. EOF)
 		pack->req.on_headers_complete([pack](bool upgrade, bool keep_alive) {
 			pack->res._shutdown_on_end = !keep_alive;
 
@@ -67,7 +60,7 @@ server::server() : net::server(), _clients_head(nullptr) {
 				return;
 			}
 
-			if (!pack->server || !pack->server->emit_request_s(pack->req, pack->res)) {
+			if (!pack->server || !pack->server->emit_request_s(request(pack, &pack->req), response(pack, &pack->res))) {
 				pack->res.set_status_code(500);
 				pack->res.end();
 				return;
@@ -105,12 +98,18 @@ server::server() : net::server(), _clients_head(nullptr) {
 }
 
 void server::close() {
-	req_res_pack* pack = this->_clients_head;
+	auto it = this->_clients_head;
 
-	while (pack) {
-		pack->server = nullptr;
-		pack->socket.close();
-		pack = pack->next;
+	while (true) {
+		auto pack = it.lock();
+
+		if (pack) {
+			pack->server = nullptr;
+			pack->socket.close();
+			it = pack->next;
+		} else {
+			break;
+		}
 	}
 
 	node::net::server::close();

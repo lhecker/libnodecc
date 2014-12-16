@@ -11,7 +11,7 @@ namespace node {
 namespace http {
 
 class client_request : public node::http::request_response_proto {
-	NODE_ADD_CALLBACK(public, connect, void, http::client_request& req, http::incoming_message& res)
+	NODE_ADD_CALLBACK(public, connect, void, node::http::client_request& req, node::http::incoming_message& res)
 	NODE_ADD_CALLBACK(public, error, void)
 
 	

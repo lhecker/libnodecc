@@ -34,7 +34,6 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 			}
 
 			this->_socket.close();
-			this->_close();
 		} else {
 			this->_parserBuffer = &buffer;
 			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
@@ -184,9 +183,11 @@ void incoming_message::add_header_partials() {
 void incoming_message::_close() {
 	this->emit_close_s();
 	this->on_data(nullptr);
-	this->on_headers_complete(nullptr);
-	this->on_end(nullptr);
 	this->on_close(nullptr);
+	this->on_end(nullptr);
+
+	// delete this last since node::http::server uses this callback to store a strong reference to the req_res_pack
+	this->on_headers_complete(nullptr);
 }
 
 } // namespace node
