@@ -14,7 +14,19 @@ namespace util {
 template<typename T>
 class notification_queue : private node::uv::async {
 public:
+	/*
+	 * This callback will be called once for each notification,
+	 * that has been passed to the queue.
+	 */
 	NODE_ADD_CALLBACK(public, notification, void, const T&)
+
+	/*
+	 * Passes a reference to all notifications.
+	 * 
+	 * This interface might change, when the underlying
+	 * data structure changes - consider using the notification callback.
+	 */
+	NODE_ADD_CALLBACK(public, notifications, void, const std::vector<T>&)
 
 public:
 	explicit notification_queue() : node::uv::async() {}
@@ -29,6 +41,8 @@ public:
 				std::lock_guard<std::mutex> lock(self->_mutex);
 				std::swap(queue, self->_queue);
 			}
+
+			self->emit_notifications_s(queue);
 
 			for (const T& v : queue) {
 				if (!self->emit_notification_s(v)) {
