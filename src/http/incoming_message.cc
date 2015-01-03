@@ -77,10 +77,10 @@ uint8_t incoming_message::status_code() const {
 bool incoming_message::is_websocket_request() {
 	if (this->_is_websocket == UINT8_MAX) {
 		if (this->_parser.upgrade != 0) {
-			const auto &upgradeField = this->_headers.find("upgrade");
-			const auto &keyField = this->_headers.find("sec-websocket-key");
-			const auto &versionField = this->_headers.find("sec-websocket-version");
-			const auto &end = this->_headers.end();
+			const auto& upgradeField = this->_headers.find("upgrade");
+			const auto& keyField = this->_headers.find("sec-websocket-key");
+			const auto& versionField = this->_headers.find("sec-websocket-version");
+			const auto& end = this->_headers.end();
 
 			if (upgradeField != end &&
 				versionField != end &&

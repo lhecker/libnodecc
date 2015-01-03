@@ -138,7 +138,7 @@ void server_response::send_headers() {
 	}
 
 	{
-		for (const auto iter : this->_headers) {
+		for (const auto& iter : this->_headers) {
 			buf.append(iter.first);
 			buf.append(": ");
 			buf.append(iter.second);
