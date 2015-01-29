@@ -1,5 +1,8 @@
 #include "libnodecc/http/server_response.h"
 
+#include <mutex>
+#include <iostream>
+
 #include "libnodecc/net/socket.h"
 
 
@@ -109,11 +112,7 @@ void server_response::set_status_code(uint16_t code) {
 	this->_status_code = code;
 }
 
-void server_response::send_headers() {
-	this->_is_chunked = !this->_headers.count("content-length");
-
-	node::mutable_buffer buf(800);
-
+void server_response::compile_headers(node::mutable_buffer& buf) {
 	{
 		uv_buf_t status = str_status_code(this->status_code());
 
@@ -127,14 +126,84 @@ void server_response::send_headers() {
 	}
 
 	if (!this->_headers.count("date")) {
-		char dateBuf[38];
+		static const uint8_t wday[7][3] = {
+			{ 'S', 'u', 'n' },
+			{ 'M', 'o', 'n' },
+			{ 'T', 'u', 'e' },
+			{ 'W', 'e', 'd' },
+			{ 'T', 'h', 'u' },
+			{ 'F', 'r', 'i' },
+			{ 'S', 'a', 't' },
+		};
 
-		time_t t = time(NULL);
-		tm t2;
-		gmtime_r(&t, &t2);
-		size_t written = strftime(dateBuf, 38, "date: %a, %d %b %Y %H:%M:%S GMT\r\n", &t2);
+		static const uint8_t mon[12][3] = {
+			{ 'J', 'a', 'n' },
+			{ 'F', 'e', 'b' },
+			{ 'M', 'a', 'r' },
+			{ 'A', 'p', 'r' },
+			{ 'M', 'a', 'y' },
+			{ 'J', 'u', 'n' },
+			{ 'J', 'u', 'l' },
+			{ 'A', 'u', 'g' },
+			{ 'S', 'e', 'p' },
+			{ 'O', 'c', 't' },
+			{ 'N', 'o', 'v' },
+			{ 'D', 'e', 'c' },
+		};
 
-		buf.append(dateBuf, written);
+		/*
+		 * Cache the result of time() and gmtime_r()
+		 */
+		thread_local uint64_t lastTimeUpdate = 0;
+		thread_local node::mutable_buffer timeBuf(37);
+
+		const uint64_t now = uv_now(this->_socket);
+
+		if (now - lastTimeUpdate >= 500) {
+			lastTimeUpdate = now;
+
+			tm t;
+			time_t ts = time(nullptr);
+			gmtime_r(&ts, &t);
+
+			timeBuf.clear();
+			timeBuf.append("date: ");
+
+			timeBuf.append(wday[t.tm_wday], 3);
+			timeBuf.append(", ");
+			timeBuf.append_number(t.tm_mday);
+			timeBuf.push_back(' ');
+			timeBuf.append(mon[t.tm_mon], 3);
+			timeBuf.push_back(' ');
+			timeBuf.append_number(t.tm_year + 1900);
+
+			if (t.tm_hour < 10) {
+				timeBuf.append(" 0");
+			} else {
+				timeBuf.push_back(' ');
+			}
+
+			timeBuf.append_number(t.tm_hour);
+
+			if (t.tm_min < 10) {
+				timeBuf.append(":0");
+			} else {
+				timeBuf.push_back(':');
+			}
+
+			timeBuf.append_number(t.tm_min);
+
+			if (t.tm_sec < 10) {
+				timeBuf.append(":0");
+			} else {
+				timeBuf.push_back(':');
+			}
+
+			timeBuf.append_number(t.tm_sec);
+			timeBuf.append(" GMT\r\n");
+		}
+
+		buf.append(timeBuf);
 	}
 
 	{
@@ -147,9 +216,6 @@ void server_response::send_headers() {
 
 		buf.append("\r\n");
 	}
-
-	this->socket_write(&buf, 1);
-	this->_headers.clear();
 }
 
 bool server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {

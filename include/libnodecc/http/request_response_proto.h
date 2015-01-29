@@ -7,6 +7,7 @@
 
 namespace node {
 class buffer;
+class mutable_buffer;
 
 namespace net {
 class socket;
@@ -46,7 +47,8 @@ public:
 	virtual bool end(const node::buffer bufs[], size_t bufcnt);
 
 protected:
-	virtual void send_headers() = 0;
+	bool write(const node::buffer bufs[], size_t bufcnt, bool end);
+	virtual void compile_headers(node::mutable_buffer& buf) = 0;
 	virtual bool socket_write(const node::buffer bufs[], size_t bufcnt) = 0;
 
 	std::unordered_map<std::string, std::string> _headers;

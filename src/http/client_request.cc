@@ -9,8 +9,6 @@ namespace node {
 namespace http {
 
 client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
-	this->_headers.max_load_factor(0.75);
-
 	this->_socket.on_connect([this](int err) {
 		if (err) {
 			this->emit_error_s();
@@ -74,11 +72,7 @@ bool client_request::init(node::loop& loop, const std::string& url, on_connect_t
 	}
 }
 
-void client_request::send_headers() {
-	this->_is_chunked = !this->_headers.count("content-length");
-
-	node::mutable_buffer buf(800); // average HTTP header should be between 700-800 byte
-
+void client_request::compile_headers(node::mutable_buffer& buf) {
 	{
 		buf.append(this->_method);
 		buf.push_back(' ');
@@ -98,9 +92,6 @@ void client_request::send_headers() {
 
 		buf.append("\r\n");
 	}
-
-	this->_socket.write(buf);
-	this->_headers.clear();
 }
 
 bool client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {

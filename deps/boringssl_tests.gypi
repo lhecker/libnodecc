@@ -157,6 +157,26 @@
       ],
     },
     {
+      'target_name': 'boringssl_pbkdf_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'boringssl/crypto/evp/pbkdf_test.c',
+      ],
+    },
+    {
+      'target_name': 'boringssl_hkdf_test',
+      'type': 'executable',
+      'dependencies': [
+        'boringssl.gyp:boringssl',
+      ],
+      'sources': [
+        'boringssl/crypto/hkdf/hkdf_test.c',
+      ],
+    },
+    {
       'target_name': 'boringssl_hmac_test',
       'type': 'executable',
       'dependencies': [
@@ -235,8 +255,10 @@
       'boringssl_evp_test',
       'boringssl_example_mul',
       'boringssl_gcm_test',
+      'boringssl_hkdf_test',
       'boringssl_hmac_test',
       'boringssl_lhash_test',
+      'boringssl_pbkdf_test',
       'boringssl_pkcs12_test',
       'boringssl_pkcs7_test',
       'boringssl_rsa_test',

@@ -101,6 +101,10 @@ public:
 			std::vector<node::buffer> bufs;
 		};
 
+		if (bufcnt == 0) {
+			return 0;
+		}
+
 		uv_buf_t* uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
 		size_t total = 0;
 		size_t i;

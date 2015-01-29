@@ -33,8 +33,8 @@ class client_request : public node::http::request_response_proto {
 	const node::net::socket& socket() const;
 
 private:
-	void send_headers();
-	bool socket_write(const node::buffer bufs[], size_t bufcnt);
+	void compile_headers(node::mutable_buffer& buf) override;
+	bool socket_write(const node::buffer bufs[], size_t bufcnt) override;
 
 	node::net::socket _socket;
 	node::http::incoming_message _incoming_message;

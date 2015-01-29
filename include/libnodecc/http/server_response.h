@@ -23,8 +23,8 @@ private:
 	// http::server needs exclusive access to _shutdown_on_end
 	friend class server;
 
-	void send_headers();
-	bool socket_write(const node::buffer bufs[], size_t bufcnt);
+	void compile_headers(node::mutable_buffer& buf) override;
+	bool socket_write(const node::buffer bufs[], size_t bufcnt) override;
 
 	node::net::socket& _socket;
 	uint16_t _status_code;

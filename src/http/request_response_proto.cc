@@ -26,122 +26,187 @@ bool request_response_proto::headers_sent() const {
 }
 
 bool request_response_proto::write(const node::buffer& buf) {
-	return this->write(&buf, 1);
+	return this->write(&buf, 1, false);
 }
 
 bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
-	bool ret;
+	return this->write(bufs, bufcnt, false);
+}
 
-	if (!this->headers_sent()) {
-		if (!this->_headers.count("transfer-encoding")) {
-			this->set_header("transfer-encoding", "chunked");
+bool request_response_proto::end() {
+	return this->write(nullptr, 0, true);
+}
+
+bool request_response_proto::end(const node::buffer& buf) {
+	return this->write(&buf, 1, true);
+}
+
+bool request_response_proto::end(const node::buffer bufs[], size_t bufcnt) {
+	return this->write(bufs, bufcnt, true);
+}
+
+bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt, bool end) {
+	bool ret = true;
+	size_t compiledBufcnt = 0;
+	size_t compiledBufsPos = 0;
+	node::buffer* compiledBufs = nullptr;
+	node::mutable_buffer buf;
+
+	// if the headers have not been sent until now, determine if it uses the chunked encoding
+	if (!this->_headers_sent) {
+		if (this->_headers.find("content-length") != this->_headers.end()) {
+			this->_is_chunked = false;
+		} else {
+			const auto p = this->_headers.find("transfer-encoding");
+
+			/*
+			 * It's the first an last write call and
+			 * no transfer-encoding has benn specified.
+			 * ---> Try to set the content-length.
+			 */
+			if (p != this->_headers.end()) {
+				this->_is_chunked = p->second.compare("chunked") == 0;
+			} else {
+				if (end) {
+					size_t contentLength = 0;
+					size_t i = 0;
+
+					for (; i < bufcnt; i++) {
+						size_t size = bufs[i].size();
+
+						/*
+						 * Make sure that we don't cause a integer overflow when summing buffer sizes.
+						 * If an overflow happens break this loop and
+						 * send the data using the chunked transfer encoding.
+						 */
+						if (size > SIZE_T_MAX - contentLength) {
+							break;
+						}
+
+						contentLength += bufs[i].size();
+					}
+
+					if (i == bufcnt) {
+						/*
+						 * The loop above finished without an integer overflow.
+						 * ---> Send it using the content-length header.
+						 */
+						this->set_header("content-length", std::to_string(contentLength));
+						this->_is_chunked = false;
+
+						goto contentLengthSuccessfullySet;
+					}
+				}
+
+				/*
+				 * Calculating the content-length failed.
+				 * ---> Use chunked encoding.
+				 */
+				this->_headers.emplace_hint(p, "transfer-encoding", "chunked");
+				this->_is_chunked = true;
+			}
 		}
 
-		this->send_headers();
+	contentLengthSuccessfullySet:
+
+		/*
+		 * If it this write call will also send the headers and
+		 * uses chunked encoding we can append the first
+		 * chunk length field directly to it.
+		 *
+		 * If it isn't chunked we must use a seperate buffer for the header.
+		 */
+		if (!this->_is_chunked) {
+			compiledBufcnt = 1;
+		}
+	}
+
+	/*
+	 * If the chunked encoding is used we need 2*n+1 bufs:
+	 * ([header] + hex + \r\n) + data + (\r\n + hex + \r\n) + ... + (\r\n + 0\r\n\r\n)
+	 */
+	if (bufcnt > 0) {
+		compiledBufcnt += this->_is_chunked ? (2 * bufcnt + 1) : bufcnt;
+	} else if (end) {
+		/*
+		 * TODO: add better stateful behaviour:
+		 * preventing undefined behaviour on multiple calls to .end()
+		 */
+		compiledBufcnt++;
+	}
+
+	if (compiledBufcnt == 0) {
+		goto writeEnd;
+	} else {
+		// no need to copy the buffers if we pipe the bufs 1:1 to the socket
+		if (compiledBufcnt == bufcnt) {
+			ret = this->socket_write(bufs, bufcnt);
+			goto writeEnd;
+		}
+
+		compiledBufs = (node::buffer*)alloca(compiledBufcnt * sizeof(node::buffer));
+		new(compiledBufs) node::buffer[compiledBufcnt]();
+	}
+
+	if (!this->_headers_sent) {
+		// an average HTTP header should be between 700-800 byte in size
+		buf.reserve(800);
+		this->compile_headers(buf);
+
+		/*
+		 * If it this write call will also send the headers and
+		 * uses chunked encoding we can append the first
+		 * chunk length field directly to it.
+		 *
+		 * If it isn't chunked we must use a seperate buffer for the header.
+		 */
+		if (!this->_is_chunked) {
+			compiledBufs[compiledBufsPos++] = buf;
+		}
+
+		this->_headers.clear();
 		this->_headers_sent = true;
 	}
 
 	if (this->_is_chunked) {
-		/*
-		 * A bufcnt of N results in "2 * N + 1" chunked bufs
-		 *
-		 * E.g. 2 bufs need to be sent:
-		 * (hex + \r\n) + (data) + (\r\n + hex + \r\n) + (data) + (\r\n)
-		 */
-		size_t chunked_bufcnt = 2 * bufcnt + 1;
-		size_t chunked_pos = 0;
-
-		auto chunked_bufs = static_cast<node::buffer*>(alloca(chunked_bufcnt * sizeof(node::buffer)));
-		new(chunked_bufs) node::buffer[chunked_bufcnt]();
-
-		node::mutable_buffer chunkedStr;
-
 		for (size_t i = 0; i < bufcnt; i++) {
-			size_t size = bufs[i].size();
+			const size_t size = bufs[i].size();
 
 			if (i > 0) {
-				chunkedStr.append("\r\n");
+				buf.append("\r\n");
 			}
 
-			chunkedStr.append_number(size, 16);
-			chunkedStr.append("\r\n");
+			buf.append_number(size, 16);
+			buf.append("\r\n");
 
-			chunked_bufs[chunked_pos++] = chunkedStr;
-			chunked_bufs[chunked_pos++] = bufs[i];
+			compiledBufs[compiledBufsPos++] = buf;
+			compiledBufs[compiledBufsPos++] = bufs[i];
 
-			chunkedStr.reset();
+			buf.reset();
 		}
 
-		chunked_bufs[chunked_pos] = node::buffer("\r\n", node::weak);
-
-		ret = this->socket_write(chunked_bufs, chunked_bufcnt);
-
-		for (size_t i = 0; i < chunked_bufcnt; i++) {
-			chunked_bufs[i].~buffer();
-		}
+		static const node::buffer normalChunk = node::buffer("\r\n", node::weak);
+		static const node::buffer endChunk = node::buffer("\r\n0\r\n\r\n", node::weak);
+		compiledBufs[compiledBufsPos++] = end ? endChunk : normalChunk;
 	} else {
-		ret = this->socket_write(bufs, bufcnt);
-	}
-
-	return ret;
-}
-
-bool request_response_proto::end() {
-	return this->end(nullptr, 0);
-}
-
-bool request_response_proto::end(const node::buffer& buf) {
-	return this->end(&buf, 1);
-}
-
-bool request_response_proto::end(const node::buffer bufs[], size_t bufcnt) {
-	bool ret = true;
-
-	if (!this->headers_sent()) {
-		if (bufcnt) {
-			size_t contentLength = 0;
-			size_t i = 0;
-
-			for (; i < bufcnt; i++) {
-				size_t size = bufs[i].size();
-
-				/*
-				 * Make sure that we don't cause a integer overflow when summing buffer sizes.
-				 * If an overflow happens break this loop and
-				 * send the data using the chunked transfer encoding.
-				 */
-				if (size > SIZE_T_MAX - contentLength) {
-					break;
-				}
-
-				contentLength += bufs[i].size();
-			}
-
-			if (i == bufcnt) {
-				// the loop above finished without an integer overflow
-				this->set_header("content-length", std::to_string(contentLength));
-				this->send_headers();
-
-				ret = this->socket_write(bufs, bufcnt);
-			} else {
-				// the loop above finished WITH an integer overflow
-				// --> send it using the chunked transfer encoding
-				this->write(bufs, bufcnt);
-			}
-		} else {
-			// header-only
-			this->send_headers();
-			this->_headers_sent = false;
-			return false;
+		for (size_t i = 0; i < bufcnt; i++) {
+			compiledBufs[compiledBufsPos++] = bufs[i];
 		}
 	}
 
-	if (this->_is_chunked) {
-		node::buffer buffer = node::buffer("0\r\n\r\n", node::weak);
-		ret = ret && this->socket_write(&buffer, 1);
+	ret = this->socket_write(compiledBufs, compiledBufsPos);
+
+
+writeEnd:
+
+	for (size_t i = 0; i < compiledBufsPos; i++) {
+		compiledBufs[i].~buffer();
 	}
 
-	this->_headers_sent = false;
+	if (end) {
+		this->_headers_sent = false;
+	}
+
 	return ret;
 }
 
