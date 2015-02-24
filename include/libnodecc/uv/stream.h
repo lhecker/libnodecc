@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../buffer.h"
+#include "../stream.h"
 #include "handle.h"
 
 
@@ -13,27 +14,27 @@ namespace node {
 namespace uv {
 
 template<typename T>
-class stream : public node::uv::handle<T> {
+class stream : public node::uv::handle<T>, public node::stream::readable<node::buffer>, public node::stream::writeable<node::buffer> {
 public:
 	NODE_ADD_CALLBACK(public, alloc, node::buffer, size_t suggested_size)
-	NODE_ADD_CALLBACK(public, read, void, int err, const node::buffer& buffer)
 
 public:
 	typedef std::function<void(int err)> on_write_t;
 
 
-	explicit stream() : node::uv::handle<T>() {}
+	explicit stream() : node::uv::handle<T>() {
+	}
 
 	operator uv_stream_t*() {
 		return reinterpret_cast<uv_stream_t*>(&this->_handle);
 	}
 
-	bool read_start() {
+	void resume() override {
 		if (static_cast<const uv_stream_t*>(*this)->read_cb) {
-			return false;
+			return;
 		}
 
-		return 0 == uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
 			if (self->has_alloc_callback()) {
@@ -47,62 +48,53 @@ public:
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 
-			if (nread > 0 && self->has_read_callback()) {
-				self->emit_read_s(0, self->_alloc_buffer.slice(0, nread));
+			if (nread > 0 && self->has_data_callback()) {
+				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
+				self->emit_data_s(&buf, 1);
 			} else if (nread < 0) {
-				self->emit_read_s(static_cast<int>(nread), node::buffer());
+				self->emit_end_s();
 
 				if (nread == UV_EOF) {
-					self->shutdown();
+					// the other side shut down it's side (FIN) --> gracefully shutdown
+					self->end();
 				} else {
+					// other error --> hard close
 					self->close();
 				}
-
-				self->on_alloc(nullptr);
-				self->on_read(nullptr);
 			}
 
 			self->_alloc_buffer.reset();
 		});
 	}
 
-	bool read_stop() {
-		return 0 == uv_read_stop(*this);
+	void pause() override {
+		uv_read_stop(*this);
 	}
 
-	int write(const node::buffer& buf) {
-		return this->write(&buf, 1);
-	}
+	void end() {
+		if (!this->is_closing()) {
+			uv_shutdown_t* req = new uv_shutdown_t;
+			req->data = this;
 
-	template<typename F>
-	int write(const node::buffer& buf, F f, bool sync_allowed = true) {
-		return this->write(&buf, 1, std::forward<F>(f), sync_allowed);
-	}
+			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
+				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
+				self->close();
+				delete req;
+			});
 
-	/**
-	 * Writes the bufs array of the size bufcnt to the stream.
-	 *
-	 * If the data cannot be sent immediately it will be queued for later.
-	 * In that case if cb is provided it will be called on completion.
-	 *
-	 * If sync_allowed is true (the default) the data might get sent immediately
-	 * and the callback will be sent *synchronously*. This is important in case
-	 * you call write() again in the callback. This might lead to stackoverflows,
-	 * due to infinite recursion.
-	 */
-	int write(const node::buffer bufs[], size_t bufcnt, on_write_t cb = nullptr, bool sync_allowed = true) {
-		struct packed_req {
-			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, const on_write_t& cb) : cb(std::move(cb)), bufs(bufs, bufs + bufcnt) {
-				this->req.data = &stream;
+			if (ret != 0) {
+				delete req;
 			}
+		}
+	}
 
-			uv_write_t req;
-			on_write_t cb;
-			std::vector<node::buffer> bufs;
-		};
+	bool write(const node::buffer& buf) override {
+		return this->writev(&buf, 1);
+	}
 
+	bool writev(const node::buffer bufs[], size_t bufcnt) override {
 		if (bufcnt == 0) {
-			return 0;
+			return true;
 		}
 
 		uv_buf_t* uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
@@ -119,84 +111,77 @@ public:
 			total += b->size();
 		}
 
-		if (sync_allowed) {
-			const int wi = uv_try_write(*this, uv_bufs, static_cast<unsigned int>(bufcnt));
-			size_t wu = size_t(wi);
+		const int wi = uv_try_write(*this, uv_bufs, static_cast<unsigned int>(bufcnt));
+		size_t wu = size_t(wi);
 
-			// if uv_try_write() sent all data
-			if (wi > 0) {
-				if (wu == total) {
-					if (cb) {
-						cb(0);
-					}
-
-					return 0;
-				}
-
-				// check if for some reason wu contains an erroneous value just in case
-				if (wu > total) {
-					return -EINVAL;
-				}
-
-				// count how many buffers have been fully written...
-				for (i = 0; i < bufcnt; i++) {
-					size_t len = uv_bufs[i].len;
-
-					if (len > wu) {
-						break;
-					}
-
-					wu -= len;
-				}
-
-				// ...remove them from the lists...
-				bufs    += i;
-				uv_bufs += i;
-				bufcnt  -= i;
-
-				// ...and remove the bytes not fully written from the (now) first buffer
-				uv_bufs[0].base += wu;
-				uv_bufs[0].len  -= wu;
+		// if uv_try_write() sent all data
+		if (wi > 0) {
+			if (wu == total) {
+				// everything was written
+				return true;
 			}
+
+			// check if for some reason wu contains an erroneous value just in case
+			if (wu > total) {
+				// -EINVAL
+				return true;
+			}
+
+			// count how many buffers have been fully written...
+			for (i = 0; i < bufcnt; i++) {
+				size_t len = uv_bufs[i].len;
+
+				if (len > wu) {
+					break;
+				}
+
+				wu -= len;
+			}
+
+			// ...remove them from the lists...
+			bufs    += i;
+			uv_bufs += i;
+			bufcnt  -= i;
+
+			// ...and remove the bytes not fully written from the (now) first buffer
+			uv_bufs[0].base += wu;
+			uv_bufs[0].len  -= wu;
 		}
 
-		packed_req* pack = new packed_req(*this, bufs, bufcnt, cb);
+		struct packed_req {
+			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, size_t total) : bufs(bufs, bufs + bufcnt), total(total) {
+				stream.increase_watermark(this->total);
+				this->req.data = &stream;
+			}
 
-		return uv_write(&pack->req, *this, uv_bufs, static_cast<unsigned int>(bufcnt), [](uv_write_t* req, int status) {
+			~packed_req() {
+				uv::stream<T>* stream = reinterpret_cast<uv::stream<T>*>(this->req.data);
+				stream->decrease_watermark(this->total);
+			}
+
+			uv_write_t req;
+			std::vector<node::buffer> bufs;
+			size_t total;
+		};
+
+		packed_req* pack = new packed_req(*this, bufs, bufcnt, total);
+
+		int ret = uv_write(&pack->req, *this, uv_bufs, static_cast<unsigned int>(bufcnt), [](uv_write_t* req, int status) {
 			packed_req* pack = reinterpret_cast<packed_req*>(req);
 			uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 
-			if (pack->cb) {
-				pack->cb(status);
-			}
-
 			if (status != 0) {
 				self->close();
-				self->on_alloc(nullptr);
-				self->on_read(nullptr);
 			}
 
 			delete pack;
 		});
-	}
 
-	void shutdown() {
-		if (!this->is_closing()) {
-			uv_shutdown_t* req = new uv_shutdown_t;
-			req->data = this;
-
-			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
-				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
-				self->close();
-				self->on_alloc(nullptr);
-				self->on_read(nullptr);
-				delete req;
-			});
-
-			if (ret != 0) {
-				delete req;
-			}
+		if (ret != 0) {
+			delete pack;
 		}
+
+		return this->writeable_return_value();
 	}
 
 private:

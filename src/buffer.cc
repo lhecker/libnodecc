@@ -19,7 +19,7 @@ struct buffer::control {
 	constexpr control(void* base) noexcept : base(base), use_count(1) {};
 
 	void* base;
-	std::atomic<unsigned int> use_count;
+	std::atomic<uintptr_t> use_count;
 };
 
 
@@ -94,16 +94,22 @@ void buffer::reset() noexcept {
 }
 
 void buffer::reset(size_t size) noexcept {
-	this->release();
+	/*
+	 * If we are the only one who references the data,
+	 * we only need to free/malloc if the size is different.
+	 */
+	if (this->use_count() != 1 || size != this->_size) {
+		this->release();
 
-	if (size > 0) {
-		uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
-		uint8_t* data = base + sizeof(control);
+		if (size > 0) {
+			uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
+			uint8_t* data = base + sizeof(control);
 
-		if (base) {
-			this->_p = new(base) control(base);
-			this->_data = data;
-			this->_size = size;
+			if (base) {
+				this->_p = new(base) control(base);
+				this->_data = data;
+				this->_size = size;
+			}
 		}
 	}
 }
@@ -365,26 +371,21 @@ mutable_buffer& mutable_buffer::append(const node::buffer& buf, size_t pos, size
 }
 
 mutable_buffer& mutable_buffer::append_number(size_t n, uint8_t base) {
-	if (base >= 2 || base <= 36) {
-		size_t length = node::util::digits(n, base);
+	if (base >= 2 && base <= 36) {
+		const size_t length = node::util::digits(n, base);
+		size_t div = node::util::ipow(size_t(base), length - 1);
 
-		if (length) {
-			size_t div = node::util::ipow(size_t(base), length - 1);
+		this->_expand(length);
 
-			this->_expand(length);
+		do {
+			static const char chars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-			do {
-				static const char chars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+			const char c = chars[(n / div) % base];
+			div /= base;
 
-				const char c = chars[(n / div) % base];
-				div /= base;
-
-				*reinterpret_cast<char*>(this->get() + this->_size) = c;
-				this->_size++;
-			} while (div > 0);
-		} else {
-			this->push_back('0');
-		}
+			*reinterpret_cast<char*>(this->get() + this->_size) = c;
+			this->_size++;
+		} while (div > 0);
 	}
 
 	return *this;

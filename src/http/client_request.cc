@@ -17,7 +17,7 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 		} else {
 			this->_incoming_message._url = this->_path;
 			this->_incoming_message._method = this->_method;
-			this->_socket.read_start();
+			this->_socket.resume();
 			this->emit_connect_s(*this, this->_incoming_message);
 		}
 	});
@@ -29,7 +29,7 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 	});
 
 	this->_incoming_message.on_end([this]() {
-		this->_socket.shutdown(); // TODO keep-alive
+		this->_socket.end(); // TODO keep-alive
 	});
 }
 
@@ -95,7 +95,8 @@ void client_request::compile_headers(node::mutable_buffer& buf) {
 }
 
 bool client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {
-	return this->_socket.write(bufs, bufcnt);
+	this->_socket.writev(bufs, bufcnt);
+	return true;
 }
 
 void client_request::close() {
@@ -103,7 +104,7 @@ void client_request::close() {
 }
 
 void client_request::shutdown() {
-	this->_socket.shutdown();
+	this->_socket.end();
 }
 
 const std::string& client_request::method() const {

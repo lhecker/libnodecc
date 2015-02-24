@@ -1,6 +1,7 @@
 #include "libnodecc/http/request_response_proto.h"
 
 #include "libnodecc/net/socket.h"
+#include "libnodecc/util/math.h"
 
 
 namespace node {
@@ -91,7 +92,19 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt, boo
 						 * The loop above finished without an integer overflow.
 						 * ---> Send it using the content-length header.
 						 */
-						this->set_header("content-length", std::to_string(contentLength));
+						const size_t length = node::util::digits(contentLength, 10);
+						size_t div = node::util::ipow(10, length - 1);
+						std::string str(length, '\0');
+						char* strData = const_cast<char*>(str.data());
+
+						do {
+							static const char chars[] = "0123456789";
+
+							*strData++ = chars[(contentLength / div) % 10];
+							div /= 10;
+						} while (div > 0);
+
+						this->set_header("content-length", str);
 						this->_is_chunked = false;
 
 						goto contentLengthSuccessfullySet;

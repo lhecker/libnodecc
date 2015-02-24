@@ -24,6 +24,8 @@ public:
 		this->_handle.data = this;
 	}
 
+	virtual ~handle() {}
+
 	handle(const handle&) = delete;
 	handle& operator=(const handle&) = delete;
 
@@ -36,11 +38,14 @@ public:
 	operator uv_loop_t*() const { return (uv_loop_t*)this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 
+	// casts *this to any libuv handle type
 	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>
 	operator T*() { return &this->_handle; }
 	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>
 	operator const T*() const { return &this->_handle; }
 
+	template<typename U, typename V>
+	static U* to_node(V* handle) { return dynamic_cast<U*>(((uv::handle<T>*)handle->data)); }
 
 	template<class T1, class T2>
 	friend bool operator==(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) noexcept {

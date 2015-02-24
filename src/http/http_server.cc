@@ -95,7 +95,7 @@ server::server() : net::server() {
 			}
 		});
 
-		pack->socket.read_start();
+		pack->socket.resume();
 	});
 }
 

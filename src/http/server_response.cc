@@ -120,37 +120,20 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 			status = str_status_code(500);
 		}
 
+		/*
+		 * As per RFC 2145 §2.3:
+		 *
+		 * An HTTP server SHOULD send a response version equal to the highest
+		 * version for which the server is at least conditionally compliant, and
+		 * whose major version is less than or equal to the one received in the
+		 * request.
+		 */
 		buf.append("HTTP/1.1 ");
 		buf.append(status.base, status.len);
 		buf.append("\r\n");
 	}
 
-	if (!this->_headers.count("date")) {
-		static const uint8_t wday[7][3] = {
-			{ 'S', 'u', 'n' },
-			{ 'M', 'o', 'n' },
-			{ 'T', 'u', 'e' },
-			{ 'W', 'e', 'd' },
-			{ 'T', 'h', 'u' },
-			{ 'F', 'r', 'i' },
-			{ 'S', 'a', 't' },
-		};
-
-		static const uint8_t mon[12][3] = {
-			{ 'J', 'a', 'n' },
-			{ 'F', 'e', 'b' },
-			{ 'M', 'a', 'r' },
-			{ 'A', 'p', 'r' },
-			{ 'M', 'a', 'y' },
-			{ 'J', 'u', 'n' },
-			{ 'J', 'u', 'l' },
-			{ 'A', 'u', 'g' },
-			{ 'S', 'e', 'p' },
-			{ 'O', 'c', 't' },
-			{ 'N', 'o', 'v' },
-			{ 'D', 'e', 'c' },
-		};
-
+	if (this->_headers.find("date") == this->_headers.end()) {
 		/*
 		 * Cache the result of time() and gmtime_r()
 		 */
@@ -161,6 +144,31 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 
 		if (now - lastTimeUpdate >= 500) {
 			lastTimeUpdate = now;
+
+			static const uint8_t wday[7][3] = {
+				{ 'S', 'u', 'n' },
+				{ 'M', 'o', 'n' },
+				{ 'T', 'u', 'e' },
+				{ 'W', 'e', 'd' },
+				{ 'T', 'h', 'u' },
+				{ 'F', 'r', 'i' },
+				{ 'S', 'a', 't' },
+			};
+
+			static const uint8_t mon[12][3] = {
+				{ 'J', 'a', 'n' },
+				{ 'F', 'e', 'b' },
+				{ 'M', 'a', 'r' },
+				{ 'A', 'p', 'r' },
+				{ 'M', 'a', 'y' },
+				{ 'J', 'u', 'n' },
+				{ 'J', 'u', 'l' },
+				{ 'A', 'u', 'g' },
+				{ 'S', 'e', 'p' },
+				{ 'O', 'c', 't' },
+				{ 'N', 'o', 'v' },
+				{ 'D', 'e', 'c' },
+			};
 
 			tm t;
 			time_t ts = time(nullptr);
@@ -176,27 +184,24 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 			timeBuf.append(mon[t.tm_mon], 3);
 			timeBuf.push_back(' ');
 			timeBuf.append_number(t.tm_year + 1900);
+			timeBuf.push_back(' ');
 
 			if (t.tm_hour < 10) {
-				timeBuf.append(" 0");
-			} else {
-				timeBuf.push_back(' ');
+				timeBuf.push_back('0');
 			}
 
 			timeBuf.append_number(t.tm_hour);
+			timeBuf.push_back(':');
 
 			if (t.tm_min < 10) {
-				timeBuf.append(":0");
-			} else {
-				timeBuf.push_back(':');
+				timeBuf.push_back('0');
 			}
 
 			timeBuf.append_number(t.tm_min);
+			timeBuf.push_back(':');
 
 			if (t.tm_sec < 10) {
-				timeBuf.append(":0");
-			} else {
-				timeBuf.push_back(':');
+				timeBuf.push_back('0');
 			}
 
 			timeBuf.append_number(t.tm_sec);
@@ -219,14 +224,15 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 }
 
 bool server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {
-	return this->socket().write(bufs, bufcnt);
+	this->socket().writev(bufs, bufcnt);
+	return true;
 }
 
 bool server_response::end(const node::buffer bufs[], size_t bufcnt) {
 	bool ret = request_response_proto::end(bufs, bufcnt);
 
 	if (this->_shutdown_on_end) {
-		this->socket().shutdown();
+		this->socket().end();
 	}
 
 	// reset fields for the next response in a keepalive connection

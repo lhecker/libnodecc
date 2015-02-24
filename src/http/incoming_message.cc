@@ -27,22 +27,23 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 
 	this->_headers.max_load_factor(0.75);
 
-	socket.on_read([this](int err, const node::buffer& buffer) {
-		if (err) {
-			if (err == UV_EOF) {
-				http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
-			}
+	socket.on_data([this](const node::buffer* bufs, size_t bufcnt) {
+		for (size_t i = 0; i < bufcnt; i++) {
+			const node::buffer* buf = bufs + i;
 
-			this->_socket.close();
-		} else {
-			this->_parserBuffer = &buffer;
-			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buffer, buffer.size());
+			this->_parserBuffer = buf;
+			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buf->data<char>(), buf->size());
 
 			// TODO: handle upgrade
-			if (this->_parser.upgrade == 1 || nparsed != buffer.size()) {
-				this->_socket.shutdown();
+			if (this->_parser.upgrade == 1 || nparsed != buf->size()) {
+				// prevent final http_parser_execute() in .on_end()?
+				this->_socket.end();
 			}
 		}
+	});
+
+	socket.on_end([this]() {
+		http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 	});
 }
 
