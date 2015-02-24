@@ -191,8 +191,6 @@ node::buffer base64::encode(const node::buffer& buffer) {
 			case 2:
 				out[3] = '=';
 		}
-
-		out += left + 1;
 	}
 
 	return result;
