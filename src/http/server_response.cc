@@ -1,23 +1,146 @@
 #include "libnodecc/http/server_response.h"
 
+#include <ctime>
 #include <mutex>
 #include <iostream>
 
 #include "libnodecc/net/socket.h"
 
 
-#ifndef _POSIX_C_SOURCE
-# define _POSIX_C_SOURCE 199506L
-#endif
-#include <ctime>
 #ifdef __STDC_WANT_SECURE_LIB__
 # define gmtime_r(timep, result) gmtime_s(result, timep)
 #endif
 
+#ifndef thread_local
+# if defined _WIN32 && (defined _MSC_VER || defined __ICL || defined __DMC__ || defined __BORLANDC__)
+#  define thread_local __declspec(thread)
+# elif defined __GNUC__ || defined __SUNPRO_C || defined __xlC__
+#  define thread_local __thread
+# else
+#  error "thread local storage support is required"
+# endif
+#endif
 
-static uv_buf_t str_status_code(uint16_t status_code) {
+
+/*
+ * Caches the result of time() and gmtime_r() in a buffer as a string.
+ */
+class date_buffer_t {
+public:
+	void update(uint64_t now) {
+		static const uint8_t wday[7][3] = {
+			{ 'S', 'u', 'n' },
+			{ 'M', 'o', 'n' },
+			{ 'T', 'u', 'e' },
+			{ 'W', 'e', 'd' },
+			{ 'T', 'h', 'u' },
+			{ 'F', 'r', 'i' },
+			{ 'S', 'a', 't' },
+		};
+
+		static const uint8_t mon[12][3] = {
+			{ 'J', 'a', 'n' },
+			{ 'F', 'e', 'b' },
+			{ 'M', 'a', 'r' },
+			{ 'A', 'p', 'r' },
+			{ 'M', 'a', 'y' },
+			{ 'J', 'u', 'n' },
+			{ 'J', 'u', 'l' },
+			{ 'A', 'u', 'g' },
+			{ 'S', 'e', 'p' },
+			{ 'O', 'c', 't' },
+			{ 'N', 'o', 'v' },
+			{ 'D', 'e', 'c' },
+		};
+
+		if (now - this->lastUpdate >= 500) {
+			this->lastUpdate = now;
+
+			tm t;
+			time_t ts = time(nullptr);
+			gmtime_r(&ts, &t);
+
+#define to_char(x) ('0' + (x))
+
+			// %a Tue
+			const auto tm_wday = t.tm_wday;
+			this->buffer[6]  = wday[tm_wday][0];
+			this->buffer[7]  = wday[tm_wday][1];
+			this->buffer[8]  = wday[tm_wday][2];
+
+			// %d 15
+			const auto tm_mday = t.tm_mday;
+			this->buffer[11] = to_char(tm_mday / 10);
+			this->buffer[12] = to_char(tm_mday % 10);
+
+			// %b Nov
+			const auto tm_mon = t.tm_mon;
+			this->buffer[14]  = mon[tm_mon][0];
+			this->buffer[15]  = mon[tm_mon][1];
+			this->buffer[16]  = mon[tm_mon][2];
+
+			// %Y 1994
+			const auto tm_year = t.tm_year + 1900;
+			this->buffer[18] = to_char((tm_year / 1000)     );
+			this->buffer[19] = to_char((tm_year /  100) % 10);
+			this->buffer[20] = to_char((tm_year /   10) % 10);
+			this->buffer[21] = to_char((tm_year       ) % 10);
+
+			// %H 12
+			const auto tm_hour = t.tm_hour;
+			this->buffer[23] = to_char(tm_hour / 10);
+			this->buffer[24] = to_char(tm_hour % 10);
+
+			// %M 45
+			const auto tm_min = t.tm_min;
+			this->buffer[26] = to_char(tm_min / 10);
+			this->buffer[27] = to_char(tm_min % 10);
+
+			// %S 26
+			const auto tm_sec = t.tm_sec;
+			this->buffer[29] = to_char(tm_sec / 10);
+			this->buffer[30] = to_char(tm_sec % 10);
+
+#undef to_char
+		}
+	}
+
+	uint64_t lastUpdate = 0;
+	char buffer[37] = {               // Buffer Position | strftime() | Example Content
+		'd', 'a', 't', 'e', ':', ' ', //        0                            date:
+		'\0', '\0', '\0',             //        6              %a            Tue
+		',', ' ',                     //        9                            ,
+		'\0', '\0',                   //       11              %d            15
+		' ',                          //       13
+		'\0', '\0', '\0',             //       14              %b            Nov
+		' ',                          //       17
+		'\0', '\0', '\0', '\0',       //       18              %Y            1994
+		' ',                          //       22
+		'\0', '\0',                   //       23              %H            12
+		':',                          //       25                            :
+		'\0', '\0',                   //       26              %M            45
+		':',                          //       28                            :
+		'\0', '\0',                   //       29              %S            26
+		' ',                          //       31
+		'G', 'M', 'T',                //       32              %Z            GMT
+		'\r', '\n',                   //       35                            \r\n
+	};
+};
+
+
+static thread_local date_buffer_t date_buffer;
+
+
+static inline uv_buf_t str_status_code(uint16_t status_code) {
 	uv_buf_t ret;
 
+	/*
+	 * Most (good) compilers will layout this long case/switch
+	 * in a nested one (e.g. first switching 1xx/2xx/3xx/4xx/5xx
+	 * and then switching between the lower numbers).
+	 *
+	 * TODO: Manually optimize for better predictability.
+	 */
 	switch (status_code) {
 	case 100: ret.len = 12; ret.base = const_cast<char*>("100 Continue");                        break;
 	case 101: ret.len = 23; ret.base = const_cast<char*>("101 Switching Protocols");             break;
@@ -134,81 +257,8 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 	}
 
 	if (this->_headers.find("date") == this->_headers.end()) {
-		/*
-		 * Cache the result of time() and gmtime_r()
-		 */
-		thread_local uint64_t lastTimeUpdate = 0;
-		thread_local node::mutable_buffer timeBuf(37);
-
-		const uint64_t now = uv_now(this->_socket);
-
-		if (now - lastTimeUpdate >= 500) {
-			lastTimeUpdate = now;
-
-			static const uint8_t wday[7][3] = {
-				{ 'S', 'u', 'n' },
-				{ 'M', 'o', 'n' },
-				{ 'T', 'u', 'e' },
-				{ 'W', 'e', 'd' },
-				{ 'T', 'h', 'u' },
-				{ 'F', 'r', 'i' },
-				{ 'S', 'a', 't' },
-			};
-
-			static const uint8_t mon[12][3] = {
-				{ 'J', 'a', 'n' },
-				{ 'F', 'e', 'b' },
-				{ 'M', 'a', 'r' },
-				{ 'A', 'p', 'r' },
-				{ 'M', 'a', 'y' },
-				{ 'J', 'u', 'n' },
-				{ 'J', 'u', 'l' },
-				{ 'A', 'u', 'g' },
-				{ 'S', 'e', 'p' },
-				{ 'O', 'c', 't' },
-				{ 'N', 'o', 'v' },
-				{ 'D', 'e', 'c' },
-			};
-
-			tm t;
-			time_t ts = time(nullptr);
-			gmtime_r(&ts, &t);
-
-			timeBuf.clear();
-			timeBuf.append("date: ");
-
-			timeBuf.append(wday[t.tm_wday], 3);
-			timeBuf.append(", ");
-			timeBuf.append_number(t.tm_mday);
-			timeBuf.push_back(' ');
-			timeBuf.append(mon[t.tm_mon], 3);
-			timeBuf.push_back(' ');
-			timeBuf.append_number(t.tm_year + 1900);
-			timeBuf.push_back(' ');
-
-			if (t.tm_hour < 10) {
-				timeBuf.push_back('0');
-			}
-
-			timeBuf.append_number(t.tm_hour);
-			timeBuf.push_back(':');
-
-			if (t.tm_min < 10) {
-				timeBuf.push_back('0');
-			}
-
-			timeBuf.append_number(t.tm_min);
-			timeBuf.push_back(':');
-
-			if (t.tm_sec < 10) {
-				timeBuf.push_back('0');
-			}
-
-			timeBuf.append_number(t.tm_sec);
-			timeBuf.append(" GMT\r\n");
-		}
-
-		buf.append(timeBuf);
+		date_buffer.update(uv_now(this->_socket));
+		buf.append(date_buffer.buffer, sizeof(date_buffer.buffer));
 	}
 
 	{
