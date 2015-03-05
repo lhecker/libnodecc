@@ -110,10 +110,6 @@ $L$nocacheinfo::
 	cmp	r9d,0
 	jne	$L$notintel
 	or	edx,040000000h
-	and	ah,15
-	cmp	ah,15
-	jne	$L$notintel
-	or	edx,000100000h
 $L$notintel::
 	bt	edx,28
 	jnc	$L$generic
