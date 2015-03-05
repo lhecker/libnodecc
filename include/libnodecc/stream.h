@@ -8,22 +8,22 @@ namespace node {
 namespace stream {
 
 template <typename T>
-class writeable;
+class writable;
 
-template<typename T>
+template<typename T, typename E>
 class readable {
-	friend class writeable<T>;
+	friend class writable<T>;
 
-	NODE_ADD_CALLBACK(public, data, void, const T* chunks, size_t chunkcnt);
+	NODE_ADD_CALLBACK(public, data, void, E err, const T* chunks, size_t chunkcnt);
 	NODE_ADD_CALLBACK(public, end, void);
 
 public:
 	virtual void resume() = 0;
 	virtual void pause() = 0;
 
-	void pipe(const node::stream::writeable<T>& target, bool end = true) {
-		this->on_data([this, target](const T* chunks, size_t chunkcnt) {
-			if (!target.writev(chunks, chunkcnt)) {
+	void pipe(const node::stream::writable<T>& target, bool end = true) {
+		this->on_data([this, target](E err, const T* chunks, size_t chunkcnt) {
+			if (err || !target.writev(chunks, chunkcnt)) {
 				this->pause();
 			}
 		});
@@ -41,7 +41,7 @@ public:
 };
 
 template<typename T>
-class writeable {
+class writable {
 	NODE_ADD_CALLBACK(public, drain, void);
 
 public:
@@ -98,7 +98,7 @@ protected:
 		}
 	}
 
-	bool writeable_return_value() {
+	bool writable_return_value() {
 		bool ret = this->_wm >= this->_hwm;
 
 		if (ret) {
@@ -115,8 +115,8 @@ private:
 	uint8_t _state = 0;
 };
 
-template<typename T>
-class duplex : public readable<T>, public writeable<T> {
+template<typename T, typename E>
+class duplex : public readable<T, E>, public writable<T> {
 };
 
 } // namespace stream

@@ -14,7 +14,7 @@ namespace node {
 namespace uv {
 
 template<typename T>
-class stream : public node::uv::handle<T>, public node::stream::readable<node::buffer>, public node::stream::writeable<node::buffer> {
+class stream : public node::uv::handle<T>, public node::stream::duplex<node::buffer, int> {
 public:
 	NODE_ADD_CALLBACK(public, alloc, node::buffer, size_t suggested_size)
 
@@ -50,8 +50,9 @@ public:
 
 			if (nread > 0 && self->has_data_callback()) {
 				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
-				self->emit_data_s(&buf, 1);
+				self->emit_data_s(0, &buf, 1);
 			} else if (nread < 0) {
+				self->emit_data_s(int(nread), nullptr, 0);
 				self->emit_end_s();
 
 				if (nread == UV_EOF) {
@@ -181,7 +182,7 @@ public:
 			delete pack;
 		}
 
-		return this->writeable_return_value();
+		return this->writable_return_value();
 	}
 
 private:
