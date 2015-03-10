@@ -394,18 +394,18 @@ mutable_buffer& mutable_buffer::append_number(size_t n, uint8_t base) {
 void mutable_buffer::reserve(size_t size) noexcept {
 	if (size > this->capacity()) {
 		/*
-		 * The growth rate should be exponential, that is that if we need to resize,
-		 * we allocate more that we need and thus prevent unneeded reallocations.
+		 * The growth rate should be exponential, that is that if we need to resize the buffer,
+		 * we allocate more than what we need and thus prevent unneeded reallocations.
 		 *
-		 * Thus the growth function after n resizes with the starting size T is:
+		 * The growth function after "n" resizes with a starting size of "T" is:
 		 *   T*x^n <= T + T*x + T*x^2 + ... + T*x^(n-1)
 		 * After removing T on both sides we get:
 		 *   x^n <= 1 + x + x^2 + ... + x^(n-1)
 		 *   x^n <= ∑x^i where i := 0..n-1
 		 *
-		 * Now we want that the next allocation always fits into the "holes"
-		 * left by the deallocation of all previous allocations
-		 * (under the optimal condition where those are all lined up in memory).
+		 * Now we'd like the next allocation to always fit into the "hole"
+		 * left by all the previous deallocations of the buffer memory
+		 * (under optimal conditions those should be all lined up in memory).
 		 *
 		 * Thus the latter function above is only true for all x in (0,phi]
 		 * (whith phi being the famous golden ratio).
