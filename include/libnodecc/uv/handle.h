@@ -21,6 +21,7 @@ public:
 
 
 	explicit handle() {
+		this->_handle.loop = nullptr;
 		this->_handle.data = this;
 	}
 
@@ -63,7 +64,7 @@ public:
 	}
 
 	void close() {
-		if (!this->is_closing()) {
+		if (this->_handle.loop && !this->is_closing()) {
 			uv_close(*this, [](uv_handle_t* handle) {
 				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
