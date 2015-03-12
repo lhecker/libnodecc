@@ -1,5 +1,6 @@
 #include "libnodecc/http/server_response.h"
 
+#include <atomic>
 #include <ctime>
 #include <mutex>
 #include <iostream>
@@ -7,27 +8,47 @@
 #include "libnodecc/net/socket.h"
 
 
-#ifdef __STDC_WANT_SECURE_LIB__
-# define gmtime_r(timep, result) gmtime_s(result, timep)
-#endif
-
-#ifndef thread_local
-# if defined _WIN32 && (defined _MSC_VER || defined __ICL || defined __DMC__ || defined __BORLANDC__)
-#  define thread_local __declspec(thread)
-# elif defined __GNUC__ || defined __SUNPRO_C || defined __xlC__
-#  define thread_local __thread
-# else
-#  error "thread local storage support is required"
-# endif
-#endif
-
-
 /*
  * Caches the result of time() and gmtime_r() in a buffer as a string.
+ *
+ * TODO: Stop using the std::atomic on _last_update
+ * if it's not lock free on the specific platform
+ * (i.e. if ATOMIC_LLONG_LOCK_FREE is 0).
+ * In that case the _mutex should be used instead.
  */
 class date_buffer_t {
 public:
+	date_buffer_t() {
+		uv_rwlock_init(&this->_mutex);
+		this->update_buffer();
+	}
+
+	~date_buffer_t() {
+		uv_rwlock_destroy(&this->_mutex);
+	}
+
 	void update(uint64_t now) {
+		uint64_t last_update = this->_last_update.load(std::memory_order_relaxed);
+
+		if (now - last_update >= 500) {
+			if (this->_last_update.compare_exchange_strong(last_update, now)) {
+				uv_rwlock_wrlock(&this->_mutex);
+				this->update_buffer();
+				uv_rwlock_wrunlock(&this->_mutex);
+			}
+		}
+	}
+
+	node::buffer get_buffer() {
+		uv_rwlock_rdlock(&this->_mutex);
+		node::buffer buffer(this->_buffer);
+		uv_rwlock_rdunlock(&this->_mutex);
+
+		return buffer;
+	}
+
+private:
+	void update_buffer() {
 		static const uint8_t wday[7][3] = {
 			{ 'S', 'u', 'n' },
 			{ 'M', 'o', 'n' },
@@ -53,82 +74,96 @@ public:
 			{ 'D', 'e', 'c' },
 		};
 
-		if (now - this->lastUpdate >= 500) {
-			this->lastUpdate = now;
+		tm t;
+		time_t ts = time(nullptr);
+		gmtime_r(&ts, &t);
 
-			tm t;
-			time_t ts = time(nullptr);
-			gmtime_r(&ts, &t);
+		node::buffer buffer(37);
+
+		if (buffer) {
+			char* data = buffer.data<char>();
 
 #define to_char(x) ('0' + (x))
 
+			data[0]  = 'd';
+			data[1]  = 'a';
+			data[2]  = 't';
+			data[3]  = 'e';
+			data[4]  = ':';
+			data[5]  = ' ';
+
 			// %a Tue
 			const auto tm_wday = t.tm_wday;
-			this->buffer[6]  = wday[tm_wday][0];
-			this->buffer[7]  = wday[tm_wday][1];
-			this->buffer[8]  = wday[tm_wday][2];
+			data[6]  = wday[tm_wday][0];
+			data[7]  = wday[tm_wday][1];
+			data[8]  = wday[tm_wday][2];
+
+			data[9]  = ',';
+			data[10] = ' ';
 
 			// %d 15
 			const auto tm_mday = t.tm_mday;
-			this->buffer[11] = to_char(tm_mday / 10);
-			this->buffer[12] = to_char(tm_mday % 10);
+			data[11] = to_char(tm_mday / 10);
+			data[12] = to_char(tm_mday % 10);
+
+			data[13] = ' ';
 
 			// %b Nov
 			const auto tm_mon = t.tm_mon;
-			this->buffer[14]  = mon[tm_mon][0];
-			this->buffer[15]  = mon[tm_mon][1];
-			this->buffer[16]  = mon[tm_mon][2];
+			data[14]  = mon[tm_mon][0];
+			data[15]  = mon[tm_mon][1];
+			data[16]  = mon[tm_mon][2];
+
+			data[17] = ' ';
 
 			// %Y 1994
 			const auto tm_year = t.tm_year + 1900;
-			this->buffer[18] = to_char((tm_year / 1000)     );
-			this->buffer[19] = to_char((tm_year /  100) % 10);
-			this->buffer[20] = to_char((tm_year /   10) % 10);
-			this->buffer[21] = to_char((tm_year       ) % 10);
+			data[18] = to_char((tm_year / 1000)     );
+			data[19] = to_char((tm_year /  100) % 10);
+			data[20] = to_char((tm_year /   10) % 10);
+			data[21] = to_char((tm_year       ) % 10);
+
+			data[22] = ' ';
 
 			// %H 12
 			const auto tm_hour = t.tm_hour;
-			this->buffer[23] = to_char(tm_hour / 10);
-			this->buffer[24] = to_char(tm_hour % 10);
+			data[23] = to_char(tm_hour / 10);
+			data[24] = to_char(tm_hour % 10);
+
+			data[25] = ':';
 
 			// %M 45
 			const auto tm_min = t.tm_min;
-			this->buffer[26] = to_char(tm_min / 10);
-			this->buffer[27] = to_char(tm_min % 10);
+			data[26] = to_char(tm_min / 10);
+			data[27] = to_char(tm_min % 10);
+
+			data[28] = ':';
 
 			// %S 26
 			const auto tm_sec = t.tm_sec;
-			this->buffer[29] = to_char(tm_sec / 10);
-			this->buffer[30] = to_char(tm_sec % 10);
+			data[29] = to_char(tm_sec / 10);
+			data[30] = to_char(tm_sec % 10);
+
+			data[31] = ' ';
+			data[32] = 'G';
+			data[33] = 'M';
+			data[34] = 'T';
+			data[35] = '\r';
+			data[36] = '\n';
 
 #undef to_char
 		}
+
+		this->_buffer = std::move(buffer);
 	}
 
-	uint64_t lastUpdate = 0;
-	char buffer[37] = {               // Buffer Position | strftime() | Example Content
-		'd', 'a', 't', 'e', ':', ' ', //        0                            date:
-		'\0', '\0', '\0',             //        6              %a            Tue
-		',', ' ',                     //        9                            ,
-		'\0', '\0',                   //       11              %d            15
-		' ',                          //       13
-		'\0', '\0', '\0',             //       14              %b            Nov
-		' ',                          //       17
-		'\0', '\0', '\0', '\0',       //       18              %Y            1994
-		' ',                          //       22
-		'\0', '\0',                   //       23              %H            12
-		':',                          //       25                            :
-		'\0', '\0',                   //       26              %M            45
-		':',                          //       28                            :
-		'\0', '\0',                   //       29              %S            26
-		' ',                          //       31
-		'G', 'M', 'T',                //       32              %Z            GMT
-		'\r', '\n',                   //       35                            \r\n
-	};
+	std::atomic<uint64_t> _last_update = {0};
+	node::buffer _buffer;
+	uv_rwlock_t _mutex;
 };
 
 
-static thread_local date_buffer_t date_buffer;
+static date_buffer_t date_buffer;
 
 
 static inline uv_buf_t str_status_code(uint16_t status_code) {
@@ -258,7 +293,7 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 
 	if (this->_headers.find("date") == this->_headers.end()) {
 		date_buffer.update(uv_now(this->_socket));
-		buf.append(date_buffer.buffer, sizeof(date_buffer.buffer));
+		buf.append(date_buffer.get_buffer());
 	}
 
 	{
