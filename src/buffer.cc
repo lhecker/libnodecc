@@ -206,7 +206,7 @@ bool buffer::empty() const noexcept {
 }
 
 size_t buffer::use_count() const noexcept {
-	return this->_p ? this->_p->use_count.load(std::memory_order_relaxed) : 0;
+	return this->_p ? this->_p->use_count.load(std::memory_order_acquire) : 0;
 }
 
 uint8_t* buffer::get() const noexcept {
@@ -269,8 +269,8 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 
 /*
  * Increasing the reference count is done using memory_order_relaxed,
- * since new references can only be formed from an existing reference and
- * passing an existing one already requires synchronization.
+ * since it doesn't matter in which order the count is increased
+ * as long as the final sum in release() is correct.
  */
 void buffer::retain() noexcept {
 	if (this->_p) {
@@ -280,10 +280,10 @@ void buffer::retain() noexcept {
 
 void buffer::release() noexcept {
 	/*
-	 * Normally std::memory_order_acq_rel should be used for the fetch_sub operation,
-	 * but this results in an unneeded "acquire" operation, when the reference counter
-	 * does not yet reach zero and may impose a performance penalty.
-	 * (Taken from the boost::atomic docs.)
+	 * Normally std::memory_order_acq_rel should be used for the fetch_sub operation
+	 * (to make all read/writes to the backing buffer visible before it's possibly freed),
+	 * but this would result in an unneeded "acquire" operation, whenever the reference counter
+	 * does not yet reach zero and thus may impose a performance penalty. Solution below:
 	 */
 	if (this->_p && this->_p->use_count.fetch_sub(1, std::memory_order_release) == 1) {
 		std::atomic_thread_fence(std::memory_order_acquire);
