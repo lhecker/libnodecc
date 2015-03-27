@@ -123,13 +123,6 @@
 				'-Wextra',
 				'-Wno-unused-parameter',
 			],
-			'target_conditions': [
-				['library=="static_library"', {
-					'GCC_DYNAMIC_NO_PIC': 'YES',
-				}, {
-					'GCC_DYNAMIC_NO_PIC': 'NO',
-				}],
-			],
 		},
 	},
 }
