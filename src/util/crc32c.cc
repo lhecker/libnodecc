@@ -13,7 +13,7 @@ void crc32c::push(const void* data, size_t size) {
 	this->_crc = crc32c::push(this->_crc, data, size);
 }
 
-void crc32c::push(const node::buffer& buffer) {
+void crc32c::push(const buffer_view buffer) {
 	this->push(buffer.data(), buffer.size());
 }
 
@@ -73,7 +73,7 @@ uint32_t crc32c::checksum(const void* data, size_t size) {
 	return crc32c::push(0xffffffff, data, size) ^ 0xffffffff;
 }
 
-uint32_t crc32c::checksum(const node::buffer& buffer) {
+uint32_t crc32c::checksum(const buffer_view buffer) {
 	return crc32c::checksum(buffer.data(), buffer.size());
 }
 

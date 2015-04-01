@@ -12,12 +12,12 @@ public:
 	explicit crc32c();
 
 	void push(const void* data, size_t size);
-	void push(const node::buffer& buffer);
+	void push(const buffer_view buffer);
 
 	uint32_t checksum() const;
 
 	static uint32_t checksum(const void* data, size_t size);
-	static uint32_t checksum(const node::buffer& buffer);
+	static uint32_t checksum(const buffer_view buffer);
 
 private:
 	static uint32_t push(uint32_t crc, const void* data, size_t size);

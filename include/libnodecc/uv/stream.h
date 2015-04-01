@@ -39,11 +39,11 @@ public:
 
 			if (self->has_alloc_callback()) {
 				self->_alloc_buffer = self->emit_alloc(suggested_size);
-			} else {
+			} else if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
 				self->_alloc_buffer.reset(suggested_size);
 			}
 
-			buf->base = self->_alloc_buffer.template data<char>();
+			buf->base = static_cast<char*>(self->_alloc_buffer);
 			buf->len = self->_alloc_buffer.size();
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);

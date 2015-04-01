@@ -6,7 +6,7 @@
 namespace node {
 namespace util {
 
-node::buffer base64::encode(const node::buffer& buffer) {
+node::buffer base64::encode(const buffer_view buffer) {
 	/*
 	 * This code first converts the input bytes to big endian.
 	 * Benchmarking suggested that this is about 15-20% faster on x86 (builtin "bswap" instruction) and ARM,
@@ -196,7 +196,7 @@ node::buffer base64::encode(const node::buffer& buffer) {
 	return result;
 }
 
-node::buffer decode(const node::buffer& buffer) {
+node::buffer decode(const buffer_view buffer) {
 	static const uint8_t index[256] = {
 		255 /* NUL */, 255 /* SOH */, 255 /* STX */, 255 /* ETX */, 255 /* EOT */, 255 /* ENQ */, 255 /* ACK */, 255 /* BEL */, 255 /* BS  */, 255 /* HT  */, 255 /* LF  */, 255 /* VT  */, 255 /* FF  */, 255 /* CR  */, 255 /* SO  */, 255 /* SI  */,
 		255 /* DLE */, 255 /* DC1 */, 255 /* DC2 */, 255 /* DC3 */, 255 /* DC4 */, 255 /* NAK */, 255 /* SYN */, 255 /* ETB */, 255 /* CAN */, 255 /* EM  */, 255 /* SUB */, 255 /* ESC */, 255 /* FS  */, 255 /* GS  */, 255 /* RS  */, 255 /* US  */,

@@ -6,14 +6,18 @@
 #include "libnodecc/util/math.h"
 
 
-#if PTRDIFF_MAX > SIZE_T_MAX
-# define PTRDIFF_GREATER_SIZE(ptrdiff, size) ((ptrdiff) > ptrdiff_t(size))
-#else
-# define PTRDIFF_GREATER_SIZE(ptrdiff, size) (size_t(ptrdiff) > (size))
-#endif
-
-
 namespace node {
+
+buffer_view::buffer_view(const void* data, std::size_t size) noexcept : _data(const_cast<void*>(data)), _size(size) {
+}
+
+buffer_view& buffer_view::operator=(const buffer_view& other) {
+	_data = other._data;
+	_size = other._size;
+	return *this;
+}
+
+
 
 struct buffer::control {
 	constexpr control(void* base) noexcept : base(base), use_count(1) {};
@@ -23,8 +27,8 @@ struct buffer::control {
 };
 
 
-buffer::buffer(const void* base, size_t size, node::flags flags) noexcept : buffer() {
-	this->reset(base, size, flags);
+buffer::buffer(const void* data, std::size_t size, node::flags flags) noexcept : buffer() {
+	this->reset(data, size, flags);
 }
 
 buffer::buffer(buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
@@ -33,15 +37,15 @@ buffer::buffer(buffer&& other) noexcept : _p(other._p), _data(other._data), _siz
 	other._size = 0;
 }
 
-buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
-	this->retain();
-}
-
 buffer::buffer(mutable_buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
 	other._p = nullptr;
 	other._data = nullptr;
 	other._size = 0;
 	other._real_size = 0;
+}
+
+buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+	this->retain();
 }
 
 buffer& buffer::operator=(buffer&& other) noexcept {
@@ -61,19 +65,16 @@ buffer& buffer::operator=(const buffer& other) noexcept {
 	return *this;
 }
 
-buffer& buffer::operator=(mutable_buffer&& other) noexcept {
-	this->release();
-	this->swap(other);
-
-	return *this;
-}
-
-buffer::buffer(size_t size) noexcept : _p(nullptr) {
+buffer::buffer(std::size_t size) noexcept : _p(nullptr) {
 	this->reset(size);
 }
 
 buffer::~buffer() noexcept {
 	this->release();
+}
+
+std::size_t buffer::use_count() const noexcept {
+	return this->_p ? this->_p->use_count.load(std::memory_order_acquire) : 0;
 }
 
 void buffer::swap(buffer& other) noexcept {
@@ -93,36 +94,30 @@ void buffer::reset() noexcept {
 	this->release();
 }
 
-void buffer::reset(size_t size) noexcept {
-	/*
-	 * If we are the only one who references the data,
-	 * we only need to free/malloc if the size is different.
-	 */
-	if (this->use_count() != 1 || size != this->_size) {
-		this->release();
+void buffer::reset(std::size_t size) noexcept {
+	this->release();
 
-		if (size > 0) {
-			uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
-			uint8_t* data = base + sizeof(control);
+	if (size > 0) {
+		uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
+		uint8_t* data = base + sizeof(control);
 
-			if (base) {
-				this->_p = new(base) control(base);
-				this->_data = data;
-				this->_size = size;
-			}
+		if (base) {
+			this->_p = new(base) control(base);
+			this->_data = data;
+			this->_size = size;
 		}
 	}
 }
 
-void buffer::reset(const void* base, size_t size, node::flags flags) noexcept {
+void buffer::reset(const void* data, std::size_t size, node::flags flags) noexcept {
 	this->release();
 
-	this->_data = (void*)base;
+	this->_data = (void*)data;
 	this->_size = size;
 
 	switch (flags) {
 	case node::flags::strong:
-		this->_p = new control((void*)base);
+		this->_p = new control((void*)data);
 		break;
 	case node::flags::copy:
 		this->copy(*this);
@@ -132,14 +127,20 @@ void buffer::reset(const void* base, size_t size, node::flags flags) noexcept {
 	}
 }
 
-buffer buffer::copy(size_t size) const noexcept {
+buffer buffer::copy(std::size_t size) const noexcept {
 	buffer buffer;
 	this->copy(buffer, size);
 	return buffer;
 }
 
-buffer buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
+buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 	buffer buffer;
+
+#if PTRDIFF_MAX > SIZE_T_MAX
+# define PTRDIFF_GREATER_SIZE(ptrdiff, size) ((ptrdiff) > std::ptrdiff_t(size))
+#else
+# define PTRDIFF_GREATER_SIZE(ptrdiff, size) (std::size_t(ptrdiff) > (size))
+#endif
 
 	if (PTRDIFF_GREATER_SIZE(PTRDIFF_MAX, this->_size) && this->_data) {
 		if (start < 0) {
@@ -170,78 +171,9 @@ buffer buffer::slice(ptrdiff_t start, ptrdiff_t end) const noexcept {
 		}
 	}
 
+#undef PTRDIFF_GREATER_SIZE
+
 	return buffer;
-}
-
-bool buffer::is_strong() const noexcept {
-	return this->_p;
-}
-
-bool buffer::is_weak() const noexcept {
-	return !this->_p;
-}
-
-buffer::operator void*() const noexcept {
-	return this->data<void>();
-}
-
-buffer::operator char*() const noexcept {
-	return this->data<char>();
-}
-
-buffer::operator unsigned char*() const noexcept {
-	return this->data<unsigned char>();
-}
-
-uint8_t& buffer::operator[](size_t pos) const noexcept {
-	return this->data<uint8_t>()[pos];
-}
-
-buffer::operator bool() const noexcept {
-	return this->_data;
-}
-
-bool buffer::empty() const noexcept {
-	return !this->_data;
-}
-
-size_t buffer::use_count() const noexcept {
-	return this->_p ? this->_p->use_count.load(std::memory_order_acquire) : 0;
-}
-
-uint8_t* buffer::get() const noexcept {
-	return this->data<uint8_t>();
-}
-
-size_t buffer::size() const noexcept {
-	return this->_size;
-}
-
-int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
-	int r = 0;
-
-	if (pos1 < this->size() && size1 <= (this->size() - pos1) && data2) {
-		r = memcmp(this->get() + pos1, data2, std::min(size1, size2));
-
-		if (r == 0) {
-			r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
-		}
-	}
-
-	return r;
-
-}
-
-int buffer::compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
-	return this->compare(0, size1, data2, size2);
-}
-
-int buffer::compare(const void* data2, std::size_t size2) const noexcept {
-	return this->compare(0, this->size(), data2, size2);
-}
-
-int buffer::compare(const buffer& other) const noexcept {
-	return this->compare(0, this->size(), other.get(), other.size());
 }
 
 void buffer::copy(buffer& target, std::size_t size) const noexcept {
@@ -266,6 +198,19 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 	}
 }
 
+int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+	int r = 0;
+
+	if (pos1 < this->size() && size1 <= (this->size() - pos1) && data2) {
+		r = memcmp(this->get() + pos1, data2, std::min(size1, size2));
+
+		if (r == 0) {
+			r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
+		}
+	}
+
+	return r;
+}
 
 /*
  * Increasing the reference count is done using memory_order_relaxed,
@@ -306,7 +251,7 @@ void buffer::release() noexcept {
 mutable_buffer::mutable_buffer() noexcept : node::buffer(), _real_size(0) {
 }
 
-mutable_buffer::mutable_buffer(size_t size) noexcept : node::buffer(size), _real_size(0) {
+mutable_buffer::mutable_buffer(std::size_t size) noexcept : node::buffer(size), _real_size(0) {
 	std::swap(this->_size, this->_real_size);
 }
 
@@ -346,14 +291,14 @@ mutable_buffer& mutable_buffer::operator=(const mutable_buffer& other) noexcept 
 	return *this;
 }
 
-mutable_buffer& mutable_buffer::append(const void* data, size_t size) noexcept {
+mutable_buffer& mutable_buffer::append(const void* data, std::size_t size) noexcept {
 	this->_expand(size);
 	memcpy(this->get() + this->_size, data, size);
 	this->_size += size;
 	return *this;
 }
 
-mutable_buffer& mutable_buffer::append(const node::buffer& buf, size_t pos, size_t count) noexcept {
+mutable_buffer& mutable_buffer::append(const node::buffer& buf, std::size_t pos, std::size_t count) noexcept {
 	if (pos < buf.size() && count > 0) {
 		if (count > buf.size() - pos) {
 			count = buf.size() - pos;
@@ -370,10 +315,10 @@ mutable_buffer& mutable_buffer::append(const node::buffer& buf, size_t pos, size
 	return *this;
 }
 
-mutable_buffer& mutable_buffer::append_number(size_t n, uint8_t base) {
+mutable_buffer& mutable_buffer::append_number(std::size_t n, uint8_t base) {
 	if (base >= 2 && base <= 36) {
-		const size_t length = node::util::digits(n, base);
-		size_t div = node::util::ipow(size_t(base), length - 1);
+		const std::size_t length = node::util::digits(n, base);
+		std::size_t div = node::util::ipow(std::size_t(base), length - 1);
 
 		this->_expand(length);
 
@@ -391,7 +336,7 @@ mutable_buffer& mutable_buffer::append_number(size_t n, uint8_t base) {
 	return *this;
 }
 
-void mutable_buffer::reserve(size_t size) noexcept {
+void mutable_buffer::reserve(std::size_t size) noexcept {
 	if (size > this->capacity()) {
 		/*
 		 * The growth rate should be exponential, that is that if we need to resize the buffer,
@@ -417,10 +362,10 @@ void mutable_buffer::reserve(size_t size) noexcept {
 		 * If that's not the case either a growth rate of 1.5 is choosen, or if size
 		 * is much larger than the current capacity (more than 1.5 times) size will be choosen.
 		 */
-		size_t cap = this->capacity();
+		std::size_t cap = this->capacity();
 		cap = cap > (size + (size >> 1)) ? size : std::max(cap + (cap >> 1), size);
 
-		size_t _size = this->_size;
+		std::size_t _size = this->_size;
 		this->copy(*this, cap);
 		this->_real_size = this->_size;
 		this->_size = _size;
@@ -436,17 +381,17 @@ void mutable_buffer::reset() noexcept {
 	this->_real_size = 0;
 }
 
-size_t mutable_buffer::capacity() const noexcept {
+std::size_t mutable_buffer::capacity() const noexcept {
 	return this->_real_size;
 }
 
-void mutable_buffer::expand_noinit(size_t size) noexcept {
+void mutable_buffer::expand_noinit(std::size_t size) noexcept {
 	this->_expand(size);
 	this->_size = this->_real_size;
 }
 
-void mutable_buffer::_expand(size_t size) noexcept {
-	size_t cap = this->capacity();
+void mutable_buffer::_expand(std::size_t size) noexcept {
+	std::size_t cap = this->capacity();
 	size += this->size();
 
 	if (size < 16) {
@@ -454,8 +399,8 @@ void mutable_buffer::_expand(size_t size) noexcept {
 	}
 
 	if (size > cap) {
-		// see reserve(size_t) for details
-		size_t _size = this->_size;
+		// see reserve(std::size_t) for details
+		std::size_t _size = this->_size;
 		this->copy(*this, std::max(cap + (cap >> 1), size));
 		this->_real_size = this->_size;
 		this->_size = _size;
