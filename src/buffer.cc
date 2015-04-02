@@ -31,20 +31,20 @@ buffer::buffer(const void* data, std::size_t size, node::flags flags) noexcept :
 	this->reset(data, size, flags);
 }
 
-buffer::buffer(buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+buffer::buffer(buffer&& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
 	other._p = nullptr;
 	other._data = nullptr;
 	other._size = 0;
 }
 
-buffer::buffer(mutable_buffer&& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
 	other._p = nullptr;
 	other._data = nullptr;
 	other._size = 0;
 	other._real_size = 0;
 }
 
-buffer::buffer(const buffer& other) noexcept : _p(other._p), _data(other._data), _size(other._size) {
+buffer::buffer(const buffer& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
 	this->retain();
 }
 

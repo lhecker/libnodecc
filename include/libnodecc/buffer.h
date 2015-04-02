@@ -113,7 +113,7 @@ public:
 	/**
 	 * Creates an empty buffer.
 	 */
-	constexpr buffer() : _p(nullptr), _data(nullptr), _size(0) {}
+	constexpr buffer() : buffer_view(), _p(nullptr) {}
 
 	/**
 	 * Takes over another buffer.
@@ -291,8 +291,6 @@ protected:
 	void release() noexcept;
 
 	control* _p;
-	void* _data;
-	std::size_t _size;
 };
 
 
