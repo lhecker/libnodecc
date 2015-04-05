@@ -35,11 +35,11 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
 }
 
 bool request_response_proto::end() {
-	return this->write(nullptr, 0, true);
+	return this->end(nullptr, 0);
 }
 
 bool request_response_proto::end(const node::buffer& buf) {
-	return this->write(&buf, 1, true);
+	return this->end(&buf, 1);
 }
 
 bool request_response_proto::end(const node::buffer bufs[], size_t bufcnt) {
