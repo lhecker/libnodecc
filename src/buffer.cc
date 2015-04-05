@@ -41,7 +41,7 @@ buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other._data, other
 	other._p = nullptr;
 	other._data = nullptr;
 	other._size = 0;
-	other._real_size = 0;
+	other._capacity = 0;
 }
 
 buffer::buffer(const buffer& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
@@ -87,7 +87,7 @@ void buffer::swap(mutable_buffer& other) noexcept {
 	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
-	other._real_size = other._size;
+	other._capacity = other._size;
 }
 
 void buffer::reset() noexcept {
@@ -181,8 +181,9 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 		size = this->_size;
 	}
 
-	uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
-	uint8_t* data = base + sizeof(control);
+	constexpr const std::size_t control_size = (sizeof(control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
+	uint8_t* base = (uint8_t*)malloc(control_size + size);
+	uint8_t* data = base + control_size;
 
 	// do this upfront in case of target == *this
 	if (base && this->_data) {
@@ -201,7 +202,7 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
 	int r = 0;
 
-	if (pos1 < this->size() && size1 <= (this->size() - pos1) && data2) {
+	if (pos1 < this->_size && size1 <= (this->_size - pos1) && data2) {
 		r = memcmp(this->get() + pos1, data2, std::min(size1, size2));
 
 		if (r == 0) {
@@ -248,67 +249,70 @@ void buffer::release() noexcept {
 
 
 
-mutable_buffer::mutable_buffer() noexcept : node::buffer(), _real_size(0) {
+mutable_buffer::mutable_buffer() noexcept : node::buffer(), _capacity(0) {
 }
 
-mutable_buffer::mutable_buffer(std::size_t size) noexcept : node::buffer(size), _real_size(0) {
-	std::swap(this->_size, this->_real_size);
+mutable_buffer::mutable_buffer(std::size_t capacity) noexcept : node::buffer(capacity), _capacity(0) {
+	std::swap(this->_size, this->_capacity);
 }
 
-mutable_buffer::mutable_buffer(node::buffer&& other) noexcept : node::buffer(std::move(other)), _real_size(other._size) {
+mutable_buffer::mutable_buffer(node::buffer&& other) noexcept : node::buffer(std::forward<node::buffer>(other)), _capacity(other._size) {
 }
 
 mutable_buffer& mutable_buffer::operator=(node::buffer&& other) noexcept {
-	node::buffer::operator=(std::move(other));
-	this->_real_size = other.size();
+	node::buffer::operator=(std::forward<node::buffer>(other));
+	this->_capacity = other._size;
 	return *this;
 }
 
-mutable_buffer::mutable_buffer(const node::buffer& other) noexcept : node::buffer(other), _real_size(other._size) {
+mutable_buffer::mutable_buffer(const node::buffer& other) noexcept : node::buffer(other), _capacity(other._size) {
 }
 
 mutable_buffer& mutable_buffer::operator=(const node::buffer& other) noexcept {
 	node::buffer::operator=(other);
-	this->_real_size = other._size;
+	this->_capacity = other._size;
 	return *this;
 }
 
-mutable_buffer::mutable_buffer(mutable_buffer&& other) noexcept : node::buffer(std::move(other)), _real_size(other._real_size) {
+mutable_buffer::mutable_buffer(mutable_buffer&& other) noexcept : node::buffer(std::forward<node::buffer>(other)), _capacity(other._capacity) {
 }
 
 mutable_buffer& mutable_buffer::operator=(mutable_buffer&& other) noexcept {
-	node::buffer::operator=(std::move(other));
-	this->_real_size = other._real_size;
+	node::buffer::operator=(std::forward<node::buffer>(other));
+	this->_capacity = other._capacity;
 	return *this;
 }
 
-mutable_buffer::mutable_buffer(const mutable_buffer& other) noexcept : node::buffer(other), _real_size(other._real_size) {
+mutable_buffer::mutable_buffer(const mutable_buffer& other) noexcept : node::buffer(other), _capacity(other._capacity) {
 }
 
 mutable_buffer& mutable_buffer::operator=(const mutable_buffer& other) noexcept {
 	node::buffer::operator=(other);
-	this->_real_size = other._real_size;
+	this->_capacity = other._capacity;
 	return *this;
 }
 
 mutable_buffer& mutable_buffer::append(const void* data, std::size_t size) noexcept {
-	this->_expand(size);
-	memcpy(this->get() + this->_size, data, size);
-	this->_size += size;
+	auto p = reinterpret_cast<void*>(this->get() + this->size());
+
+	if (this->_expand_size(size)) {
+		memcpy(p, data, size);
+	}
+
 	return *this;
 }
 
 mutable_buffer& mutable_buffer::append(const node::buffer& buf, std::size_t pos, std::size_t count) noexcept {
-	if (pos < buf.size() && count > 0) {
-		if (count > buf.size() - pos) {
-			count = buf.size() - pos;
+	if (pos < buf._size && count > 0) {
+		if (count > buf._size - pos) {
+			count = buf._size - pos;
 		}
 
 		if (this->_size > 0) {
 			this->append(buf.data() + pos, count);
 		} else {
 			node::buffer::operator=(buf.slice(pos, count));
-			this->_real_size = this->_size;
+			this->_capacity = this->_size;
 		}
 	}
 
@@ -320,56 +324,76 @@ mutable_buffer& mutable_buffer::append_number(std::size_t n, uint8_t base) {
 		const std::size_t length = node::util::digits(n, base);
 		std::size_t div = node::util::ipow(std::size_t(base), length - 1);
 
-		this->_expand(length);
+		this->set_size(this->_size + length);
 
 		do {
-			static const char chars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+			static const uint8_t chars[36] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' };
 
-			const char c = chars[(n / div) % base];
+			const uint8_t c = chars[(n / div) % base];
 			div /= base;
 
-			*reinterpret_cast<char*>(this->get() + this->_size) = c;
-			this->_size++;
+			this->operator[](this->_size++) = c;
 		} while (div > 0);
 	}
 
 	return *this;
 }
 
-void mutable_buffer::reserve(std::size_t size) noexcept {
-	if (size > this->capacity()) {
-		/*
-		 * The growth rate should be exponential, that is that if we need to resize the buffer,
-		 * we allocate more than what we need and thus prevent unneeded reallocations.
-		 *
-		 * The growth function after "n" resizes with a starting size of "T" is:
-		 *   T*x^n <= T + T*x + T*x^2 + ... + T*x^(n-1)
-		 * After removing T on both sides we get:
-		 *   x^n <= 1 + x + x^2 + ... + x^(n-1)
-		 *   x^n <= ∑x^i where i := 0..n-1
-		 *
-		 * Now we'd like the next allocation to always fit into the "hole"
-		 * left by all the previous deallocations of the buffer memory
-		 * (under optimal conditions those should be all lined up in memory).
-		 *
-		 * Thus the latter function above is only true for all x in (0,phi]
-		 * (whith phi being the famous golden ratio).
-		 *
-		 * Here we use a growth rate of x = 1.5.
-		 * If size is less than the "previous" capacity (e.g. divided by 1.5),
-		 * then the allocation will be reset to exactly size,
-		 * since it's smaller by a factor of over 1.5 (e.g. this buffer is much too big).
-		 * If that's not the case either a growth rate of 1.5 is choosen, or if size
-		 * is much larger than the current capacity (more than 1.5 times) size will be choosen.
-		 */
-		std::size_t cap = this->capacity();
-		cap = cap > (size + (size >> 1)) ? size : std::max(cap + (cap >> 1), size);
+std::size_t mutable_buffer::capacity() const noexcept {
+	return this->_capacity;
+}
 
-		std::size_t _size = this->_size;
-		this->copy(*this, cap);
-		this->_real_size = this->_size;
+void mutable_buffer::set_capacity(std::size_t capacity) noexcept {
+	// we only want to change the _capacity --> preserve _size
+	const std::size_t _size = this->_size;
+
+	// after this _size will be "equal" to _capacity
+	// (actually only nearly equal due to the exponential growth factor)
+	this->set_size(capacity);
+
+	// due to the previous call we need to recover the original _size
+	// but only do so if the the buffer has grown compared to the original _size
+	if (this->_size > _size) {
 		this->_size = _size;
 	}
+}
+
+void mutable_buffer::set_size(std::size_t size) noexcept {
+	/*
+	 * The growth rate should be exponential, that is that if we need to resize the buffer,
+	 * we allocate more than what we need and thus prevent unneeded reallocations.
+	 *
+	 * The growth function after "n" resizes with a starting size of "T" is:
+	 *   T*x^n <= T + T*x + T*x^2 + ... + T*x^(n-1)
+	 * After removing T on both sides we get:
+	 *   x^n <= 1 + x + x^2 + ... + x^(n-1)
+	 *   x^n <= ∑x^i where i := 0..n-1
+	 *
+	 * Now we'd like the next allocation to always fit into the "hole"
+	 * left by all the previous deallocations of the buffer memory
+	 * (under optimal conditions those should be all lined up in memory).
+	 *
+	 * Thus the latter function above is only true for all x in (0,phi]
+	 * (whith phi being the famous golden ratio).
+	 *
+	 * Here we use a growth rate of x = 1.5.
+	 * If size is less than the "previous" capacity (e.g. divided by 1.5),
+	 * then the allocation will be reset to exactly size,
+	 * since it's smaller by a factor of over 1.5 (e.g. this buffer is much too big).
+	 * If that's not the case either a growth rate of 1.5 is choosen, or if size
+	 * is much larger than the current capacity (more than 1.5 times) size will be choosen.
+	 */
+	if (size > this->_capacity) {
+		// if size is larger than cap
+		this->copy(*this, std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
+		this->_capacity = this->_size;
+	} else if ((size + (size >> 1)) < this->_capacity) {
+		// if size is much less than cap
+		this->copy(*this, std::max(std::size_t(16), size));
+		this->_capacity = this->_size;
+	}
+
+	this->_size = std::min(this->_capacity, size);
 }
 
 void mutable_buffer::clear() noexcept {
@@ -378,41 +402,34 @@ void mutable_buffer::clear() noexcept {
 
 void mutable_buffer::reset() noexcept {
 	node::buffer::reset();
-	this->_real_size = 0;
+	this->_capacity = 0;
 }
 
-std::size_t mutable_buffer::capacity() const noexcept {
-	return this->_real_size;
-}
-
-void mutable_buffer::expand_noinit(std::size_t size) noexcept {
-	this->_expand(size);
-	this->_size = this->_real_size;
-}
-
-void mutable_buffer::_expand(std::size_t size) noexcept {
-	std::size_t cap = this->capacity();
+bool mutable_buffer::_expand_size(std::size_t size) {
+	// see set_size() - the difference is that this method will never reduce the capacity
 	size += this->size();
 
-	if (size < 16) {
-		size = 16;
+	if (size > this->_capacity) {
+		this->copy(*this, std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
+
+		if (!this->_size) {
+			return false;
+		}
+
+		this->_capacity = this->_size;
 	}
 
-	if (size > cap) {
-		// see reserve(std::size_t) for details
-		std::size_t _size = this->_size;
-		this->copy(*this, std::max(cap + (cap >> 1), size));
-		this->_real_size = this->_size;
-		this->_size = _size;
-	}
+	this->_size = size;
+
+	return true;
 }
 
 } // namespace node
 
-bool operator==(const node::buffer& lhs, const node::buffer& rhs) noexcept {
+bool operator==(const node::buffer_view& lhs, const node::buffer_view& rhs) noexcept {
 	return lhs.data() == rhs.data();
 }
 
-bool operator!=(const node::buffer& lhs, const node::buffer& rhs) noexcept {
+bool operator!=(const node::buffer_view& lhs, const node::buffer_view& rhs) noexcept {
 	return lhs.data() != rhs.data();
 }

@@ -73,7 +73,7 @@ server::server() : net::server() {
 					const auto& key = pack->req._headers.at("sec-websocket-key");
 
 					node::mutable_buffer buffer;
-					buffer.reserve(key.length() + strlen(websocketMagic));
+					buffer.set_capacity(key.length() + strlen(websocketMagic));
 					buffer.append(key);
 					buffer.append(websocketMagic);
 

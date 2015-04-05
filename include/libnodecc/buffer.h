@@ -67,7 +67,11 @@ public:
 		return this->data<unsigned char>();
 	}
 
-	inline uint8_t& operator[](std::size_t pos) const noexcept {
+	inline uint8_t& operator[](std::size_t pos) noexcept {
+		return this->data<uint8_t>()[pos];
+	}
+
+	inline const uint8_t& operator[](std::size_t pos) const noexcept {
 		return this->data<uint8_t>()[pos];
 	}
 
@@ -91,6 +95,9 @@ public:
 	inline std::basic_string<CharT, Traits, Allocator> to_string() const {
 		return std::basic_string<CharT, Traits, Allocator>(reinterpret_cast<CharT*>(this->_data), this->_size);
 	}
+
+	friend bool operator==(const buffer_view& lhs, const buffer_view& rhs) noexcept;
+	friend bool operator!=(const buffer_view& lhs, const buffer_view& rhs) noexcept;
 
 private:
 	void* _data;
@@ -266,10 +273,6 @@ public:
 		return this->compare(static_cast<const void*>(str), std::char_traits<charT>::length(str));
 	}
 
-
-	friend bool operator==(const buffer& lhs, const buffer& rhs) noexcept;
-	friend bool operator!=(const buffer& lhs, const buffer& rhs) noexcept;
-
 protected:
 	struct control;
 
@@ -300,7 +303,7 @@ class mutable_buffer : public node::buffer {
 
 public:
 	explicit mutable_buffer() noexcept;
-	explicit mutable_buffer(std::size_t size) noexcept;
+	explicit mutable_buffer(std::size_t capacity) noexcept;
 
 	mutable_buffer(node::buffer&& other) noexcept;
 	mutable_buffer& operator=(node::buffer&& other) noexcept;
@@ -319,9 +322,11 @@ public:
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {
-		this->_expand(sizeof(charT));
-		*reinterpret_cast<charT*>(this->get() + this->_size) = ch;
-		this->_size += sizeof(charT);
+		auto p = reinterpret_cast<charT*>(this->get() + this->size());
+		
+		if (this->_expand_size(sizeof(charT))) {
+			*p = ch;
+		}
 	}
 
 	template<typename charT>
@@ -354,17 +359,17 @@ public:
 
 	mutable_buffer& append_number(std::size_t n, uint8_t base = 10);
 
-	void expand_noinit(std::size_t size) noexcept;
-	void reserve(std::size_t size) noexcept;
+	std::size_t capacity() const noexcept;
+	void set_capacity(std::size_t capacity) noexcept;
+	void set_size(std::size_t size) noexcept;
+
 	void clear() noexcept;
 	void reset() noexcept;
 
-	std::size_t capacity() const noexcept;
-
 private:
-	void _expand(std::size_t size) noexcept;
+	bool _expand_size(std::size_t size);
 
-	std::size_t _real_size;
+	std::size_t _capacity;
 };
 
 } // namespace node

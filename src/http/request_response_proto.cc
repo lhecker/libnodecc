@@ -163,7 +163,7 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt, boo
 
 	if (!this->_headers_sent) {
 		// an average HTTP header should be between 700-800 byte in size
-		buf.reserve(800);
+		buf.set_capacity(800);
 		this->compile_headers(buf);
 
 		/*
