@@ -72,30 +72,9 @@ public:
 		uv_read_stop(*this);
 	}
 
-	void end() {
-		if (!this->is_closing()) {
-			uv_shutdown_t* req = new uv_shutdown_t;
-			req->data = this;
-
-			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
-				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
-				self->close();
-				delete req;
-			});
-
-			if (ret != 0) {
-				delete req;
-			}
-		}
-	}
-
-	bool write(const node::buffer& buf) override {
-		return this->writev(&buf, 1);
-	}
-
-	bool writev(const node::buffer bufs[], size_t bufcnt) override {
+	void _write(const node::buffer bufs[], size_t bufcnt) override {
 		if (bufcnt == 0) {
-			return true;
+			return;
 		}
 
 		uv_buf_t* uv_bufs = static_cast<uv_buf_t*>(alloca(bufcnt * sizeof(uv_buf_t)));
@@ -119,13 +98,13 @@ public:
 		if (wi > 0) {
 			if (wu == total) {
 				// everything was written
-				return true;
+				return;
 			}
 
 			// check if for some reason wu contains an erroneous value just in case
 			if (wu > total) {
 				// -EINVAL
-				return true;
+				return;
 			}
 
 			// count how many buffers have been fully written...
@@ -181,8 +160,23 @@ public:
 		if (ret != 0) {
 			delete pack;
 		}
+	}
 
-		return this->writable_return_value();
+	void end() {
+		if (!this->is_closing()) {
+			uv_shutdown_t* req = new uv_shutdown_t;
+			req->data = this;
+
+			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
+				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
+				self->close();
+				delete req;
+			});
+
+			if (ret != 0) {
+				delete req;
+			}
+		}
 	}
 
 private:

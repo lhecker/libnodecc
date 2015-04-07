@@ -14,7 +14,7 @@ template<typename T, typename E>
 class readable {
 	friend class writable<T>;
 
-	NODE_ADD_CALLBACK(public, data, void, E err, const T* chunks, size_t chunkcnt);
+	NODE_ADD_CALLBACK(public, data, void, E err, const T chunks[], size_t chunkcnt);
 	NODE_ADD_CALLBACK(public, end, void);
 
 public:
@@ -22,7 +22,7 @@ public:
 	virtual void pause() = 0;
 
 	void pipe(const node::stream::writable<T>& target, bool end = true) {
-		this->on_data([this, target](E err, const T* chunks, size_t chunkcnt) {
+		this->on_data([this, target](E err, const T chunks[], size_t chunkcnt) {
 			if (err || !target.writev(chunks, chunkcnt)) {
 				this->pause();
 			}
@@ -71,17 +71,18 @@ public:
 		this->_lwm = lwm;
 	}
 
-	virtual void end() = 0;
-	virtual bool write(const T& chunk) = 0;
-	virtual bool writev(const T* chunks, size_t chunkcnt) {
-		bool ret = true;
+	bool write(const T& chunk) {
+		this->writev(&chunk, 1);
+	};
 
-		for (size_t i = 0; i < chunkcnt; i++) {
-			ret = this->write(chunks[i]) && ret;
-		}
-
-		return ret;
+	bool writev(const T chunks[], size_t chunkcnt) {
+		this->_write(chunks, chunkcnt);
+		this->_was_flooded = this->_wm >= this->_hwm;
+		return this->_was_flooded;
 	}
+
+	virtual void _write(const T chunks[], size_t chunkcnt) = 0;
+	virtual void end() = 0;
 
 protected:
 	inline void increase_watermark(size_t n) {
@@ -91,28 +92,21 @@ protected:
 	void decrease_watermark(size_t n) {
 		this->_wm = this->_wm > n ? this->_wm - n : 0;
 
-		// TODO: optimize the point when exactly the writer emits the drain event
-		if (this->_state == 1 && this->_wm < this->_lwm) {
+		// TODO: optimize the point in time at which the writer emits the drain event
+		if (this->_was_flooded && this->_wm < this->_lwm) {
 			this->emit_drain_s();
-			this->_state = 0;
+			this->_was_flooded = false;
 		}
 	}
 
 	bool writable_return_value() {
-		bool ret = this->_wm >= this->_hwm;
-
-		if (ret) {
-			this->_state = 1;
-		}
-
-		return ret;
 	}
 
 private:
 	size_t _hwm = 16 * 1024;
 	size_t _lwm =  4 * 1024;
 	size_t _wm = 0;
-	uint8_t _state = 0;
+	bool _was_flooded = false;
 };
 
 template<typename T, typename E>
