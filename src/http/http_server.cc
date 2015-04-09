@@ -11,7 +11,7 @@ namespace http {
 
 class server::req_res_pack {
 public:
-	explicit req_res_pack(server* server) : server(server), req(socket, HTTP_REQUEST), res(socket) {
+	explicit req_res_pack(server* server) : req(socket, HTTP_REQUEST), res(socket), server(server) {
 	}
 
 	~req_res_pack() {
@@ -19,11 +19,11 @@ public:
 		fflush(stdout);
 	}
 
-	server* server;
 	std::weak_ptr<req_res_pack> next;
 	node::net::socket socket;
 	node::http::incoming_message req;
 	node::http::server_response res;
+	server* server;
 };
 
 server::server() : net::server() {

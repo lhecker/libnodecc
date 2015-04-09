@@ -31,12 +31,12 @@ public:
 	handle& operator=(const handle&) = delete;
 
 
-	operator node::loop&() { return reinterpret_cast<node::loop&>(*this->_handle.loop->data); }
+	operator node::loop&() { return *static_cast<node::loop*>(this->_handle.loop->data); }
 	operator uv_loop_t*() { return this->_handle.loop; }
 	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
 
-	operator node::loop&() const { return (node::loop&)(*this->_handle.loop->data); }
-	operator uv_loop_t*() const { return (uv_loop_t*)this->_handle.loop; }
+	operator node::loop&() const { return *static_cast<node::loop*>(this->_handle.loop->data); }
+	operator uv_loop_t*() const { return this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 
 	// casts *this to any libuv handle type

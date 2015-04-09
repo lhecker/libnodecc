@@ -41,13 +41,15 @@ public:
 	explicit buffer_view(const void* data, std::size_t size) noexcept;
 
 	template<typename T>
-	explicit buffer_view(const std::vector<T>& vec) noexcept : buffer_view((void*)vec.data(), vec.size()) {}
+	explicit buffer_view(const std::vector<T>& vec) noexcept : buffer_view(vec.data(), vec.size()) {}
 
-	template<typename charT, typename traits, typename Allocator>
-	explicit buffer_view(const std::basic_string<charT, traits, Allocator>& str) noexcept : buffer_view((void*)str.data(), str.size() * sizeof(charT)) {}
+	explicit buffer_view(const char* str) noexcept : buffer_view(const_cast<char*>(str), strlen(str)) {}
 
 	template<typename charT>
-	explicit buffer_view(const charT* str) noexcept : buffer_view((void*)str, std::char_traits<charT>::length(str)) {}
+	explicit buffer_view(const charT* str) noexcept : buffer_view(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT)) {}
+
+	template<typename charT, typename traits, typename Allocator>
+	explicit buffer_view(const std::basic_string<charT, traits, Allocator>& str) noexcept : buffer_view(reinterpret_cast<charT*>(str.data()), str.size() * sizeof(charT)) {}
 
 
 	template<typename T = uint8_t>
@@ -163,7 +165,6 @@ public:
 	 */
 	explicit buffer(const void* data, std::size_t size, node::flags flags) noexcept;
 
-
 	/**
 	 * Creates a buffer referring the specified std::vector.
 	 *
@@ -171,7 +172,24 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
 	 */
 	template<typename T>
-	explicit buffer(const std::vector<T>& vec, node::flags flags = node::flags::copy) noexcept : buffer((void*)vec.data(), vec.size(), flags) {}
+	explicit buffer(const std::vector<T>& vec, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<T*>(vec.data()), vec.size(), flags) {}
+
+	/**
+	 * Creates a buffer referring the specified C string.
+	 *
+	 * @param  str   The string which should be referred to.
+	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
+	 */
+	explicit buffer(const char* str, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<char*>(str), strlen(str), flags) {}
+
+	/**
+	 * Creates a buffer referring the specified non-char C string.
+	 *
+	 * @param  str   The string which should be referred to.
+	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
+	 */
+	template<typename charT>
+	explicit buffer(const charT* str, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT), flags) {}
 
 	/**
 	 * Creates a buffer referring the specified std::basic_string.
@@ -180,16 +198,7 @@ public:
 	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
 	 */
 	template<typename charT, typename traits, typename Allocator>
-	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, node::flags flags = node::flags::copy) noexcept : buffer((void*)str.data(), str.size() * sizeof(charT), flags) {}
-
-	/**
-	 * Creates a buffer referring the specified vector.
-	 *
-	 * @param  vec   The Null-terminated byte string which should be referred to.
-	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
-	 */
-	template<typename charT>
-	explicit buffer(const charT* str, node::flags flags = node::flags::copy) noexcept : buffer((void*)str, std::char_traits<charT>::length(str), flags) {}
+	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<charT*>(str.data()), str.size() * sizeof(charT), flags) {}
 
 
 	~buffer() noexcept;
@@ -248,7 +257,7 @@ public:
 	 * Negative indexes (start/end) start at the end of the buffer.
 	 *
 	 * @param start The new buffer is offset by the index start.
-	 * @param start The new buffer is cropped to the index end.
+	 * @param end   The new buffer is cropped to the index end.
 	 */
 	buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = PTRDIFF_MAX) const noexcept;
 

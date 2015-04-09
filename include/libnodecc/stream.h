@@ -14,8 +14,8 @@ template<typename T, typename E>
 class readable {
 	friend class writable<T>;
 
-	NODE_ADD_CALLBACK(public, data, void, E err, const T chunks[], size_t chunkcnt);
-	NODE_ADD_CALLBACK(public, end, void);
+	NODE_ADD_CALLBACK(public, data, void, E err, const T chunks[], size_t chunkcnt)
+	NODE_ADD_CALLBACK(public, end, void)
 
 public:
 	virtual void resume() = 0;
@@ -42,7 +42,7 @@ public:
 
 template<typename T>
 class writable {
-	NODE_ADD_CALLBACK(public, drain, void);
+	NODE_ADD_CALLBACK(public, drain, void)
 
 public:
 	/*
@@ -71,8 +71,8 @@ public:
 		this->_lwm = lwm;
 	}
 
-	bool write(const T& chunk) {
-		this->writev(&chunk, 1);
+	inline bool write(const T& chunk) {
+		return this->writev(&chunk, 1);
 	};
 
 	bool writev(const T chunks[], size_t chunkcnt) {
