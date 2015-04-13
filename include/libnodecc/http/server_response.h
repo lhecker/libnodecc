@@ -11,20 +11,20 @@ class server_response : public node::http::request_response_proto {
 public:
 	explicit server_response(node::net::socket& socket);
 
-	using http::request_response_proto::end;
-	bool end(const node::buffer bufs[], size_t bufcnt);
-
 	node::net::socket& socket() const;
 
 	uint16_t status_code() const;
 	void set_status_code(uint16_t code);
 
+protected:
+	void _end(const node::buffer chunks[], size_t chunkcnt) override;
+	
+	void compile_headers(node::mutable_buffer& buf) override;
+	void socket_write(const node::buffer bufs[], size_t bufcnt) override;
+
 private:
 	// http::server needs exclusive access to _shutdown_on_end
 	friend class server;
-
-	void compile_headers(node::mutable_buffer& buf) override;
-	bool socket_write(const node::buffer bufs[], size_t bufcnt) override;
 
 	node::net::socket& _socket;
 	uint16_t _status_code;

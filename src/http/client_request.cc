@@ -94,9 +94,8 @@ void client_request::compile_headers(node::mutable_buffer& buf) {
 	}
 }
 
-bool client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {
-	this->_socket.writev(bufs, bufcnt);
-	return true;
+void client_request::socket_write(const node::buffer bufs[], size_t bufcnt) {
+	this->_socket.write(bufs, bufcnt);
 }
 
 void client_request::close() {

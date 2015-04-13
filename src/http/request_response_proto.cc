@@ -26,28 +26,15 @@ bool request_response_proto::headers_sent() const {
 	return this->_headers_sent;
 }
 
-bool request_response_proto::write(const node::buffer& buf) {
-	return this->write(&buf, 1, false);
+void request_response_proto::_write(const node::buffer chunks[], size_t chunkcnt) {
+	this->http_write(chunks, chunkcnt, false);
 }
 
-bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt) {
-	return this->write(bufs, bufcnt, false);
+void request_response_proto::_end(const node::buffer chunks[], size_t chunkcnt) {
+	this->http_write(chunks, chunkcnt, true);
 }
 
-bool request_response_proto::end() {
-	return this->end(nullptr, 0);
-}
-
-bool request_response_proto::end(const node::buffer& buf) {
-	return this->end(&buf, 1);
-}
-
-bool request_response_proto::end(const node::buffer bufs[], size_t bufcnt) {
-	return this->write(bufs, bufcnt, true);
-}
-
-bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt, bool end) {
-	bool ret = true;
+void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt, bool end) {
 	size_t compiledBufcnt = 0;
 	size_t compiledBufsPos = 0;
 	node::buffer* compiledBufs = nullptr;
@@ -153,7 +140,7 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt, boo
 	} else {
 		// no need to copy the buffers if we pipe the bufs 1:1 to the socket
 		if (compiledBufcnt == bufcnt) {
-			ret = this->socket_write(bufs, bufcnt);
+			this->socket_write(bufs, bufcnt);
 			goto writeEnd;
 		}
 
@@ -207,7 +194,7 @@ bool request_response_proto::write(const node::buffer bufs[], size_t bufcnt, boo
 		}
 	}
 
-	ret = this->socket_write(compiledBufs, compiledBufsPos);
+	this->socket_write(compiledBufs, compiledBufsPos);
 
 
 writeEnd:
@@ -219,8 +206,6 @@ writeEnd:
 	if (end) {
 		this->_headers_sent = false;
 	}
-
-	return ret;
 }
 
 } // namespace node

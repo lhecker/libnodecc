@@ -34,7 +34,7 @@ class client_request : public node::http::request_response_proto {
 
 private:
 	void compile_headers(node::mutable_buffer& buf) override;
-	bool socket_write(const node::buffer bufs[], size_t bufcnt) override;
+	void socket_write(const node::buffer bufs[], size_t bufcnt) override;
 
 	node::net::socket _socket;
 	node::http::incoming_message _incoming_message;

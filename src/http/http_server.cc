@@ -83,9 +83,7 @@ server::server() : net::server() {
 						pack->res.set_header("connection", "upgrade");
 						pack->res.set_header("upgrade", "websocket");
 						pack->res.set_header("sec-websocket-accept", node::util::base64::encode(node::buffer(digest, node::weak)).to_string());
-
-						// write nothing - just send the headers
-						pack->res.write(nullptr, 0);
+						pack->res.send_headers();
 						return;
 					}
 				}

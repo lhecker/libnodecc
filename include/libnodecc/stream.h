@@ -45,6 +45,8 @@ class writable {
 	NODE_ADD_CALLBACK(public, drain, void)
 
 public:
+	constexpr writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm) {}
+
 	/*
 	 * TODO: add callbacks to write() and writev()
 	 * BUT:
@@ -72,17 +74,29 @@ public:
 	}
 
 	inline bool write(const T& chunk) {
-		return this->writev(&chunk, 1);
+		return this->write(&chunk, 1);
 	};
 
-	bool writev(const T chunks[], size_t chunkcnt) {
+	bool write(const T chunks[], size_t chunkcnt) {
 		this->_write(chunks, chunkcnt);
 		this->_was_flooded = this->_wm >= this->_hwm;
 		return this->_was_flooded;
 	}
 
-	virtual void _write(const T chunks[], size_t chunkcnt) = 0;
-	virtual void end() = 0;
+	inline bool end() {
+		this->_end(nullptr, 0);
+		return this->_was_flooded;
+	}
+
+	inline bool end(const T& chunk) {
+		return this->end(&chunk, 1);
+	};
+
+	bool end(const T chunks[], size_t chunkcnt) {
+		this->_end(chunks, chunkcnt);
+		this->_was_flooded = this->_wm >= this->_hwm;
+		return this->_was_flooded;
+	}
 
 protected:
 	inline void increase_watermark(size_t n) {
@@ -92,19 +106,18 @@ protected:
 	void decrease_watermark(size_t n) {
 		this->_wm = this->_wm > n ? this->_wm - n : 0;
 
-		// TODO: optimize the point in time at which the writer emits the drain event
-		if (this->_was_flooded && this->_wm < this->_lwm) {
+		if (this->_was_flooded && this->_wm <= this->_lwm) {
 			this->emit_drain_s();
 			this->_was_flooded = false;
 		}
 	}
 
-	bool writable_return_value() {
-	}
+	virtual void _write(const T chunks[], size_t chunkcnt) = 0;
+	virtual void _end(const T chunks[], size_t chunkcnt) = 0;
 
 private:
-	size_t _hwm = 16 * 1024;
-	size_t _lwm =  4 * 1024;
+	size_t _hwm;
+	size_t _lwm;
 	size_t _wm = 0;
 	bool _was_flooded = false;
 };

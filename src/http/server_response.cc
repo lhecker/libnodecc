@@ -308,13 +308,12 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 	}
 }
 
-bool server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {
-	this->socket().writev(bufs, bufcnt);
-	return true;
+void server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {
+	this->socket().write(bufs, bufcnt);
 }
 
-bool server_response::end(const node::buffer bufs[], size_t bufcnt) {
-	bool ret = request_response_proto::end(bufs, bufcnt);
+void server_response::_end(const node::buffer chunks[], size_t chunkcnt) {
+	request_response_proto::_end(chunks, chunkcnt);
 
 	if (this->_shutdown_on_end) {
 		this->socket().end();
@@ -322,8 +321,6 @@ bool server_response::end(const node::buffer bufs[], size_t bufcnt) {
 
 	// reset fields for the next response in a keepalive connection
 	this->set_status_code(200);
-
-	return ret;
 }
 
 } // namespace node

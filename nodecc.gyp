@@ -21,6 +21,7 @@
 				'include/libnodecc/loop.h',
 				'include/libnodecc/net/server.h',
 				'include/libnodecc/net/socket.h',
+				'include/libnodecc/stream.h',
 				'include/libnodecc/util/base64.h',
 				'include/libnodecc/util/crc32c.h',
 				'include/libnodecc/util/endian.h',
