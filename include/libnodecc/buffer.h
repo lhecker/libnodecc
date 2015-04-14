@@ -331,10 +331,10 @@ public:
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {
-		const auto prev_size = this->size();
+		charT* p = static_cast<charT*>(this->_expand_size(sizeof(charT)));
 
-		if (this->_expand_size(sizeof(charT))) {
-			*(this->data<charT>() + prev_size) = ch;
+		if (p) {
+			*p = ch;
 		}
 	}
 
@@ -376,7 +376,11 @@ public:
 	void reset() noexcept;
 
 private:
-	bool _expand_size(std::size_t size);
+	/*
+	 * Similiar to set_size() but it will never reduce the capacity.
+	 * It returns a pointer to the location right after the previous end of the buffer.
+	 */
+	void* _expand_size(std::size_t size);
 
 	std::size_t _capacity;
 };

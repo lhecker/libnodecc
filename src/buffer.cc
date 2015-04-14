@@ -293,10 +293,10 @@ mutable_buffer& mutable_buffer::operator=(const mutable_buffer& other) noexcept 
 }
 
 mutable_buffer& mutable_buffer::append(const void* data, std::size_t size) noexcept {
-	const auto prev_size = this->size();
+	void* p = this->_expand_size(size);
 
-	if (this->_expand_size(size)) {
-		memcpy(this->data() + prev_size, data, size);
+	if (p) {
+		memcpy(p, data, size);
 	}
 
 	return *this;
@@ -323,17 +323,16 @@ mutable_buffer& mutable_buffer::append_number(std::size_t n, uint8_t base) {
 	if (base >= 2 && base <= 36) {
 		const std::size_t length = node::util::digits(n, base);
 		std::size_t div = node::util::ipow(std::size_t(base), length - 1);
+		uint8_t* p = static_cast<uint8_t*>(this->_expand_size(length));
 
-		this->set_size(this->_size + length);
+		if (p) {
+			do {
+				static const uint8_t chars[36] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' };
 
-		do {
-			static const uint8_t chars[36] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' };
-
-			const uint8_t c = chars[(n / div) % base];
-			div /= base;
-
-			this->operator[](this->_size++) = c;
-		} while (div > 0);
+				*p++ = chars[(n / div) % base];
+				div /= base;
+			} while (div > 0);
+		}
 	}
 
 	return *this;
@@ -405,15 +404,16 @@ void mutable_buffer::reset() noexcept {
 	this->_capacity = 0;
 }
 
-bool mutable_buffer::_expand_size(std::size_t size) {
-	// see set_size() - the difference is that this method will never reduce the capacity
-	size += this->size();
+void* mutable_buffer::_expand_size(std::size_t size) {
+	const std::size_t prev_size = this->size();
+
+	size += prev_size;
 
 	if (size > this->_capacity) {
 		this->copy(*this, std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
 
 		if (!this->_size) {
-			return false;
+			return nullptr;
 		}
 
 		this->_capacity = this->_size;
@@ -421,7 +421,7 @@ bool mutable_buffer::_expand_size(std::size_t size) {
 
 	this->_size = size;
 
-	return true;
+	return this->data() + prev_size;
 }
 
 } // namespace node
