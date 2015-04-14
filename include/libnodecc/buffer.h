@@ -331,10 +331,10 @@ public:
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {
-		auto p = reinterpret_cast<charT*>(this->get() + this->size());
-		
+		const auto prev_size = this->size();
+
 		if (this->_expand_size(sizeof(charT))) {
-			*p = ch;
+			*(this->data<charT>() + prev_size) = ch;
 		}
 	}
 

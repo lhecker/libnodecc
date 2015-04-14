@@ -293,10 +293,10 @@ mutable_buffer& mutable_buffer::operator=(const mutable_buffer& other) noexcept 
 }
 
 mutable_buffer& mutable_buffer::append(const void* data, std::size_t size) noexcept {
-	auto p = reinterpret_cast<void*>(this->get() + this->size());
+	const auto prev_size = this->size();
 
 	if (this->_expand_size(size)) {
-		memcpy(p, data, size);
+		memcpy(this->data() + prev_size, data, size);
 	}
 
 	return *this;
