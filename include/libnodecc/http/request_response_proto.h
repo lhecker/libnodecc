@@ -41,10 +41,12 @@ public:
 	bool headers_sent() const;
 
 	inline void send_headers() {
-		this->http_write(nullptr, 0, false);
+		this->write(nullptr, 0);
 	}
 
 protected:
+	void http_write(const node::buffer bufs[], size_t bufcnt, bool end);
+
 	void _write(const node::buffer chunks[], size_t chunkcnt) override;
 	void _end(const node::buffer chunks[], size_t chunkcnt) override;
 
@@ -53,10 +55,6 @@ protected:
 
 	// needs to be directly accessed by certain subclasses
 	std::unordered_map<std::string, std::string> _headers;
-
-private:
-	void http_write(const node::buffer bufs[], size_t bufcnt, bool end);
-
 	bool _headers_sent;
 	bool _is_chunked;
 };

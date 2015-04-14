@@ -40,6 +40,7 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 	node::buffer* compiledBufs = nullptr;
 	node::mutable_buffer buf;
 
+	// TODO: do not set chunked/content-length headers if there is no body at all (e.g. GET requests)
 	// if the headers have not been sent until now, determine if it uses the chunked encoding
 	if (!this->_headers_sent) {
 		if (this->_headers.find("content-length") != this->_headers.end()) {
