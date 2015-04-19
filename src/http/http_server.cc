@@ -1,9 +1,10 @@
 #include "libnodecc/http/server.h"
 
-#include <openssl/sha.h>
 #include <wslay/wslay.h>
+#include <openssl/ssl.h>
 
 #include "libnodecc/util/base64.h"
+#include "libnodecc/util/sha1.h"
 
 
 namespace node {
@@ -12,11 +13,6 @@ namespace http {
 class server::req_res_pack {
 public:
 	explicit req_res_pack(server* server) : req(socket, HTTP_REQUEST), res(socket), server(server) {
-	}
-
-	~req_res_pack() {
-		printf("req_res_pack::~req_res_pack\n");
-		fflush(stdout);
 	}
 
 	std::weak_ptr<req_res_pack> next;
@@ -68,24 +64,26 @@ server::server() : net::server() {
 
 			if (upgrade) {
 				if (pack->req._is_websocket == 1) {
-					uint8_t digest[SHA_DIGEST_LENGTH];
 					const char websocketMagic[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 					const auto& key = pack->req._headers.at("sec-websocket-key");
+					uint8_t digest[SHA1_DIGEST_LENGTH];
 
 					node::mutable_buffer buffer;
 					buffer.set_capacity(key.length() + strlen(websocketMagic));
 					buffer.append(key);
 					buffer.append(websocketMagic);
 
-					if (SHA1(buffer.data<const uint8_t>(), buffer.size(), digest)) {
-						pack->res._shutdown_on_end = true;
-						pack->res.set_status_code(101);
-						pack->res.set_header("connection", "upgrade");
-						pack->res.set_header("upgrade", "websocket");
-						pack->res.set_header("sec-websocket-accept", node::util::base64::encode(node::buffer(digest, node::weak)).to_string());
-						pack->res.send_headers();
-						return;
-					}
+					node::util::sha1 s;
+					s.push(buffer);
+					s.get_digest(digest);
+
+					pack->res._shutdown_on_end = true;
+					pack->res.set_status_code(101);
+					pack->res.set_header("connection", "upgrade");
+					pack->res.set_header("upgrade", "websocket");
+					pack->res.set_header("sec-websocket-accept", node::util::base64::encode(node::buffer_view(digest, sizeof(digest))).to_string());
+					pack->res.send_headers();
+					return;
 				}
 
 				pack->res.set_status_code(501);

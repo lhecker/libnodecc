@@ -6,29 +6,29 @@
 namespace node {
 namespace util {
 
+uint32_t crc32c::checksum(node::buffer_view buffer) {
+	return crc32c::push(0xffffffff, buffer) ^ 0xffffffff;
+}
+
 crc32c::crc32c() : _crc(0xffffffff) {
 }
 
-void crc32c::push(const void* data, size_t size) {
-	this->_crc = crc32c::push(this->_crc, data, size);
-}
-
-void crc32c::push(const buffer_view buffer) {
-	this->push(buffer.data(), buffer.size());
+void crc32c::push(node::buffer_view buffer) {
+	this->_crc = crc32c::push(this->_crc, buffer);
 }
 
 uint32_t crc32c::checksum() const {
 	return this->_crc ^ 0xffffffff;
 }
 
-uint32_t crc32c::push(uint32_t crc, const void* d, size_t size) {
-	if (!d || !size) {
+uint32_t crc32c::push(uint32_t crc, node::buffer_view buffer) {
+	// implements CRC32C divide-by-8, similiar to one of Intel's implementations
+	const uint8_t* data = buffer.data<const uint8_t>();
+	const uint8_t* dataend = data + buffer.size();
+
+	if (!data || data == dataend) {
 		return 0xffffffff;
 	}
-
-	// implements CRC32C divide-by-8, similiar to one of Intel's implementations
-	const uint8_t* data = (const uint8_t*)d;
-	const uint8_t* dataend = (const uint8_t*)data + size;
 
 	const uint8_t* div8start = (const uint8_t*)((uintptr_t(data) + 7) & ~7);
 	const uint8_t* div8end = (const uint8_t* const)(uintptr_t(dataend) & ~7);
@@ -67,14 +67,6 @@ uint32_t crc32c::push(uint32_t crc, const void* d, size_t size) {
 	}
 
 	return crc;
-}
-
-uint32_t crc32c::checksum(const void* data, size_t size) {
-	return crc32c::push(0xffffffff, data, size) ^ 0xffffffff;
-}
-
-uint32_t crc32c::checksum(const buffer_view buffer) {
-	return crc32c::checksum(buffer.data(), buffer.size());
 }
 
 } // namespace util

@@ -19,7 +19,7 @@
 #  define ntohl(x) _byteswap_ulong(x)
 #  define htonl(x) _byteswap_ulong(x)
 # endif
-#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
+#elif !defined(ntohl) && defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
 # if NODE_BIG_ENDIAN
 #  define ntohl(x) (x)
 #  define htonl(x) (x)

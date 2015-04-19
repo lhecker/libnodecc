@@ -9,18 +9,15 @@ namespace util {
 
 class crc32c {
 public:
+	static uint32_t checksum(node::buffer_view buffer);
+
 	explicit crc32c();
 
-	void push(const void* data, size_t size);
-	void push(const buffer_view buffer);
-
+	void push(node::buffer_view buffer);
 	uint32_t checksum() const;
 
-	static uint32_t checksum(const void* data, size_t size);
-	static uint32_t checksum(const buffer_view buffer);
-
 private:
-	static uint32_t push(uint32_t crc, const void* data, size_t size);
+	static uint32_t push(uint32_t crc, node::buffer_view buffer);
 
 	uint32_t _crc;
 };
