@@ -1,20 +1,20 @@
 #ifndef nodecc_buffer_h
 #define nodecc_buffer_h
 
-#include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <string>
 #include <vector>
 
+#include "util/function_traits.h"
+
 
 namespace node {
 
-enum flags : uint8_t {
-	weak   = 0x00,
-	strong = 0x01,
-	copy   = 0x02,
+enum buffer_flags {
+	weak = 0,
+	copy = 1,
 };
-
 
 class buffer;
 class mutable_buffer;
@@ -43,13 +43,11 @@ public:
 	template<typename T>
 	explicit buffer_view(const std::vector<T>& vec) noexcept : buffer_view(vec.data(), vec.size()) {}
 
-	explicit buffer_view(const char* str) noexcept : buffer_view(const_cast<char*>(str), strlen(str)) {}
-
 	template<typename charT>
 	explicit buffer_view(const charT* str) noexcept : buffer_view(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT)) {}
 
 	template<typename charT, typename traits, typename Allocator>
-	explicit buffer_view(const std::basic_string<charT, traits, Allocator>& str) noexcept : buffer_view(reinterpret_cast<charT*>(str.data()), str.size() * sizeof(charT)) {}
+	explicit buffer_view(const std::basic_string<charT, traits, Allocator>& str) noexcept : buffer_view(str.data(), str.size() * sizeof(charT)) {}
 
 
 	template<typename T = uint8_t>
@@ -159,47 +157,41 @@ public:
 	/**
 	 * Creates a buffer referring the specified memory area.
 	 *
+	 * @param data The base address of the memory area.
+	 * @param size The size of the memory area.
+	 * @param d    An optional custom deleter callback. The default simply calls free().
+	 */
+	template<typename D>
+	explicit buffer(const void* data, std::size_t size, D d) noexcept {
+		control_base* p = new(std::nothrow) control<D>(data, std::forward<D>(d));
+
+		if (p) {
+			this->_data = const_cast<void*>(data);
+			this->_size = size;
+			this->_p = p;
+		} else {
+			this->_data = nullptr;
+			this->_size = 0;
+			this->_p = nullptr;
+		}
+	}
+
+	/**
+	 * Creates a buffer referring the specified memory area.
+	 *
 	 * @param data  The base address of the memory area.
 	 * @param size  The size of the memory area.
-	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 * @param flags node::weak or node::copy
 	 */
-	explicit buffer(const void* data, std::size_t size, node::flags flags) noexcept;
+	explicit buffer(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
 
-	/**
-	 * Creates a buffer referring the specified std::vector.
-	 *
-	 * @param  vec   The std::vector<T> which should be referred to.
-	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
-	 */
-	template<typename T>
-	explicit buffer(const std::vector<T>& vec, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<T*>(vec.data()), vec.size(), flags) {}
+	explicit buffer(const buffer_view other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
 
-	/**
-	 * Creates a buffer referring the specified C string.
-	 *
-	 * @param  str   The string which should be referred to.
-	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
-	 */
-	explicit buffer(const char* str, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<char*>(str), strlen(str), flags) {}
-
-	/**
-	 * Creates a buffer referring the specified non-char C string.
-	 *
-	 * @param  str   The string which should be referred to.
-	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
-	 */
 	template<typename charT>
-	explicit buffer(const charT* str, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT), flags) {}
+	explicit buffer(const charT* str, buffer_flags flags = node::copy) noexcept : buffer(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT), flags) {}
 
-	/**
-	 * Creates a buffer referring the specified std::basic_string.
-	 *
-	 * @param  str   The std::basic_string<charT, traits, Allocator> which should be referred to.
-	 * @param  flags Specifies how the memory is referred. E.g. weak, strong, or copy (the default).
-	 */
 	template<typename charT, typename traits, typename Allocator>
-	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, node::flags flags = node::flags::copy) noexcept : buffer(const_cast<charT*>(str.data()), str.size() * sizeof(charT), flags) {}
-
+	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, buffer_flags flags = node::copy) noexcept : buffer(str.data(), str.size() * sizeof(charT), flags) {}
 
 	~buffer() noexcept;
 
@@ -231,18 +223,33 @@ public:
 	void reset() noexcept;
 
 	/**
-	 * Releases the buffer and creates a new one with the specified size.
+	 * Releases the buffer and allocates a new one with the specified size.
 	 */
 	void reset(size_t size) noexcept;
 
 	/**
-	 * Releases the current buffer and sets it's new memory it should refer to.
+	 * Releases the current buffer and starts managing the given memory area.
 	 *
 	 * @param data  The base address of the memory area.
 	 * @param size  The size of the memory area.
-	 * @param flags Specifies how the memory is referred. E.g. weak, strong, or copy.
+	 * @param d     An optional custom deleter callback. The default simply calls free().
 	 */
-	void reset(const void* data, std::size_t size, node::flags flags) noexcept;
+	template<typename D>
+	void reset(const void* data, std::size_t size, D d) noexcept {
+		this->_release();
+
+		control_base* p = new(std::nothrow) control<D>(data, std::forward<D>(d));
+
+		if (p) {
+			this->_data = const_cast<void*>(data);
+			this->_size = size;
+			this->_p = p;
+		}
+	}
+
+	void reset(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
+	void reset(const buffer_view other, buffer_flags flags = node::copy) noexcept;
+	void reset(const char str[], buffer_flags flags = node::copy) noexcept;
 
 	/**
 	 * Returns a copy of the buffer, while optionally resizing it.
@@ -283,26 +290,56 @@ public:
 	}
 
 protected:
-	struct control;
+	class control_base {
+	public:
+		constexpr control_base(const void* base) : base(base), use_count(1) {}
+		virtual ~control_base() = default;
+
+		virtual void free() = 0;
+
+		const void* base;
+		std::atomic<uintptr_t> use_count;
+	};
+
+	template<typename D>
+	class control : public control_base {
+	public:
+		explicit control(const void* base, D d) noexcept : control_base(base), _deleter(std::move(d)) {}
+
+		void free() override {
+			/*
+			 * If you get compiler errors in the next 2 lines below, please remember:
+			 *   - Your deleter must accept a single parameter. Not more, not less.
+			 *   - This parameter must be one to which a void pointer can be cast.
+			 */
+			this->_deleter(static_cast<typename node::util::function_traits<D>::template arg<0>::type>(const_cast<void*>(this->base)));
+		}
+
+	private:
+		D _deleter;
+	};
 
 	/**
 	 * Creates a copy of this buffer in target, while optionally resizing it.
 	 */
 	void copy(buffer& target, std::size_t size = 0) const noexcept;
 
+private:
+	void _reset_unsafe(std::size_t size) noexcept;
+
 	/**
 	 * Retains this buffer, incrementing it's reference count by one,
 	 * using std::memory_order_relaxed.
 	 */
-	void retain() noexcept;
+	void _retain() noexcept;
 
 	/**
 	 * Releases this buffer, decrementing it's reference count by one,
 	 * using std::memory_order_release and a std::memory_order_acquire fence.
 	 */
-	void release() noexcept;
+	void _release() noexcept;
 
-	control* _p;
+	control_base* _p;
 };
 
 

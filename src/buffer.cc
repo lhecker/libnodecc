@@ -6,6 +6,9 @@
 #include "libnodecc/util/math.h"
 
 
+typedef void(*free_signature)(void*);
+
+
 namespace node {
 
 buffer_view::buffer_view(const void* data, std::size_t size) noexcept : _data(const_cast<void*>(data)), _size(size) {
@@ -18,17 +21,14 @@ buffer_view& buffer_view::operator=(const buffer_view& other) {
 }
 
 
+buffer::buffer(std::size_t size) noexcept : buffer() {
+	this->_reset_unsafe(size);
+}
 
-struct buffer::control {
-	constexpr control(void* base) noexcept : base(base), use_count(1) {};
-
-	void* base;
-	std::atomic<uintptr_t> use_count;
-};
-
-
-buffer::buffer(const void* data, std::size_t size, node::flags flags) noexcept : buffer() {
-	this->reset(data, size, flags);
+buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept : buffer_view(data, size), _p(nullptr) {
+	if (flags == node::copy) {
+		this->copy(*this);
+	}
 }
 
 buffer::buffer(buffer&& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
@@ -45,32 +45,28 @@ buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other._data, other
 }
 
 buffer::buffer(const buffer& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
-	this->retain();
+	this->_retain();
 }
 
 buffer& buffer::operator=(buffer&& other) noexcept {
-	this->release();
+	this->_release();
 	this->swap(other);
 
 	return *this;
 }
 
 buffer& buffer::operator=(const buffer& other) noexcept {
-	this->release();
+	this->_release();
 	this->_p = other._p;
 	this->_data = other._data;
 	this->_size = other._size;
-	this->retain();
+	this->_retain();
 
 	return *this;
 }
 
-buffer::buffer(std::size_t size) noexcept : _p(nullptr) {
-	this->reset(size);
-}
-
 buffer::~buffer() noexcept {
-	this->release();
+	this->_release();
 }
 
 std::size_t buffer::use_count() const noexcept {
@@ -91,40 +87,31 @@ void buffer::swap(mutable_buffer& other) noexcept {
 }
 
 void buffer::reset() noexcept {
-	this->release();
+	this->_release();
 }
 
 void buffer::reset(std::size_t size) noexcept {
-	this->release();
-
-	if (size > 0) {
-		uint8_t* base = (uint8_t*)malloc(sizeof(control) + size);
-		uint8_t* data = base + sizeof(control);
-
-		if (base) {
-			this->_p = new(base) control(base);
-			this->_data = data;
-			this->_size = size;
-		}
-	}
+	this->_release();
+	this->_reset_unsafe(size);
 }
 
-void buffer::reset(const void* data, std::size_t size, node::flags flags) noexcept {
-	this->release();
+void buffer::reset(const void* data, std::size_t size, buffer_flags flags) noexcept {
+	this->_release();
 
 	this->_data = (void*)data;
 	this->_size = size;
 
-	switch (flags) {
-	case node::flags::strong:
-		this->_p = new control((void*)data);
-		break;
-	case node::flags::copy:
+	if (flags == node::copy) {
 		this->copy(*this);
-		break;
-	default:
-		;
 	}
+}
+
+void buffer::reset(const buffer_view other, buffer_flags flags) noexcept {
+	this->reset(other.data(), other.size(), flags);
+}
+
+void buffer::reset(const char str[], buffer_flags flags) noexcept {
+	this->reset(str, strlen(str), flags);
 }
 
 buffer buffer::copy(std::size_t size) const noexcept {
@@ -142,7 +129,7 @@ buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 # define PTRDIFF_GREATER_SIZE(ptrdiff, size) (std::size_t(ptrdiff) > (size))
 #endif
 
-	if (PTRDIFF_GREATER_SIZE(PTRDIFF_MAX, this->_size) && this->_data) {
+	if (this->_data && PTRDIFF_GREATER_SIZE(PTRDIFF_MAX, this->_size)) {
 		if (start < 0) {
 			start += this->_size;
 
@@ -167,7 +154,7 @@ buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 			buffer._size = end - start;
 			buffer._p = this->_p;
 			buffer._data = this->get() + start;
-			buffer.retain();
+			buffer._retain();
 		}
 	}
 
@@ -181,19 +168,19 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 		size = this->_size;
 	}
 
-	constexpr const std::size_t control_size = (sizeof(control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
+	constexpr const std::size_t control_size = (sizeof(control<free_signature>) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
 	uint8_t* base = (uint8_t*)malloc(control_size + size);
 	uint8_t* data = base + control_size;
 
-	// do this upfront in case of target == *this
+	// we need to do this upfront since target might be *this
 	if (base && this->_data) {
 		memcpy(data, this->_data, std::min(size, this->_size));
 	}
 
-	target.release();
+	target._release();
 
 	if (base) {
-		target._p = new(base) control(base);
+		target._p = new(base) control<free_signature>(base, free);
 		target._data = data;
 		target._size = size;
 	}
@@ -213,32 +200,51 @@ int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std:
 	return r;
 }
 
-/*
- * Increasing the reference count is done using memory_order_relaxed,
- * since it doesn't matter in which order the count is increased
- * as long as the final sum in release() is correct.
- */
-void buffer::retain() noexcept {
-	if (this->_p) {
-		this->_p->use_count.fetch_add(1, std::memory_order_relaxed);
+void buffer::_reset_unsafe(std::size_t size) noexcept {
+	if (size > 0) {
+		constexpr const std::size_t control_size = (sizeof(control<free_signature>) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
+		uint8_t* base = (uint8_t*)malloc(control_size + size);
+		uint8_t* data = base + control_size;
+
+		if (base) {
+			this->_p = new(base) control<free_signature>(base, free);
+			this->_data = data;
+			this->_size = size;
+		}
 	}
 }
 
-void buffer::release() noexcept {
+/*
+ * Increasing the reference count is done using memory_order_relaxed,
+ * since it doesn't matter in which order the count is increased
+ * as long as the final sum in _release() is correct.
+ */
+void buffer::_retain() noexcept {
+	control_base* p = this->_p;
+
+	if (p) {
+		p->use_count.fetch_add(1, std::memory_order_relaxed);
+	}
+}
+
+void buffer::_release() noexcept {
 	/*
 	 * Normally std::memory_order_acq_rel should be used for the fetch_sub operation
 	 * (to make all read/writes to the backing buffer visible before it's possibly freed),
 	 * but this would result in an unneeded "acquire" operation, whenever the reference counter
 	 * does not yet reach zero and thus may impose a performance penalty. Solution below:
 	 */
-	if (this->_p && this->_p->use_count.fetch_sub(1, std::memory_order_release) == 1) {
+	control_base* p = this->_p;
+
+	if (p && p->use_count.fetch_sub(1, std::memory_order_release) == 1) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 
-		void* base = this->_p->base;
-		free(base);
+		const void* base = p->base;
 
-		if (this->_p != base) {
-			delete this->_p;
+		p->free();
+
+		if (p != base) {
+			delete p;
 		}
 	}
 
