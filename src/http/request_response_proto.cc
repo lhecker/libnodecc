@@ -86,9 +86,7 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 						char* strData = const_cast<char*>(str.data());
 
 						do {
-							static const char chars[] = "0123456789";
-
-							*strData++ = chars[(contentLength / div) % 10];
+							*strData++ = '0' + ((contentLength / div) % 10);
 							div /= 10;
 						} while (div > 0);
 

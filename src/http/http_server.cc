@@ -1,7 +1,6 @@
 #include "libnodecc/http/server.h"
 
 #include <wslay/wslay.h>
-#include <openssl/ssl.h>
 
 #include "libnodecc/util/base64.h"
 #include "libnodecc/util/sha1.h"
