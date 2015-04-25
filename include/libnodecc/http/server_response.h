@@ -11,7 +11,7 @@ class server_response : public node::http::request_response_proto {
 public:
 	explicit server_response(node::net::socket& socket);
 
-	node::net::socket& socket() const;
+	node::net::socket& socket();
 
 	uint16_t status_code() const;
 	void set_status_code(uint16_t code);

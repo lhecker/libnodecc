@@ -30,7 +30,7 @@ class client_request : public node::http::request_response_proto {
 	void set_method(const std::string& method);
 	void set_path(const std::string& path);
 
-	const node::net::socket& socket() const;
+	node::net::socket& socket();
 
 private:
 	void compile_headers(node::mutable_buffer& buf) override;

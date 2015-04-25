@@ -42,7 +42,8 @@ public:
 
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
-	const node::net::socket& socket() const;
+	node::net::socket& socket();
+	
 	const std::string& method() const;
 	const std::string& url() const;
 	const headers_t& headers() const;

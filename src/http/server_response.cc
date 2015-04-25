@@ -258,7 +258,7 @@ namespace http {
 server_response::server_response(net::socket& socket) : request_response_proto(), _socket(socket), _status_code(200), _shutdown_on_end(true) {
 }
 
-node::net::socket& server_response::socket() const {
+node::net::socket& server_response::socket() {
 	return this->_socket;
 }
 

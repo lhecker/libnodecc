@@ -51,7 +51,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 	});
 }
 
-const node::net::socket& incoming_message::socket() const {
+node::net::socket& incoming_message::socket() {
 	return this->_socket;
 }
 

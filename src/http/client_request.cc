@@ -126,7 +126,7 @@ void client_request::set_path(const std::string& path) {
 	this->_path = path;
 }
 
-const node::net::socket& client_request::socket() const {
+node::net::socket& client_request::socket() {
 	return this->_socket;
 }
 
