@@ -189,12 +189,13 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
 	int r = 0;
 
+	// this->_size must be greater than 0 and thus data1 must be non-null
 	if (pos1 < this->_size && size1 <= (this->_size - pos1) && data2) {
 		r = memcmp(this->get() + pos1, data2, std::min(size1, size2));
+	}
 
-		if (r == 0) {
-			r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
-		}
+	if (r == 0) {
+		r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
 	}
 
 	return r;
