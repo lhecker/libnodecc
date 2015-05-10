@@ -18,15 +18,15 @@ public:
 	 * This callback will be called once for each notification,
 	 * that has been passed to the queue.
 	 */
-	NODE_ADD_CALLBACK(public, notification, void, const T&)
+	NODE_CALLBACK_ADD(public, notification, void, const T&)
 
 	/*
 	 * Passes a reference to all notifications.
-	 * 
+	 *
 	 * This interface might change, when the underlying
 	 * data structure changes - consider using the notification callback.
 	 */
-	NODE_ADD_CALLBACK(public, notifications, void, const std::vector<T>&)
+	NODE_CALLBACK_ADD(public, notifications, void, const std::vector<T>&)
 
 public:
 	explicit notification_queue() : node::uv::async() {}

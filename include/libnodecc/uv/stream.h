@@ -16,12 +16,9 @@ namespace uv {
 template<typename T>
 class stream : public node::uv::handle<T>, public node::stream::duplex<node::buffer, int> {
 public:
-	NODE_ADD_CALLBACK(public, alloc, node::buffer, size_t suggested_size)
+	NODE_CALLBACK_ADD(public, alloc, node::buffer, size_t suggested_size)
 
 public:
-	typedef std::function<void(int err)> on_write_t;
-
-
 	explicit stream() : node::uv::handle<T>() {
 	}
 
@@ -50,9 +47,9 @@ public:
 
 			if (nread > 0 && self->has_data_callback()) {
 				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
-				self->emit_data_s(0, &buf, 1);
+				self->emit_data_s(&buf, 1);
 			} else if (nread < 0) {
-				self->emit_data_s(int(nread), nullptr, 0);
+				self->emit_error_s(int(nread));
 				self->emit_end_s();
 
 				if (nread == UV_EOF) {

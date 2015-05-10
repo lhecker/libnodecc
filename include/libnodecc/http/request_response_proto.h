@@ -20,7 +20,7 @@ class socket;
 namespace node {
 namespace http {
 
-class request_response_proto : public node::stream::writable<node::buffer> {
+class request_response_proto : public node::stream::writable<node::buffer, int> {
 public:
 	explicit request_response_proto();
 

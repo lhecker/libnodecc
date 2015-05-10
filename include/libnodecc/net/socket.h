@@ -9,7 +9,7 @@ namespace net {
 
 class socket : public node::uv::stream<uv_tcp_t> {
 public:
-	NODE_ADD_CALLBACK(public, connect, void, int err)
+	NODE_CALLBACK_ADD(public, connect, void, int err)
 
 public:
 	explicit socket();

@@ -29,12 +29,12 @@ class incoming_message {
 	friend class client_request;
 	friend class server;
 
-	NODE_ADD_CALLBACK(public, headers_complete, void, bool upgrade, bool keep_alive)
-	NODE_ADD_CALLBACK(public, data, void, const node::buffer& buffer)
-	NODE_ADD_CALLBACK(public, close, void)
+	NODE_CALLBACK_ADD(public, headers_complete, void, bool upgrade, bool keep_alive)
+	NODE_CALLBACK_ADD(public, data, void, const node::buffer& buffer)
+	NODE_CALLBACK_ADD(public, close, void)
 
 	// for node::http::server/client_request
-	NODE_ADD_CALLBACK(private, end, void)
+	NODE_CALLBACK_ADD(private, end, void)
 
 public:
 	typedef std::unordered_map<std::string, std::string> headers_t;
@@ -43,7 +43,7 @@ public:
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
 	node::net::socket& socket();
-	
+
 	const std::string& method() const;
 	const std::string& url() const;
 	const headers_t& headers() const;

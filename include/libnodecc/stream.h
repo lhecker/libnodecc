@@ -7,23 +7,34 @@
 namespace node {
 namespace stream {
 
-template <typename T>
+template <typename T, typename E>
 class writable;
 
-template<typename T, typename E>
-class readable {
-	friend class writable<T>;
 
-	NODE_ADD_CALLBACK(public, data, void, E err, const T chunks[], size_t chunkcnt)
-	NODE_ADD_CALLBACK(public, end, void)
+namespace detail {
+
+template<typename T, typename E>
+class base {
+	NODE_CALLBACK_ADD(public, error, void, E err)
+};
+
+} // namespace detail
+
+
+template<typename T, typename E>
+class readable : public virtual detail::base<T, E> {
+	friend class writable<T, E>;
+
+	NODE_CALLBACK_ADD(public, data, void, const T chunks[], size_t chunkcnt)
+	NODE_CALLBACK_ADD(public, end, void)
 
 public:
 	virtual void resume() = 0;
 	virtual void pause() = 0;
 
-	void pipe(const node::stream::writable<T>& target, bool end = true) {
-		this->on_data([this, target](E err, const T chunks[], size_t chunkcnt) {
-			if (err || !target.writev(chunks, chunkcnt)) {
+	void pipe(const node::stream::writable<T, E>& target, bool end = true) {
+		this->on_data([this, &target](const T chunks[], size_t chunkcnt) {
+			if (!target.write(chunks, chunkcnt)) {
 				this->pause();
 			}
 		});
@@ -33,16 +44,16 @@ public:
 		});
 
 		if (end) {
-			this->on_end([target]() {
+			this->on_end([&target]() {
 				target.end();
 			});
 		}
 	}
 };
 
-template<typename T>
-class writable {
-	NODE_ADD_CALLBACK(public, drain, void)
+template<typename T, typename E>
+class writable : public virtual detail::base<T, E> {
+	NODE_CALLBACK_ADD(public, drain, void)
 
 public:
 	constexpr writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm) {}
@@ -123,7 +134,7 @@ private:
 };
 
 template<typename T, typename E>
-class duplex : public readable<T, E>, public writable<T> {
+class duplex : public readable<T, E>, public writable<T, E> {
 };
 
 } // namespace stream

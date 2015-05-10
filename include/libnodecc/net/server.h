@@ -9,7 +9,7 @@ namespace net {
 
 class server : public node::uv::stream<uv_tcp_t> {
 public:
-	NODE_ADD_CALLBACK(public, connection, void)
+	NODE_CALLBACK_ADD(public, connection, void)
 
 public:
 	explicit server();

@@ -19,6 +19,8 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 		incoming_message::parser_on_headers_complete,
 		incoming_message::parser_on_body,
 		incoming_message::parser_on_message_complete,
+		nullptr,
+		nullptr,
 	};
 
 
@@ -27,11 +29,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 
 	this->_headers.max_load_factor(0.75);
 
-	socket.on_data([this](int err, const node::buffer* bufs, size_t bufcnt) {
-		if (err) {
-			return;
-		}
-
+	socket.on_data([this](const node::buffer* bufs, size_t bufcnt) {
 		for (size_t i = 0; i < bufcnt; i++) {
 			const node::buffer* buf = bufs + i;
 

@@ -11,7 +11,7 @@ namespace fs {
 
 class event : public node::uv::handle<uv_fs_event_t> {
 public:
-	NODE_ADD_CALLBACK(public, event, void, int err, int events, const std::string& str);
+	NODE_CALLBACK_ADD(public, event, void, int err, int events, const std::string& str);
 
 public:
 	explicit event();
