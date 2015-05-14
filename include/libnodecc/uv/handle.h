@@ -62,6 +62,10 @@ public:
 		return uv_is_closing(*this);
 	}
 
+	bool is_active() const {
+		return uv_is_active(*this);
+	}
+
 	void close() {
 		if (this->_handle.loop && !this->is_closing()) {
 			uv_close(*this, [](uv_handle_t* handle) {
