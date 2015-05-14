@@ -16,6 +16,9 @@ public:
 	explicit loop() noexcept;
 	~loop() noexcept;
 
+	loop(const loop&) = delete;
+	loop& operator=(const loop&) = delete;
+
 	void run();
 	bool run_once();
 	bool run_nowait();
