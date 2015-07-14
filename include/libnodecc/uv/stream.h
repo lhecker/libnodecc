@@ -126,7 +126,7 @@ public:
 		}
 
 		struct packed_req {
-			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, size_t total) : bufs(bufs, bufs + bufcnt), total(total) {
+			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, size_t total) : ref_list(bufs, bufcnt), total(total) {
 				stream.increase_watermark(this->total);
 				this->req.data = &stream;
 			}
@@ -137,7 +137,7 @@ public:
 			}
 
 			uv_write_t req;
-			std::vector<node::buffer> bufs;
+			node::buffer_ref_list ref_list;
 			size_t total;
 		};
 

@@ -218,7 +218,7 @@ node::buffer base64::encode(const buffer_view buffer, bool base64url) {
 	return result;
 }
 
-node::buffer decode(const buffer_view buffer) {
+node::buffer base64::decode(const buffer_view buffer) {
 #define shift6(n)       \
     if (n <= 0x3F) {    \
         r = r << 6 | n; \

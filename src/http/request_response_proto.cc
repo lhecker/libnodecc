@@ -184,8 +184,8 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 			buf.reset();
 		}
 
-		static const node::buffer normalChunk = node::buffer("\r\n", node::weak);
-		static const node::buffer endChunk = node::buffer("\r\n0\r\n\r\n", node::weak);
+		static const node::buffer normalChunk("\r\n", node::weak);
+		static const node::buffer endChunk("\r\n0\r\n\r\n", node::weak);
 		compiledBufs[compiledBufsPos++] = end ? endChunk : normalChunk;
 	} else {
 		for (size_t i = 0; i < bufcnt; i++) {

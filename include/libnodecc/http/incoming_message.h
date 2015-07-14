@@ -3,10 +3,10 @@
 
 #include <functional>
 #include <http-parser/http_parser.h>
-#include <string>
 #include <unordered_map>
 
 #include "../common.h"
+#include "../buffer.h"
 
 
 namespace node {
@@ -37,16 +37,19 @@ class incoming_message {
 	NODE_CALLBACK_ADD(private, end, void)
 
 public:
-	typedef std::unordered_map<std::string, std::string> headers_t;
+	typedef std::unordered_map<node::buffer, node::mutable_buffer> headers_t;
 
 
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
 	node::net::socket& socket();
 
-	const std::string& method() const;
-	const std::string& url() const;
-	const headers_t& headers() const;
+	node::buffer method() const;
+	node::buffer url() const;
+
+	bool has_header(const node::buffer_view key) const;
+	node::buffer header(const node::buffer_view key) const;
+
 	uint8_t http_version_major() const;
 	uint8_t http_version_minor() const;
 	uint8_t status_code() const;
@@ -61,19 +64,20 @@ private:
 	static int parser_on_body(http_parser* parser, const char* at, size_t length);
 	static int parser_on_message_complete(http_parser* parser);
 
-	void add_header_partials();
+	void _add_header_partials();
+	node::buffer _buffer(const char* at, size_t length);
 	void _close();
 
 	node::net::socket& _socket;
 
-	std::string _method;
-	std::string _url;
+	node::buffer _method;
+	node::mutable_buffer _url;
 	headers_t _headers;
 
-	std::string _partial_header_field;
-	std::string _partial_header_value;
+	node::mutable_buffer _partial_header_field;
+	node::mutable_buffer _partial_header_value;
 
-	const node::buffer* _parserBuffer;
+	const node::buffer* _parser_buffer;
 	http_parser _parser;
 
 	uint8_t _http_version_major;

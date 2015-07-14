@@ -49,7 +49,7 @@ server::server() : net::server() {
 			pack->res._shutdown_on_end = !keep_alive;
 
 			// RFC 2616 - 14.23
-			if (!pack->req.headers().count("host")) {
+			if (pack->req.has_header("host")) {
 				pack->res.set_status_code(400);
 				pack->res.end();
 				return;
@@ -64,11 +64,11 @@ server::server() : net::server() {
 			if (upgrade) {
 				if (pack->req._is_websocket == 1) {
 					const char websocketMagic[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-					const auto& key = pack->req._headers.at("sec-websocket-key");
+					const auto key = pack->req.header("sec-websocket-key");
 					uint8_t digest[SHA1_DIGEST_LENGTH];
 
 					node::mutable_buffer buffer;
-					buffer.set_capacity(key.length() + strlen(websocketMagic));
+					buffer.set_capacity(key.size() + strlen(websocketMagic));
 					buffer.append(key);
 					buffer.append(websocketMagic);
 

@@ -33,7 +33,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 		for (size_t i = 0; i < bufcnt; i++) {
 			const node::buffer* buf = bufs + i;
 
-			this->_parserBuffer = buf;
+			this->_parser_buffer = buf;
 			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buf->data<char>(), buf->size());
 
 			// TODO: handle upgrade
@@ -53,16 +53,24 @@ node::net::socket& incoming_message::socket() {
 	return this->_socket;
 }
 
-const std::string& incoming_message::method() const {
+node::buffer incoming_message::method() const {
 	return this->_method;
 }
 
-const std::string& incoming_message::url() const {
+node::buffer incoming_message::url() const {
 	return this->_url;
 }
 
-const incoming_message::headers_t& incoming_message::headers() const {
-	return this->_headers;
+bool incoming_message::has_header(const node::buffer_view key) const {
+	return this->_headers.find(key) != this->_headers.cend();
+}
+
+node::buffer incoming_message::header(const node::buffer_view key) const {
+	try {
+		return this->_headers.at(key);
+	} catch (...) {
+		return node::buffer();
+	}
 }
 
 uint8_t incoming_message::http_version_major() const {
@@ -80,17 +88,13 @@ uint8_t incoming_message::status_code() const {
 bool incoming_message::is_websocket_request() {
 	if (this->_is_websocket == UINT8_MAX) {
 		if (this->_parser.upgrade != 0) {
-			const auto& upgradeField = this->_headers.find("upgrade");
-			const auto& keyField = this->_headers.find("sec-websocket-key");
-			const auto& versionField = this->_headers.find("sec-websocket-version");
-			const auto& end = this->_headers.end();
+			const auto upgradeField = this->header("upgrade");
+			const auto versionField = this->header("sec-websocket-version");
+			const auto keyField = this->header("sec-websocket-key");
 
-			if (upgradeField != end &&
-				versionField != end &&
-				keyField != end &&
-				upgradeField->second == "websocket" &&
-				versionField->second == "13" &&
-				!keyField->second.empty())
+			if (upgradeField.compare("websocket") == 0 &&
+				versionField.compare("13") == 0 &&
+				keyField)
 			{
 				this->_is_websocket = 1;
 				return true;
@@ -105,33 +109,39 @@ bool incoming_message::is_websocket_request() {
 
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
+
 	self->_url.append(at, length);
+
 	return 0;
 }
 
 int incoming_message::parser_on_header_field(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
-	self->add_header_partials();
-	self->_partial_header_field.append(at, length);
+
+	self->_add_header_partials();
+	self->_partial_header_field.append(self->_buffer(at, length));
+
 	return 0;
 }
 
 int incoming_message::parser_on_header_value(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
-	self->add_header_partials();
-	self->_partial_header_value.append(at, length);
+
+	self->_add_header_partials();
+	self->_partial_header_value.append(self->_buffer(at, length));
+
 	return 0;
 }
 
 int incoming_message::parser_on_headers_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	self->add_header_partials();
+	self->_add_header_partials();
 
 	if (parser->type == HTTP_REQUEST) {
 		self->_http_version_major = static_cast<uint8_t>(parser->http_major);
 		self->_http_version_minor = static_cast<uint8_t>(parser->http_minor);
-		self->_method = http_method_str(static_cast<http_method>(parser->method));
+		self->_method.reset(http_method_str(static_cast<http_method>(parser->method)), node::weak);
 	} else {
 		// HTTP_RESPONSE
 		self->_status_code = static_cast<uint16_t>(parser->status_code);
@@ -146,8 +156,7 @@ int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->_on_data) {
-		ssize_t start = (uint8_t*)at - self->_parserBuffer->get();
-		self->_on_data(self->_parserBuffer->slice(start, start + length));
+		self->_on_data(self->_buffer(at, length));
 	}
 
 	return 0;
@@ -157,8 +166,8 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->_is_websocket != 1) {
-		self->_method.clear();
-		self->_url.clear();
+		self->_method.reset();
+		self->_url.reset();
 		self->_headers.clear();
 		self->emit_end_s();
 	}
@@ -166,21 +175,26 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	return 0;
 }
 
-void incoming_message::add_header_partials() {
-	if (!this->_partial_header_field.empty() && !this->_partial_header_value.empty()) {
-		std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
+void incoming_message::_add_header_partials() {
+	if (this->_partial_header_field && this->_partial_header_value) {
+		//std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
 
 		const auto iter = this->_headers.emplace(this->_partial_header_field, this->_partial_header_value);
 
 		if (!iter.second) {
-			std::string& existingValue = iter.first->second;
+			auto& existingValue = iter.first->second;
 			existingValue.append(", ");
 			existingValue.append(this->_partial_header_value);
 		}
 
-		this->_partial_header_field.clear();
-		this->_partial_header_value.clear();
+		this->_partial_header_field.reset();
+		this->_partial_header_value.reset();
 	}
+}
+
+node::buffer incoming_message::_buffer(const char* at, size_t length) {
+	const ssize_t start = (uint8_t*)at - this->_parser_buffer->get();
+	return this->_parser_buffer->slice(start, start + length);
 }
 
 void incoming_message::_close() {
