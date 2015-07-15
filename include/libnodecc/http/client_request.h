@@ -18,8 +18,8 @@ public:
 public:
 	explicit client_request();
 
-	bool init(node::loop& loop, const sockaddr& addr, const std::string& hostname, decltype(on_connect)::type cb);
-	bool init(node::loop& loop, const std::string& url, decltype(on_connect)::type cb);
+	bool init(node::loop& loop, const sockaddr& addr, const std::string& hostname, decltype(on_connect)::function_type cb);
+	bool init(node::loop& loop, const std::string& url, decltype(on_connect)::function_type cb);
 
 	void shutdown();
 	void close();

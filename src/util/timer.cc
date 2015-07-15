@@ -30,7 +30,7 @@ bool timer::start(uint64_t timeout, uint64_t repeat) {
 	}, timeout, repeat);
 }
 
-bool timer::start(uint64_t timeout, uint64_t repeat, decltype(on_timeout)::type cb) {
+bool timer::start(uint64_t timeout, uint64_t repeat, decltype(on_timeout)::function_type cb) {
 	this->on_timeout(std::move(cb));
 	return this->start(timeout, repeat);
 }

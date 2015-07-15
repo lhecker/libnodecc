@@ -33,14 +33,14 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 	});
 }
 
-bool client_request::init(node::loop& loop, const sockaddr& addr, const std::string& hostname, decltype(on_connect)::type cb) {
+bool client_request::init(node::loop& loop, const sockaddr& addr, const std::string& hostname, decltype(on_connect)::function_type cb) {
 	this->on_connect(std::move(cb));
 	this->_hostname = hostname;
 
 	return this->_socket.init(loop) && this->_socket.connect(addr);
 }
 
-bool client_request::init(node::loop& loop, const std::string& url, decltype(on_connect)::type cb) {
+bool client_request::init(node::loop& loop, const std::string& url, decltype(on_connect)::function_type cb) {
 	http_parser_url u;
 	http_parser_parse_url(url.data(), url.size(), 0, &u);
 

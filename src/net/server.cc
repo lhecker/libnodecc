@@ -17,11 +17,9 @@ bool server::listen(const sockaddr& addr, int backlog, bool dualstack) {
 	}
 
 	return 0 == uv_listen(*this, backlog, [](uv_stream_t* server, int status) {
-		auto self = reinterpret_cast<node::net::server*>(server->data);
-		self->on_connection.emit();
-
-		if (status != 0) {
-			self->on_connection(nullptr);
+		if (status == 0) {
+			auto self = reinterpret_cast<node::net::server*>(server->data);
+			self->on_connection.emit();
 		}
 	});
 }

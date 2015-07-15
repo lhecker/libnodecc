@@ -37,7 +37,7 @@ public:
 	bool again();
 
 	bool start(uint64_t timeout, uint64_t repeat);
-	bool start(uint64_t timeout, uint64_t repeat, decltype(on_timeout)::type cb);
+	bool start(uint64_t timeout, uint64_t repeat, decltype(on_timeout)::function_type cb);
 
 	bool stop();
 };

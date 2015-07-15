@@ -16,7 +16,6 @@
 				'include/libnodecc/buffer/buffer_view.h',
 				'include/libnodecc/buffer/mutable_buffer.h',
 				'include/libnodecc/channel.h',
-				'include/libnodecc/common.h',
 				'include/libnodecc/dns/lookup.h',
 				'include/libnodecc/event.h',
 				'include/libnodecc/fs/event.h',

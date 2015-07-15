@@ -5,8 +5,6 @@
 #include <stdexcept>
 #include <utility>
 
-#include "buffer.h"
-
 
 namespace node {
 
@@ -47,23 +45,14 @@ struct event_optional : std::pair<T, bool> {
 	}
 };
 
-/*
- * Bugs in VS2015:
- * Using
- *   template<typename R, typename... Args>
- *   class event<R(Args...)> {}
- * does not compile.
- * Even without using template specialization on the class,
- * subsequent usage of "Args..." as parameter pack won't work either.
- */
+
 template<class T>
 class event;
 
 template<class R, class... Args>
 class event<R(Args...)> {
 public:
-	typedef std::function<R(Args...)> type;
-	typedef event_optional<node::buffer> result_type;
+	typedef std::function<R(Args...)> function_type;
 
 
 	constexpr event() {}
@@ -90,21 +79,31 @@ public:
 		this->_f = nullptr;
 	}
 
-	result_type emit(Args... args) {
-		if (this->empty()) {
-			return result_type();
-		} else {
-			this->_f(std::forward<Args>(args)...);
-			return result_type();
-		}
-	}
-
 	void swap(event<R(Args...)>& other) noexcept {
 		std::swap(this->_f, other._f);
 	}
 
+	template<typename = typename std::enable_if<std::is_void<R>>::type>
+	bool emit(Args... args) {
+		if (this->empty()) {
+			return false;
+		} else {
+			this->_f(std::forward<Args>(args)...);
+			return true;
+		}
+	}
+
+	template<typename = typename std::enable_if<!std::is_void<R>>::type>
+	event_optional<R> emit(Args... args) {
+		if (this->empty()) {
+			return event_optional<R>();
+		} else {
+			return event_optional<R>(this->_f(std::forward<Args>(args)...), true);
+		}
+	}
+
 private:
-	type _f;
+	function_type _f;
 };
 
 } // namespace node
