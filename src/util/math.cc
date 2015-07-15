@@ -159,6 +159,6 @@ unsigned int node::util::digits(size_t n, uint8_t base) {
 			return (node::util::digits2(n) + m - 2) / (m - 1);
 		}
 
-		return std::log(n) / std::log(base);
+		return unsigned int(std::log(n) / std::log(base));
 	}
 }

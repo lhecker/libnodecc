@@ -50,7 +50,7 @@ void loop::stop() {
 }
 
 bool loop::alive() {
-	return uv_loop_alive(&this->_loop);
+	return uv_loop_alive(&this->_loop) != 0;
 }
 
 loop::operator uv_loop_t*() {

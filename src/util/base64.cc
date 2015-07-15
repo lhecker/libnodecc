@@ -254,20 +254,20 @@ node::buffer base64::decode(const buffer_view buffer) {
 			// TODO: add support for big endian systems by converting the constants
 			switch (ri) {
 			case 2:
-				out[0] = (r & 0x00000ff0ul) >> 4;
+				out[0] = uint8_t((r & 0x00000ff0ul) >>  4);
 				out += 1;
 				ri = 1;
 				break;
 			case 3:
-				out[0] = (r & 0x0003fc00ul) >> 10;
-				out[1] = (r & 0x000003fcul) >> 2;
+				out[0] = uint8_t((r & 0x0003fc00ul) >> 10);
+				out[1] = uint8_t((r & 0x000003fcul) >>  2);
 				out += 2;
 				ri = 1;
 				break;
 			case 4:
-				out[0] = (r & 0x00ff0000ul) >> 16;
-				out[1] = (r & 0x0000ff00ul) >> 8;
-				out[2] = (r & 0x000000fful);
+				out[0] = uint8_t((r & 0x00ff0000ul) >> 16);
+				out[1] = uint8_t((r & 0x0000ff00ul) >>  8);
+				out[2] = uint8_t((r & 0x000000fful) >>  0);
 				out += 3;
 				ri = 0;
 				break;
@@ -285,16 +285,16 @@ node::buffer base64::decode(const buffer_view buffer) {
 
 		switch (ri) {
 		case 2:
-			out[0] = (r & 0x00000ff0ul) >> 4;
+			out[0] = uint8_t((r & 0x00000ff0ul) >>  4);
 			break;
 		case 3:
-			out[0] = (r & 0x0003fc00ul) >> 10;
-			out[1] = (r & 0x000003fcul) >> 2;
+			out[0] = uint8_t((r & 0x0003fc00ul) >> 10);
+			out[1] = uint8_t((r & 0x000003fcul) >>  2);
 			break;
 		case 4:
-			out[0] = (r & 0x00ff0000ul) >> 16;
-			out[1] = (r & 0x0000ff00ul) >> 8;
-			out[2] = (r & 0x000000fful);
+			out[0] = uint8_t((r & 0x00ff0000ul) >> 16);
+			out[1] = uint8_t((r & 0x0000ff00ul) >>  8);
+			out[2] = uint8_t((r & 0x000000fful) >>  0);
 			break;
 		}
 
