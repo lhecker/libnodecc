@@ -16,15 +16,15 @@ struct event_optional : std::pair<T, bool> {
 		return this->second;
 	}
 
-	constexpr T* operator->() {
+	constexpr T* operator->() const {
 		return &this->first;
 	}
 
-	constexpr T& operator*() & {
+	constexpr T& operator*() const & {
 		return this->first;
 	}
 
-	constexpr T&& operator*() && {
+	T&& operator*() && {
 		return this->first;
 	}
 
@@ -32,7 +32,7 @@ struct event_optional : std::pair<T, bool> {
 		return this->first;
 	}
 
-	constexpr T&& value() && {
+	T&& value() && {
 		return this->first;
 	}
 
@@ -90,14 +90,6 @@ public:
 		this->_f = nullptr;
 	}
 
-	constexpr const type& value() const & {
-		return this->_f;
-	}
-
-	constexpr type&& value() && {
-		return std::move(this->_f);
-	}
-
 	result_type emit(Args... args) {
 		if (this->empty()) {
 			return result_type();
@@ -105,6 +97,10 @@ public:
 			this->_f(std::forward<Args>(args)...);
 			return result_type();
 		}
+	}
+
+	void swap(event<R(Args...)>& other) noexcept {
+		std::swap(this->_f, other._f);
 	}
 
 private:

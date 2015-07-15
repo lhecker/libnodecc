@@ -156,7 +156,7 @@ int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->on_data) {
-		self->on_data(self->_buffer(at, length));
+		self->on_data.emit(self->_buffer(at, length));
 	}
 
 	return 0;

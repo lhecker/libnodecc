@@ -71,14 +71,19 @@ public:
 
 				if (self && self->on_close) {
 					/*
-					 * After emitting the close event the std::function
-					 * owning the callback should be cleared.
-					 * This will ensure that smart pointers are reset.
-					 * But move the std::function to the stack just in case that
-					 * the handle gets deleted within the close callback.
+					 * If a close event is emitted it's std::function object must be reset,
+					 * since we need to ensure that potential smart pointers stored in the
+					 * capture group of a lambda function are deleted as well.
+					 *
+					 * Furthermore the std::function should be moved onto our stack beforehand,
+					 * since the uv::handle might get deleted/freed manually in the callback,
+					 * which would delete the std::function in that moment
+					 * as well and thus might crash the program.
 					 */
-					const auto close = std::move(self->on_close.value());
-					close();
+					decltype(self->on_close) on_close;
+					self->on_close.swap(on_close);
+
+					on_close.emit();
 				}
 			});
 		}
