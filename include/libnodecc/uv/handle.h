@@ -36,7 +36,10 @@ public:
 	operator uv_loop_t*() const { return this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 
-	// casts *this to any libuv handle type
+	/*
+	 * SFINAE only works if the inner template depends on the outer template.
+	 * --> <typename U = T, (subsequent usage of U instead of T)>
+	 */
 	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>
 	operator T*() { return &this->_handle; }
 	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>

@@ -10,6 +10,8 @@ namespace node {
 
 template<typename T>
 struct event_optional : std::pair<T, bool> {
+	using std::pair<T, bool>::pair;
+
 	constexpr operator bool() const noexcept {
 		return this->second;
 	}
@@ -83,7 +85,7 @@ public:
 		std::swap(this->_f, other._f);
 	}
 
-	template<typename = typename std::enable_if<std::is_void<R>>::type>
+	template<typename S = R, typename = typename std::enable_if<std::is_void<S>::value>::type>
 	bool emit(Args... args) {
 		if (this->empty()) {
 			return false;
@@ -93,12 +95,12 @@ public:
 		}
 	}
 
-	template<typename = typename std::enable_if<!std::is_void<R>>::type>
-	event_optional<R> emit(Args... args) {
+	template<typename S = R, typename = typename std::enable_if<!std::is_void<S>::value>::type>
+	event_optional<S> emit(Args... args) {
 		if (this->empty()) {
-			return event_optional<R>();
+			return event_optional<S>();
 		} else {
-			return event_optional<R>(this->_f(std::forward<Args>(args)...), true);
+			return event_optional<S>(this->_f(std::forward<Args>(args)...), true);
 		}
 	}
 
