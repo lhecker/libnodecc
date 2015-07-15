@@ -1,7 +1,7 @@
 #ifndef nodecc_util_endian_h
 #define nodecc_util_endian_h
 
-#include "_endian.hpp"
+#include "_boost_endian.h"
 
 #define NODE_LITTLE_ENDIAN BOOST_LITTLE_ENDIAN
 #define NODE_BIG_ENDIAN    BOOST_BIG_ENDIAN

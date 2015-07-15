@@ -4,7 +4,7 @@
 #include <cmath>
 #include <functional>
 
-#include "../common.h"
+#include "../event.h"
 #include "../loop.h"
 
 
@@ -13,8 +13,6 @@ namespace uv {
 
 template<typename T>
 class handle {
-	NODE_CALLBACK_ADD(public, close, void);
-
 public:
 	typedef handle handle_type;
 
@@ -59,11 +57,11 @@ public:
 
 
 	bool is_closing() const {
-		return uv_is_closing(*this);
+		return uv_is_closing(*this) != 0;
 	}
 
 	bool is_active() const {
-		return uv_is_active(*this);
+		return uv_is_active(*this) != 0;
 	}
 
 	void close() {
@@ -71,7 +69,7 @@ public:
 			uv_close(*this, [](uv_handle_t* handle) {
 				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
-				if (self && self->_on_close) {
+				if (self && self->on_close) {
 					/*
 					 * After emitting the close event the std::function
 					 * owning the callback should be cleared.
@@ -79,7 +77,7 @@ public:
 					 * But move the std::function to the stack just in case that
 					 * the handle gets deleted within the close callback.
 					 */
-					on_close_t close = std::move(self->_on_close);
+					const auto close = std::move(self->on_close.value());
 					close();
 				}
 			});
@@ -99,6 +97,9 @@ public:
 	void unref() {
 		uv_unref(*this);
 	}
+
+
+	node::event<void()> on_close;
 
 protected:
 	T _handle;

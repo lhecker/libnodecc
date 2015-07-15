@@ -73,16 +73,16 @@ node::buffer incoming_message::header(const node::buffer_view key) const {
 	}
 }
 
+uint16_t incoming_message::status_code() const {
+	return this->_status_code;
+}
+
 uint8_t incoming_message::http_version_major() const {
 	return this->_http_version_major;
 }
 
 uint8_t incoming_message::http_version_minor() const {
 	return this->_http_version_minor;
-}
-
-uint8_t incoming_message::status_code() const {
-	return this->_status_code;
 }
 
 bool incoming_message::is_websocket_request() {
@@ -104,7 +104,7 @@ bool incoming_message::is_websocket_request() {
 		this->_is_websocket = 0;
 	}
 
-	return this->_is_websocket;
+	return this->_is_websocket == 1;
 }
 
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
@@ -147,7 +147,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 		self->_status_code = static_cast<uint16_t>(parser->status_code);
 	}
 
-	self->emit_headers_complete_s(parser->upgrade != 0, http_should_keep_alive(parser));
+	self->on_headers_complete.emit(parser->upgrade != 0, http_should_keep_alive(parser) != 0);
 
 	return 0;
 }
@@ -155,8 +155,8 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	if (self->_on_data) {
-		self->_on_data(self->_buffer(at, length));
+	if (self->on_data) {
+		self->on_data(self->_buffer(at, length));
 	}
 
 	return 0;
@@ -169,7 +169,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 		self->_method.reset();
 		self->_url.reset();
 		self->_headers.clear();
-		self->emit_end_s();
+		self->on_end.emit();
 	}
 
 	return 0;
@@ -198,7 +198,7 @@ node::buffer incoming_message::_buffer(const char* at, size_t length) {
 }
 
 void incoming_message::_close() {
-	this->emit_close_s();
+	this->on_close.emit();
 	this->on_data(nullptr);
 	this->on_close(nullptr);
 	this->on_end(nullptr);

@@ -1,7 +1,6 @@
 #ifndef nodecc_buffer_buffer_view_h
 #define nodecc_buffer_buffer_view_h
 
-#include <cstdlib>
 #include <functional>
 #include <string>
 #include <vector>
@@ -81,11 +80,11 @@ public:
 	}
 
 	inline operator bool() const noexcept {
-		return this->_data;
+		return this->_data != nullptr;
 	}
 
 	inline bool empty() const noexcept {
-		return !this->_data;
+		return this->_data == nullptr;
 	}
 
 	inline uint8_t* get() const noexcept {

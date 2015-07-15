@@ -1,11 +1,19 @@
 #include "libnodecc/http/server_response.h"
 
-#include <atomic>
 #include <ctime>
 #include <mutex>
 #include <iostream>
 
 #include "libnodecc/net/socket.h"
+
+
+#ifndef _POSIX_C_SOURCE
+# define _POSIX_C_SOURCE 199506L
+#endif
+#include <ctime>
+#ifdef __STDC_WANT_SECURE_LIB__
+# define gmtime_r(timep, result) gmtime_s(result, timep)
+#endif
 
 
 /*

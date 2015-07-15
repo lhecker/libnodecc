@@ -8,7 +8,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 /*
- * Modified to integrate it into libnodecc.
+ * Modified for integratation into libnodecc.
  * (2015-04-19 by Leonard Hecker)
  */
 

@@ -1,6 +1,3 @@
-[submodule "deps/boringssl"]
-	path = deps/boringssl
-	url = https://boringssl.googlesource.com/boringssl/
 [submodule "src/http/http-parser"]
 	path = deps/http-parser
 	url = https://github.com/joyent/http-parser.git

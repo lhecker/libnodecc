@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 
+#include "event.h"
 #include "uv/async.h"
 
 
@@ -19,7 +20,7 @@ public:
 	 * This callback will be called once for each notification,
 	 * that has been passed to the queue.
 	 */
-	NODE_CALLBACK_ADD(public, notifications, void, const queue&)
+	node::event<void(const queue&)> on_notifications;
 
 public:
 	explicit channel() : node::uv::async() {}
@@ -35,7 +36,7 @@ public:
 				std::swap(q, self->_q);
 			}
 
-			self->emit_notifications_s(q);
+			self->on_notifications.emit(q);
 		});
 
 		if (ok) {

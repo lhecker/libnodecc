@@ -16,7 +16,7 @@ namespace uv {
 template<typename T>
 class stream : public node::uv::handle<T>, public node::stream::duplex<node::buffer, int> {
 public:
-	NODE_CALLBACK_ADD(public, alloc, node::buffer, size_t suggested_size)
+	node::event<node::buffer(size_t suggested_size)> on_alloc;
 
 public:
 	explicit stream() : node::uv::handle<T>() {
@@ -34,8 +34,10 @@ public:
 		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
-			if (self->has_alloc_callback()) {
-				self->_alloc_buffer = self->emit_alloc(suggested_size);
+			const auto r = self->on_alloc.emit(suggested_size);
+
+			if (r) {
+				self->_alloc_buffer = r.value();
 			} else if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
 				self->_alloc_buffer.reset(suggested_size);
 			}
@@ -45,12 +47,12 @@ public:
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 
-			if (nread > 0 && self->has_data_callback()) {
+			if (nread > 0 && self->on_data) {
 				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
-				self->emit_data_s(&buf, 1);
+				self->on_data.emit(&buf, 1);
 			} else if (nread < 0) {
-				self->emit_error_s(int(nread));
-				self->emit_end_s();
+				self->on_error.emit(int(nread));
+				self->on_end.emit();
 
 				if (nread == UV_EOF) {
 					// the other side shut down it's side (FIN) --> gracefully shutdown

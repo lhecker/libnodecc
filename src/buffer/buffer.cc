@@ -1,6 +1,7 @@
 #include "libnodecc/buffer.h"
 
-#include <atomic>
+#include <algorithm>
+#include <cstdlib>
 
 
 typedef void(*free_signature)(void*);
@@ -40,6 +41,8 @@ buffer& buffer::operator=(buffer_view&& other) noexcept {
 
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
+
+	return *this;
 }
 
 buffer& buffer::operator=(const buffer_view& other) noexcept {
@@ -47,6 +50,8 @@ buffer& buffer::operator=(const buffer_view& other) noexcept {
 
 	this->_data = other._data;
 	this->_size = other._size;
+
+	return *this;
 }
 
 buffer& buffer::operator=(buffer&& other) noexcept {

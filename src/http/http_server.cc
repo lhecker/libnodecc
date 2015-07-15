@@ -1,7 +1,5 @@
 #include "libnodecc/http/server.h"
 
-#include <wslay/wslay.h>
-
 #include "libnodecc/util/base64.h"
 #include "libnodecc/util/sha1.h"
 
@@ -55,7 +53,7 @@ server::server() : net::server() {
 				return;
 			}
 
-			if (!pack->server || !pack->server->emit_request_s(request(pack, &pack->req), response(pack, &pack->res))) {
+			if (!pack->server || !pack->server->on_request.emit(request(pack, &pack->req), response(pack, &pack->res))) {
 				pack->res.set_status_code(500);
 				pack->res.end();
 				return;

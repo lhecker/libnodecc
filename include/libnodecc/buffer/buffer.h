@@ -4,6 +4,8 @@
 #include "../util/function_traits.h"
 #include "buffer_view.h"
 
+#include <atomic>
+
 
 namespace node {
 
@@ -19,10 +21,9 @@ class buffer_ref_list;
 /**
  * A immutable buffer, with optional reference counting.
  *
- * It can either strongly manage a C buffer
- * (that is, one which was allocated with malloc etc.)
- * using reference counting similiar to std::shared_ptr,
- * or weakly reference some buffer.
+ * Beware that passing a buffer from one thread to another
+ * is inherently NOT thread safe and never will be.
+ * Please use some other synchronization mechanism, like node::channel.
  */
 class buffer : public buffer_view {
 	friend class node::mutable_buffer;
@@ -115,11 +116,11 @@ public:
 
 
 	inline bool is_strong() const noexcept {
-		return this->_p;
+		return this->_p != nullptr;
 	}
 
 	inline bool is_weak() const noexcept {
-		return !this->_p;
+		return this->_p == nullptr;
 	}
 
 	std::size_t use_count() const noexcept;
@@ -210,7 +211,7 @@ public:
 protected:
 	class control_base {
 	public:
-		constexpr control_base(const void* base) : base(base), use_count(1) {}
+		explicit control_base(const void* base) : base(base), use_count(1) {}
 		virtual ~control_base() = default;
 
 		virtual void free() = 0;

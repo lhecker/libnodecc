@@ -11,14 +11,14 @@ namespace http {
 client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
 	this->_socket.on_connect([this](int err) {
 		if (err) {
-			this->emit_error_s();
+			this->on_error.emit();
 			this->on_error(nullptr);
 			this->on_connect(nullptr);
 		} else {
 			this->_incoming_message._url.reset(node::buffer_view(this->_path));
 			this->_incoming_message._method.reset(node::buffer_view(this->_method));
 			this->_socket.resume();
-			this->emit_connect_s(*this, this->_incoming_message);
+			this->on_connect.emit(*this, this->_incoming_message);
 		}
 	});
 
@@ -33,14 +33,14 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 	});
 }
 
-bool client_request::init(node::loop& loop, const sockaddr& addr, const std::string& hostname, on_connect_t cb) {
-	this->_on_connect = std::move(cb);
+bool client_request::init(node::loop& loop, const sockaddr& addr, const std::string& hostname, decltype(on_connect)::type cb) {
+	this->on_connect(std::move(cb));
 	this->_hostname = hostname;
 
 	return this->_socket.init(loop) && this->_socket.connect(addr);
 }
 
-bool client_request::init(node::loop& loop, const std::string& url, on_connect_t cb) {
+bool client_request::init(node::loop& loop, const std::string& url, decltype(on_connect)::type cb) {
 	http_parser_url u;
 	http_parser_parse_url(url.data(), url.size(), 0, &u);
 
@@ -62,7 +62,7 @@ bool client_request::init(node::loop& loop, const std::string& url, on_connect_t
 		this->_path = "/";
 	}
 
-	this->_on_connect = std::move(cb);
+	this->on_connect(std::move(cb));
 
 	// hostname needed for name resolution
 	if (!this->_hostname.empty()) {

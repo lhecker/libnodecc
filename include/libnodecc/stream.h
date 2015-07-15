@@ -1,7 +1,7 @@
 #ifndef nodecc_stream_h
 #define nodecc_stream_h
 
-#include "common.h"
+#include "event.h"
 
 
 namespace node {
@@ -15,7 +15,8 @@ namespace detail {
 
 template<typename T, typename E>
 class base {
-	NODE_CALLBACK_ADD(public, error, void, E err)
+public:
+	node::event<void(E err)> on_error;
 };
 
 } // namespace detail
@@ -23,12 +24,9 @@ class base {
 
 template<typename T, typename E>
 class readable : public virtual detail::base<T, E> {
+public:
 	friend class writable<T, E>;
 
-	NODE_CALLBACK_ADD(public, data, void, const T chunks[], size_t chunkcnt)
-	NODE_CALLBACK_ADD(public, end, void)
-
-public:
 	virtual void resume() = 0;
 	virtual void pause() = 0;
 
@@ -49,24 +47,25 @@ public:
 			});
 		}
 	}
+
+	node::event<void(const T chunks[], size_t chunkcnt)> on_data;
+	node::event<void()> on_end;
 };
 
 template<typename T, typename E>
 class writable : public virtual detail::base<T, E> {
-	NODE_CALLBACK_ADD(public, drain, void)
-
 public:
-	constexpr writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm) {}
+	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0), _was_flooded(false) {}
 
 	/*
-	 * TODO: add callbacks to write() and writev()
-	 * BUT:
-	 * A developer might write something like this:
-	 *   void cb() { writer.write(buffer, cb); }
-	 *   cb();
-	 * which might lead to infinite recursion, if the write() function calls the cb synchronously.
-	 * (This is for instance the case for node::stream<T> which uses the synchronous uv_try_write.)
-	 */
+	* TODO: add callbacks to write() and writev()
+	* BUT:
+	* A developer might write something like this:
+	*   void cb() { writer.write(buffer, cb); }
+	*   cb();
+	* which might lead to infinite recursion, if the write() function calls the cb synchronously.
+	* (This is for instance the case for node::stream<T> which uses the synchronous uv_try_write.)
+	*/
 
 	inline size_t highwatermark() const {
 		return this->_hwm;
@@ -86,7 +85,7 @@ public:
 
 	inline bool write(const T& chunk) {
 		return this->write(&chunk, 1);
-	};
+	}
 
 	bool write(const T chunks[], size_t chunkcnt) {
 		this->_write(chunks, chunkcnt);
@@ -101,13 +100,15 @@ public:
 
 	inline bool end(const T& chunk) {
 		return this->end(&chunk, 1);
-	};
+	}
 
 	bool end(const T chunks[], size_t chunkcnt) {
 		this->_end(chunks, chunkcnt);
 		this->_was_flooded = this->_wm >= this->_hwm;
 		return this->_was_flooded;
 	}
+
+	node::event<void()> on_drain;
 
 protected:
 	inline void increase_watermark(size_t n) {
@@ -118,7 +119,7 @@ protected:
 		this->_wm = this->_wm > n ? this->_wm - n : 0;
 
 		if (this->_was_flooded && this->_wm <= this->_lwm) {
-			this->emit_drain_s();
+			this->on_drain.emit();
 			this->_was_flooded = false;
 		}
 	}
@@ -129,8 +130,8 @@ protected:
 private:
 	size_t _hwm;
 	size_t _lwm;
-	size_t _wm = 0;
-	bool _was_flooded = false;
+	size_t _wm;
+	bool _was_flooded;
 };
 
 template<typename T, typename E>

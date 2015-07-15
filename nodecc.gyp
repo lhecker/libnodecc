@@ -18,6 +18,7 @@
 				'include/libnodecc/channel.h',
 				'include/libnodecc/common.h',
 				'include/libnodecc/dns/lookup.h',
+				'include/libnodecc/event.h',
 				'include/libnodecc/fs/event.h',
 				'include/libnodecc/http/client_request.h',
 				'include/libnodecc/http/incoming_message.h',
@@ -28,6 +29,7 @@
 				'include/libnodecc/net/server.h',
 				'include/libnodecc/net/socket.h',
 				'include/libnodecc/stream.h',
+				'include/libnodecc/util/_boost_endian.h',
 				'include/libnodecc/util/base64.h',
 				'include/libnodecc/util/crc32c.h',
 				'include/libnodecc/util/endian.h',
@@ -67,7 +69,6 @@
 			'dependencies': [
 				'deps/json11.gyp:json11',
 				'deps/libuv/uv.gyp:libuv',
-				'deps/wslay.gyp:wslay',
 			],
 			'direct_dependent_settings': {
 				'include_dirs': [
@@ -87,6 +88,11 @@
 				'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
 				'CLANG_CXX_LIBRARY': 'libc++',
 			},
+			'defines': [
+				'NOMINMAX',
+				'STRICT',
+				'UNICODE',
+			],
 		},
 	]
 }

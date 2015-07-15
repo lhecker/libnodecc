@@ -1,5 +1,8 @@
 #include "libnodecc/buffer.h"
 
+#include <algorithm>
+#include <cstdlib>
+
 #include "libnodecc/util/math.h"
 
 

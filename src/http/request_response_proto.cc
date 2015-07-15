@@ -1,5 +1,7 @@
 #include "libnodecc/http/request_response_proto.h"
 
+#include <limits>
+
 #include "libnodecc/net/socket.h"
 #include "libnodecc/util/math.h"
 
@@ -68,7 +70,8 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 						 * If an overflow happens break this loop and
 						 * send the data using the chunked transfer encoding.
 						 */
-						if (size > SIZE_T_MAX - contentLength) {
+						std::numeric_limits<decltype(contentLength)>::max();
+						if (size > 0 - contentLength) {
 							break;
 						}
 

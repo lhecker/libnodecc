@@ -2,6 +2,7 @@
 #define nodecc_http_server_h
 
 #include <functional>
+#include <memory>
 
 #include "../net/server.h"
 #include "incoming_message.h"
@@ -16,7 +17,7 @@ public:
 	typedef std::shared_ptr<node::http::incoming_message> request;
 	typedef std::shared_ptr<node::http::server_response> response;
 
-	NODE_CALLBACK_ADD(public, request, void, const node::http::server::request& req, const node::http::server::response& res)
+	node::event<void(const node::http::server::request& req, const node::http::server::response& res)> on_request;
 
 public:
 	explicit server();

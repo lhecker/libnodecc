@@ -30,26 +30,32 @@ unsigned int node::util::digits2(unsigned int n) {
 }
 
 unsigned int node::util::digits2(unsigned long n) {
+	static_assert(std::numeric_limits<decltype(n)>::digits == 32, "_BitScanReverse needs uint32_t");
+
 	unsigned long idx;
+
 	if (_BitScanReverse(&idx, n)) {
-		return std::numeric_limits<unsigned long>::digits - idx;
+		return std::numeric_limits<decltype(n)>::digits - idx;
 	} else {
 		return 0;
 	}
 }
 
+#if !defined(NODE_WITHOUT_BUILTIN_BSR64)
 unsigned int node::util::digits2(unsigned long long n) {
-	static_assert(std::numeric_limits<unsigned long long>::digits == 64, "unsigned long long needs to be 64Bit for _BitScanReverse64 to work");
+	static_assert(std::numeric_limits<decltype(n)>::digits == 64, "_BitScanReverse needs uint64_t");
 
 	unsigned long idx;
+
 	if (_BitScanReverse64(&idx, n)) {
-		return std::numeric_limits<unsigned long long>::digits - idx;
+		return std::numeric_limits<decltype(n)>::digits - idx;
 	} else {
 		return 0;
 	}
 }
+#endif
 
-#else
+#else // no builtin CLZ/BSR
 
 #include <cstdint>
 

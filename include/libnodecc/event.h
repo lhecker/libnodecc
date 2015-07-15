@@ -1,40 +1,114 @@
 #ifndef nodecc_event_h
 #define nodecc_event_h
 
+#include <functional>
+#include <stdexcept>
+#include <utility>
+
+#include "buffer.h"
+
+
 namespace node {
 
-template<typename R, typename ...Args>
-class event<R(Args...)> {
-public:
-	typename std::function<R(Args...)> function_type;
-
-	operator()(function_type&& f) {
-		this->_f = std::move(f);
+template<typename T>
+struct event_optional : std::pair<T, bool> {
+	constexpr operator bool() const noexcept {
+		return this->second;
 	}
 
-	operator=(function_type&& f) {
-		this->_f = std::move(f);
+	constexpr T* operator->() {
+		return &this->first;
+	}
+
+	constexpr T& operator*() & {
+		return this->first;
+	}
+
+	constexpr T&& operator*() && {
+		return this->first;
+	}
+
+	constexpr const T& value() const & {
+		return this->first;
+	}
+
+	constexpr T&& value() && {
+		return this->first;
+	}
+
+	template<class V>
+	constexpr T value_or(V&& v) const & {
+		return *this ? **this : std::forward<V>(v);
+	}
+
+	template<class V>
+	constexpr T&& value_or(V&& v) const && {
+		return *this ? **this : std::forward<V>(v);
+	}
+};
+
+/*
+ * Bugs in VS2015:
+ * Using
+ *   template<typename R, typename... Args>
+ *   class event<R(Args...)> {}
+ * does not compile.
+ * Even without using template specialization on the class,
+ * subsequent usage of "Args..." as parameter pack won't work either.
+ */
+template<class T>
+class event;
+
+template<class R, class... Args>
+class event<R(Args...)> {
+public:
+	typedef std::function<R(Args...)> type;
+	typedef event_optional<node::buffer> result_type;
+
+
+	constexpr event() {}
+	~event() {}
+
+	event(const event&) = delete;
+	event& operator=(const event&) = delete;
+
+
+	template<typename F>
+	void operator()(F&& f) {
+		this->_f = std::forward<F>(f);
+	}
+
+	constexpr operator bool() const noexcept {
+		return static_cast<bool>(this->_f);
+	}
+
+	constexpr bool empty() const noexcept {
+		return !this->_f;
 	}
 
 	void clear() noexcept {
 		this->_f = nullptr;
 	}
 
-	R trigger(Args... args) {
-		return this->_f(std::forward<Args...>(...args));
+	constexpr const type& value() const & {
+		return this->_f;
 	}
 
-	bool trigger_s(Args... args) noexcept {
-		if (this->_f) {
-			this->_f(std::forward<Args...>(...args));
-			return true;
-		}
+	constexpr type&& value() && {
+		return std::move(this->_f);
+	}
 
-		return false;
+	result_type emit(Args... args) {
+		if (this->empty()) {
+			return result_type();
+		} else {
+			this->_f(std::forward<Args>(args)...);
+			return result_type();
+		}
 	}
 
 private:
-	function_type _f;
+	type _f;
 };
 
 } // namespace node

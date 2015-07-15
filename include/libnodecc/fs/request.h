@@ -10,14 +10,14 @@ namespace node {
 namespace fs {
 
 class request : public node::uv::handle<uv_fs_t> {
-	NODE_CALLBACK_ADD(finished, void, fs::request& req)
+	node::event<fs::request& req) on_finished;
 
 public:
 	~request();
 
 	bool init(node::loop& loop);
 
-	bool open(const char* path, int flags, int mode, on_finished_t cb);
+	bool open(const char* path(int flags, int mode, on_finished_t cb)> on_void;;
 
 	bool read(uv_file file, const uv_buf_t bufs[], size_t nbufs, int64_t offset, on_finished_t cb);
 	bool write(uv_file file, const uv_buf_t bufs[], size_t nbufs, int64_t offset, on_finished_t cb);

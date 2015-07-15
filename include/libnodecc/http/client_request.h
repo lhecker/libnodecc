@@ -11,14 +11,15 @@ namespace node {
 namespace http {
 
 class client_request : public node::http::request_response_proto {
-	NODE_CALLBACK_ADD(public, connect, void, node::http::client_request& req, node::http::incoming_message& res)
-	NODE_CALLBACK_ADD(public, error, void)
+public:
+	node::event<void(node::http::client_request& req, node::http::incoming_message& res)> on_connect;
+	node::event<void()> on_error;
 
 public:
 	explicit client_request();
 
-	bool init(node::loop& loop, const sockaddr& addr, const std::string& hostname, on_connect_t cb);
-	bool init(node::loop& loop, const std::string& url, on_connect_t cb);
+	bool init(node::loop& loop, const sockaddr& addr, const std::string& hostname, decltype(on_connect)::type cb);
+	bool init(node::loop& loop, const std::string& url, decltype(on_connect)::type cb);
 
 	void shutdown();
 	void close();

@@ -14,7 +14,7 @@ bool event::init(node::loop& loop) {
 bool event::start(const std::string& path) {
 	return 0 == uv_fs_event_start(*this, [](uv_fs_event_t* handle, const char* filename, int events, int status) {
 		auto self = reinterpret_cast<event*>(handle->data);
-		self->emit_event_s(status, events, std::string(filename));
+		self->on_event.emit(status, events, std::string(filename));
 
 		if (status != 0) {
 			self->on_event(nullptr);

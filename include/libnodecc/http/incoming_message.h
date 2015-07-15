@@ -5,11 +5,12 @@
 #include <http-parser/http_parser.h>
 #include <unordered_map>
 
-#include "../common.h"
 #include "../buffer.h"
+#include "../event.h"
 
 
 namespace node {
+
 class buffer;
 
 namespace net {
@@ -19,6 +20,7 @@ class socket;
 namespace http {
 class request_response_proto;
 }
+
 }
 
 
@@ -29,12 +31,14 @@ class incoming_message {
 	friend class client_request;
 	friend class server;
 
-	NODE_CALLBACK_ADD(public, headers_complete, void, bool upgrade, bool keep_alive)
-	NODE_CALLBACK_ADD(public, data, void, const node::buffer& buffer)
-	NODE_CALLBACK_ADD(public, close, void)
+public:
+	node::event<void(bool upgrade, bool keep_alive)> on_headers_complete;
+	node::event<void(const node::buffer& buffer)> on_data;
+	node::event<void()> on_close;
 
+private:
 	// for node::http::server/client_request
-	NODE_CALLBACK_ADD(private, end, void)
+	node::event<void()> on_end;
 
 public:
 	typedef std::unordered_map<node::buffer, node::mutable_buffer> headers_t;
@@ -50,9 +54,9 @@ public:
 	bool has_header(const node::buffer_view key) const;
 	node::buffer header(const node::buffer_view key) const;
 
+	uint16_t status_code() const;
 	uint8_t http_version_major() const;
 	uint8_t http_version_minor() const;
-	uint8_t status_code() const;
 
 	bool is_websocket_request();
 
@@ -80,9 +84,9 @@ private:
 	const node::buffer* _parser_buffer;
 	http_parser _parser;
 
+	uint16_t _status_code;
 	uint8_t _http_version_major;
 	uint8_t _http_version_minor;
-	uint8_t _status_code;
 	uint8_t _is_websocket;
 };
 
