@@ -27,10 +27,6 @@ public:
 	}
 
 	void resume() override {
-		if (static_cast<const uv_stream_t*>(*this)->read_cb) {
-			return;
-		}
-
 		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 

@@ -146,8 +146,19 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 			goto writeEnd;
 		}
 
-		compiledBufs = (node::buffer*)alloca(compiledBufcnt * sizeof(node::buffer));
-		new(compiledBufs) node::buffer[compiledBufcnt]();
+		const size_t size = compiledBufcnt * sizeof(node::buffer);
+
+		compiledBufs = (node::buffer*)alloca(size);
+
+		/*
+		 * Using the array version of placement-new is only
+		 * guaranteed to be compatible with new[] and
+		 * might return a pointer different from the passed one.
+		 * E.g. MSVS sets the first 4 (or 8 on x64) Bytes to the passed array length.
+		 * memset() is fine in our case since node::buffer's default
+		 * constructor is a constexpr, setting all members to zero.
+		 */
+		memset(compiledBufs, 0, size);
 	}
 
 	if (!this->_headers_sent) {
