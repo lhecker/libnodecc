@@ -32,6 +32,7 @@
 				'include/libnodecc/util/base64.h',
 				'include/libnodecc/util/crc32c.h',
 				'include/libnodecc/util/endian.h',
+				'include/libnodecc/util/fnv.h',
 				'include/libnodecc/util/function_traits.h',
 				'include/libnodecc/util/math.h',
 				'include/libnodecc/util/sha1.h',

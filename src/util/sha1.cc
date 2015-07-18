@@ -45,7 +45,7 @@ void sha1::push_impl(uint8_t byte) {
 	}
 }
 
-void sha1::push(node::buffer_view buffer) {
+void sha1::push(node::buffer_view& buffer) {
 	const uint8_t* beg = buffer.data<const uint8_t>();
 	const uint8_t* end = beg + buffer.size();
 

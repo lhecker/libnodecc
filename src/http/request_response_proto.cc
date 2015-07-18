@@ -1,7 +1,5 @@
 #include "libnodecc/http/request_response_proto.h"
 
-#include <limits>
-
 #include "libnodecc/net/socket.h"
 #include "libnodecc/util/math.h"
 
@@ -16,11 +14,11 @@ request_response_proto::request_response_proto() : _headers_sent(false) {
 request_response_proto::~request_response_proto() {
 }
 
-const std::string& request_response_proto::header(const std::string& key) {
+const node::buffer request_response_proto::header(node::buffer_view& key) {
 	return this->_headers.at(key);
 }
 
-void request_response_proto::set_header(const std::string& key, const std::string& value) {
+void request_response_proto::set_header(node::buffer key, node::buffer value) {
 	this->_headers.emplace(key, value);
 }
 
@@ -45,10 +43,12 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 	// TODO: do not set chunked/content-length headers if there is no body at all (e.g. GET requests)
 	// if the headers have not been sent until now, determine if it uses the chunked encoding
 	if (!this->_headers_sent) {
-		if (this->_headers.find("content-length") != this->_headers.end()) {
+		using namespace node::literals;
+
+		if (this->_headers.find("content-length"_buffer_view) != this->_headers.end()) {
 			this->_is_chunked = false;
 		} else {
-			const auto p = this->_headers.find("transfer-encoding");
+			const auto p = this->_headers.find("transfer-encoding"_buffer_view);
 
 			/*
 			 * It's the first an last write call and
@@ -56,7 +56,7 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 			 * ---> Try to set the content-length.
 			 */
 			if (p != this->_headers.end()) {
-				this->_is_chunked = p->second.compare("chunked") == 0;
+				this->_is_chunked = p->second.compare("chunked"_buffer_view) == 0;
 			} else {
 				if (end) {
 					size_t contentLength = 0;
@@ -83,17 +83,10 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 						 * The loop above finished without an integer overflow.
 						 * ---> Send it using the content-length header.
 						 */
-						const size_t length = node::util::digits(contentLength, 10);
-						size_t div = node::util::ipow(10, length - 1);
-						std::string str(length, '\0');
-						char* strData = const_cast<char*>(str.data());
+						node::mutable_buffer buf;
+						buf.append_number(contentLength, 10);
 
-						do {
-							*strData++ = '0' + ((contentLength / div) % 10);
-							div /= 10;
-						} while (div > 0);
-
-						this->set_header("content-length", str);
+						this->set_header("content-length"_buffer_view, buf);
 						this->_is_chunked = false;
 
 						goto contentLengthSuccessfullySet;
@@ -104,7 +97,7 @@ void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt
 				 * Calculating the content-length failed.
 				 * ---> Use chunked encoding.
 				 */
-				this->_headers.emplace_hint(p, "transfer-encoding", "chunked");
+				this->_headers.emplace_hint(p, "transfer-encoding"_buffer_view, "chunked"_buffer_view);
 				this->_is_chunked = true;
 			}
 		}

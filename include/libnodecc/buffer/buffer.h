@@ -26,8 +26,8 @@ class buffer_ref_list;
  * Please use some other synchronization mechanism, like node::channel.
  */
 class buffer : public buffer_view {
-	friend class node::mutable_buffer;
-	friend class node::buffer_ref_list;
+	friend class mutable_buffer;
+	friend class buffer_ref_list;
 
 public:
 	/**
@@ -104,7 +104,7 @@ public:
 	 */
 	explicit buffer(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
 
-	explicit buffer(const buffer_view other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
+	explicit buffer(const buffer_view& other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
 
 	template<typename charT>
 	explicit buffer(const charT* str, buffer_flags flags = node::copy) noexcept : buffer(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT), flags) {}
@@ -166,8 +166,8 @@ public:
 		}
 	}
 
+	void reset(const buffer_view& other, buffer_flags flags = node::copy) noexcept;
 	void reset(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
-	void reset(const buffer_view other, buffer_flags flags = node::copy) noexcept;
 	void reset(const char str[], buffer_flags flags = node::copy) noexcept;
 
 	/**
@@ -186,27 +186,6 @@ public:
 	 * @param end   The new buffer is cropped to the index end.
 	 */
 	buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = PTRDIFF_MAX) const noexcept;
-
-
-	int compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept;
-
-
-	inline int compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
-		return this->compare(0, size1, data2, size2);
-	}
-
-	inline int compare(const void* data2, std::size_t size2) const noexcept {
-		return this->compare(0, this->size(), data2, size2);
-	}
-
-	inline int compare(const buffer& other) const noexcept {
-		return this->compare(0, this->size(), other.get(), other.size());
-	}
-
-	template<typename charT>
-	inline int compare(const charT* str) const noexcept {
-		return this->compare(static_cast<const void*>(str), std::char_traits<charT>::length(str));
-	}
 
 protected:
 	class control_base {
@@ -244,9 +223,8 @@ protected:
 	/**
 	 * Creates a copy of this buffer in target, while optionally resizing it.
 	 */
-	void copy(buffer& target, std::size_t size = 0) const noexcept;
+	void _copy(buffer& target, std::size_t size = 0) const noexcept;
 
-private:
 	void _reset_unreleased() noexcept;
 	void _reset_unsafe(std::size_t size) noexcept;
 
@@ -271,8 +249,14 @@ private:
 template<>
 struct std::hash<node::buffer> {
 	std::size_t operator()(const node::buffer& buf) const {
-		std::size_t x = std::size_t(buf.data());
-		return x + (x >> 3);
+		return const_cast<node::buffer&>(buf).hash();
+	}
+};
+
+template<>
+struct std::equal_to<node::buffer> {
+	bool operator()(const node::buffer& lhs, const node::buffer& rhs) const {
+		return const_cast<node::buffer&>(lhs).hash() == const_cast<node::buffer&>(rhs).hash() && lhs.compare(rhs) == 0;
 	}
 };
 

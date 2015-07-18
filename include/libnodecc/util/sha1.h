@@ -31,7 +31,7 @@ public:
 	void reset();
 
 	void push(uint8_t byte);
-	void push(node::buffer_view buffer);
+	void push(node::buffer_view& buffer);
 
 	void get_digest(digest_t digest);
 

@@ -61,11 +61,11 @@ node::buffer incoming_message::url() const {
 	return this->_url;
 }
 
-bool incoming_message::has_header(const node::buffer_view key) const {
+bool incoming_message::has_header(const node::buffer_view& key) const {
 	return this->_headers.find(key) != this->_headers.cend();
 }
 
-node::buffer incoming_message::header(const node::buffer_view key) const {
+node::buffer incoming_message::header(const node::buffer_view& key) const {
 	try {
 		return this->_headers.at(key);
 	} catch (...) {
@@ -88,9 +88,11 @@ uint8_t incoming_message::http_version_minor() const {
 bool incoming_message::is_websocket_request() {
 	if (this->_is_websocket == UINT8_MAX) {
 		if (this->_parser.upgrade != 0) {
-			const auto upgradeField = this->header("upgrade");
-			const auto versionField = this->header("sec-websocket-version");
-			const auto keyField = this->header("sec-websocket-key");
+			using namespace node::literals;
+
+			const auto upgradeField = this->header("upgrade"_buffer_view);
+			const auto versionField = this->header("sec-websocket-version"_buffer_view);
+			const auto keyField = this->header("sec-websocket-key"_buffer_view);
 
 			if (upgradeField.compare("websocket") == 0 &&
 				versionField.compare("13") == 0 &&

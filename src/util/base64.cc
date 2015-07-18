@@ -24,7 +24,7 @@ static const uint8_t encode_table_url[64] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G',
 namespace node {
 namespace util {
 
-node::buffer base64::encode(const buffer_view buffer, bool base64url) {
+node::buffer base64::encode(const node::buffer_view& buffer, bool base64url) {
 	const uint8_t* encode_table = base64url ? encode_table_url : encode_table_def;
 
 	uint8_t* base = buffer.data<uint8_t>();
@@ -218,7 +218,7 @@ node::buffer base64::encode(const buffer_view buffer, bool base64url) {
 	return result;
 }
 
-node::buffer base64::decode(const buffer_view buffer) {
+node::buffer base64::decode(const node::buffer_view& buffer) {
 #define shift6(n)       \
     if (n <= 0x3F) {    \
         r = r << 6 | n; \

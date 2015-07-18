@@ -19,20 +19,15 @@ buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept 
 	}
 }
 
-buffer::buffer(buffer&& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
-	other._p = nullptr;
-	other._data = nullptr;
-	other._size = 0;
+buffer::buffer(buffer&& other) noexcept : buffer_view(other), _p(other._p) {
+	memset(&other, 0, sizeof(other));
 }
 
-buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
-	other._p = nullptr;
-	other._data = nullptr;
-	other._size = 0;
-	other._capacity = 0;
+buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other), _p(other._p) {
+	memset(&other, 0, sizeof(other));
 }
 
-buffer::buffer(const buffer& other) noexcept : buffer_view(other._data, other._size), _p(other._p) {
+buffer::buffer(const buffer& other) noexcept : buffer_view(other), _p(other._p) {
 	this->_retain();
 }
 
@@ -41,6 +36,7 @@ buffer& buffer::operator=(buffer_view&& other) noexcept {
 
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
+	std::swap(this->_hash, other._hash);
 
 	return *this;
 }
@@ -50,6 +46,7 @@ buffer& buffer::operator=(const buffer_view& other) noexcept {
 
 	this->_data = other._data;
 	this->_size = other._size;
+	this->_hash = other._hash;
 
 	return *this;
 }
@@ -63,9 +60,10 @@ buffer& buffer::operator=(buffer&& other) noexcept {
 
 buffer& buffer::operator=(const buffer& other) noexcept {
 	this->_release();
-	this->_p = other._p;
 	this->_data = other._data;
 	this->_size = other._size;
+	this->_hash = other._hash;
+	this->_p = other._p;
 	this->_retain();
 
 	return *this;
@@ -80,15 +78,18 @@ std::size_t buffer::use_count() const noexcept {
 }
 
 void buffer::swap(buffer& other) noexcept {
-	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
+	std::swap(this->_hash, other._hash);
+	std::swap(this->_p, other._p);
 }
 
 void buffer::swap(mutable_buffer& other) noexcept {
-	std::swap(this->_p, other._p);
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
+	std::swap(this->_hash, other._hash);
+	std::swap(this->_p, other._p);
+
 	other._capacity = other._size;
 }
 
@@ -101,33 +102,34 @@ void buffer::reset(std::size_t size) noexcept {
 	this->_reset_unsafe(size);
 }
 
-void buffer::reset(const void* data, std::size_t size, buffer_flags flags) noexcept {
+void buffer::reset(const buffer_view& other, buffer_flags flags) noexcept {
 	this->_release();
 
-	this->_data = (void*)data;
-	this->_size = size;
+	this->_data = other._data;
+	this->_size = other._size;
+	this->_hash = other._hash;
 
 	if (flags == node::copy) {
 		this->copy(*this);
 	}
 }
 
-void buffer::reset(const buffer_view other, buffer_flags flags) noexcept {
-	this->reset(other.data(), other.size(), flags);
+void buffer::reset(const void* data, std::size_t size, buffer_flags flags) noexcept {
+	this->reset(buffer_view(data, size), flags);
 }
 
 void buffer::reset(const char str[], buffer_flags flags) noexcept {
-	this->reset(str, strlen(str), flags);
+	this->reset(buffer_view(str), flags);
 }
 
 buffer buffer::copy(std::size_t size) const noexcept {
-	buffer buffer;
-	this->copy(buffer, size);
-	return buffer;
+	buffer buf;
+	this->_copy(buf, size);
+	return buf;
 }
 
 buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
-	buffer buffer;
+	buffer buf;
 
 #if PTRDIFF_MAX > SIZE_T_MAX
 # define PTRDIFF_GREATER_SIZE(ptrdiff, size) ((ptrdiff) > std::ptrdiff_t(size))
@@ -157,19 +159,19 @@ buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 		}
 
 		if (end > start) {
-			buffer._size = end - start;
-			buffer._p = this->_p;
-			buffer._data = this->get() + start;
-			buffer._retain();
+			buf._size = end - start;
+			buf._p = this->_p;
+			buf._data = this->get() + start;
+			buf._retain();
 		}
 	}
 
 #undef PTRDIFF_GREATER_SIZE
 
-	return buffer;
+	return buf;
 }
 
-void buffer::copy(buffer& target, std::size_t size) const noexcept {
+void buffer::_copy(buffer& target, std::size_t size) const noexcept {
 	if (size == 0) {
 		size = this->_size;
 	}
@@ -190,21 +192,6 @@ void buffer::copy(buffer& target, std::size_t size) const noexcept {
 		target._data = data;
 		target._size = size;
 	}
-}
-
-int buffer::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
-	int r = 0;
-
-	// this->_size must be greater than 0 and thus data1 must be non-null
-	if (pos1 < this->_size && size1 <= (this->_size - pos1) && data2) {
-		r = memcmp(this->get() + pos1, data2, std::min(size1, size2));
-	}
-
-	if (r == 0) {
-		r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
-	}
-
-	return r;
 }
 
 void buffer::_reset_unreleased() noexcept {

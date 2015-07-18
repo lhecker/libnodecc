@@ -299,7 +299,7 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 		buf.append("\r\n");
 	}
 
-	if (this->_headers.find("date") == this->_headers.end()) {
+	if (this->_headers.find("date"_buffer_view) == this->_headers.end()) {
 		date_buffer.update(uv_now(this->_socket));
 		buf.append(date_buffer.get_buffer());
 	}

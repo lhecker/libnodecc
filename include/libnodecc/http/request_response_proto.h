@@ -4,12 +4,11 @@
 #include <string>
 #include <unordered_map>
 
+#include "../buffer.h"
 #include "../stream.h"
 
 
 namespace node {
-class buffer;
-class mutable_buffer;
 
 namespace net {
 class socket;
@@ -27,7 +26,7 @@ public:
 	virtual ~request_response_proto();
 
 
-	const std::string& header(const std::string& key);
+	const node::buffer header(node::buffer_view& key);
 
 	/**
 	 * Sets a header.
@@ -36,7 +35,7 @@ public:
 	 * either include "chunked" as the last comma-seperated entry,
 	 * or a content-length entry, as per HTTP specification.
 	 */
-	void set_header(const std::string& key, const std::string& value);
+	void set_header(node::buffer key, node::buffer value);
 
 	bool headers_sent() const;
 
@@ -54,7 +53,7 @@ protected:
 	virtual void socket_write(const node::buffer bufs[], size_t bufcnt) = 0;
 
 	// needs to be directly accessed by certain subclasses
-	std::unordered_map<std::string, std::string> _headers;
+	std::unordered_map<node::buffer, node::buffer> _headers;
 	bool _headers_sent;
 	bool _is_chunked;
 };

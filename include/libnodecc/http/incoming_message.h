@@ -51,8 +51,8 @@ public:
 	node::buffer method() const;
 	node::buffer url() const;
 
-	bool has_header(const node::buffer_view key) const;
-	node::buffer header(const node::buffer_view key) const;
+	bool has_header(const node::buffer_view& key) const;
+	node::buffer header(const node::buffer_view& key) const;
 
 	uint16_t status_code() const;
 	uint8_t http_version_major() const;

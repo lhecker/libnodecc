@@ -100,7 +100,7 @@
 			'-fdata-sections',
 			'-ffunction-sections',
 			'-fno-common',
-			'-std=c++11',
+			'-std=c++14',
 			'-stdlib=libc++',
 			'-Wall',
 			'-Wextra',
@@ -111,7 +111,7 @@
 		],
 		'xcode_settings': {
 			'ALWAYS_SEARCH_USER_PATHS': 'NO',
-			'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
+			'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
 			'CLANG_CXX_LIBRARY': 'libc++',
 			'DEAD_CODE_STRIPPING': 'YES',
 			'GCC_INLINES_ARE_PRIVATE_EXTERN': 'YES',
