@@ -6,6 +6,9 @@
 #include "buffer.h"
 
 
+/*
+ * TODO: Add tests to ensure that _hash is set to zero if the buffer is mutated.
+ */
 namespace node {
 
 class mutable_buffer : public node::buffer {
@@ -36,6 +39,7 @@ public:
 
 		if (p) {
 			*p = ch;
+			this->_hash = 0;
 		}
 	}
 

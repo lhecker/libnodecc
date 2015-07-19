@@ -41,11 +41,11 @@ int buffer_view::compare(std::size_t pos1, std::size_t size1, const void* data2,
 
 
 bool operator==(node::buffer_view& lhs, node::buffer_view& rhs) noexcept {
-	return lhs.hash() == rhs.hash() && lhs.compare(rhs) == 0;
+	return lhs.data() == rhs.data() && lhs.size() == rhs.size();
 }
 
 bool operator!=(node::buffer_view& lhs, node::buffer_view& rhs) noexcept {
-	return lhs.hash() != rhs.hash() || lhs.compare(rhs) != 0;
+	return lhs.data() != rhs.data() || lhs.size() != rhs.size();
 }
 
 } // namespace node

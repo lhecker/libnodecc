@@ -225,7 +225,7 @@ protected:
 	 */
 	void _copy(buffer& target, std::size_t size = 0) const noexcept;
 
-	void _reset_unreleased() noexcept;
+	void _reset_zero() noexcept;
 	void _reset_unsafe(std::size_t size) noexcept;
 
 	/**

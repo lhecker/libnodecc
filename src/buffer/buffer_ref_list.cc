@@ -24,7 +24,7 @@ void buffer_ref_list::push_front(const buffer& ref) noexcept {
 
 void buffer_ref_list::emplace_front(buffer&& ref) noexcept {
 	this->_push_front(ref);
-	ref._reset_unreleased();
+	ref._reset_zero();
 }
 
 void buffer_ref_list::resize(size_t size) noexcept {

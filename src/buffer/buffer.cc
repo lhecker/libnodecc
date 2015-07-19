@@ -159,9 +159,9 @@ buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 		}
 
 		if (end > start) {
+			buf._data = this->data() + start;
 			buf._size = end - start;
 			buf._p = this->_p;
-			buf._data = this->data() + start;
 			buf._retain();
 		}
 	}
@@ -194,10 +194,11 @@ void buffer::_copy(buffer& target, std::size_t size) const noexcept {
 	}
 }
 
-void buffer::_reset_unreleased() noexcept {
-	this->_p = nullptr;
+void buffer::_reset_zero() noexcept {
 	this->_data = nullptr;
 	this->_size = 0;
+	this->_hash = 0;
+	this->_p = nullptr;
 }
 
 void buffer::_reset_unsafe(std::size_t size) noexcept {
@@ -230,7 +231,7 @@ void buffer::_release() noexcept {
 		this->_p->release();
 	}
 
-	this->_reset_unreleased();
+	this->_reset_zero();
 }
 
 /*
