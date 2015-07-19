@@ -195,7 +195,7 @@ void incoming_message::_add_header_partials() {
 }
 
 node::buffer incoming_message::_buffer(const char* at, size_t length) {
-	const ssize_t start = (uint8_t*)at - this->_parser_buffer->get();
+	const ssize_t start = (uint8_t*)at - this->_parser_buffer->data();
 	return this->_parser_buffer->slice(start, start + length);
 }
 

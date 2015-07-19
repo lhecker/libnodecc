@@ -38,7 +38,7 @@ public:
 				self->_alloc_buffer.reset(suggested_size);
 			}
 
-			buf->base = static_cast<char*>(self->_alloc_buffer);
+			buf->base = self->_alloc_buffer.data<char>();
 			buf->len = self->_alloc_buffer.size();
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);

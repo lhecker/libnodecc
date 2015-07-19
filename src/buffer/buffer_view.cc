@@ -1,5 +1,7 @@
 #include "libnodecc/buffer.h"
 
+#include <algorithm>
+
 
 namespace node {
 
@@ -12,7 +14,7 @@ buffer_view& buffer_view::operator=(const buffer_view& other) {
 
 std::size_t buffer_view::hash() noexcept {
 	if (this->_hash == 0) {
-		this->_hash = node::util::fnv1a(this->data<uint8_t>(), this->_size);
+		this->_hash = node::util::fnv1a<std::size_t>::hash(*this);
 
 		if (this->_hash == 0) {
 			this->_hash = 1;

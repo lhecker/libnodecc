@@ -161,7 +161,7 @@ buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 		if (end > start) {
 			buf._size = end - start;
 			buf._p = this->_p;
-			buf._data = this->get() + start;
+			buf._data = this->data() + start;
 			buf._retain();
 		}
 	}

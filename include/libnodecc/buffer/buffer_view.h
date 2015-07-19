@@ -55,36 +55,16 @@ public:
 
 
 	template<typename T = uint8_t>
-	constexpr T* data() const noexcept {
+	T* data() const noexcept {
 		return static_cast<T*>(this->_data);
 	}
 
-	constexpr operator void*() const noexcept {
-		return this->data<void>();
+	uint8_t& operator[](std::size_t pos) const noexcept {
+		return this->data()[pos];
 	}
 
-	constexpr operator char*() const noexcept {
-		return this->data<char>();
-	}
-
-	constexpr operator unsigned char*() const noexcept {
-		return this->data<unsigned char>();
-	}
-
-	constexpr operator const void*() const noexcept {
-		return this->data<const void>();
-	}
-
-	constexpr operator const char*() const noexcept {
-		return this->data<const char>();
-	}
-
-	constexpr operator const unsigned char*() const noexcept {
-		return this->data<const unsigned char>();
-	}
-
-	constexpr uint8_t& operator[](std::size_t pos) const noexcept {
-		return this->data<uint8_t>()[pos];
+	constexpr std::size_t size() const noexcept {
+		return this->_size;
 	}
 
 	constexpr operator bool() const noexcept {
@@ -93,14 +73,6 @@ public:
 
 	constexpr bool empty() const noexcept {
 		return this->_data == nullptr;
-	}
-
-	constexpr uint8_t* get() const noexcept {
-		return this->data<uint8_t>();
-	}
-
-	constexpr std::size_t size() const noexcept {
-		return this->_size;
 	}
 
 	constexpr std::size_t const_hash() const noexcept {
@@ -121,7 +93,7 @@ public:
 	}
 
 	inline int compare(const buffer_view& other) const noexcept {
-		return this->compare(0, this->size(), other.get(), other.size());
+		return this->compare(0, this->size(), other.data(), other.size());
 	}
 
 	template<typename CharT>
@@ -146,7 +118,7 @@ private:
 
 inline namespace literals {
 	constexpr node::buffer_view operator "" _buffer_view(const char* str, std::size_t len) noexcept {
-		return node::buffer_view(str, len, node::util::fnv1a(str, len));
+		return node::buffer_view(str, len, node::util::fnv1a<std::size_t>::const_hash(str, len));
 	}
 } // inline namespace literals
 

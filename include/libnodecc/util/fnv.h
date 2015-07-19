@@ -4,13 +4,6 @@
 #include <climits>
 #include <cstdint>
 
-#include "../buffer.h"
-
-
-
-
-
-
 
 /*
  * TODO: add tests!
@@ -36,37 +29,51 @@
  */
 
 namespace node {
+
+class buffer_view;
+
+
 namespace util {
 
-#ifdef SIZE_T_MAX
-# define FNV1_SIZE_MAX SIZE_T_MAX
-#elif SIZE_MAX
-# define FNV1_SIZE_MAX SIZE_MAX
-#endif
+namespace detail {
 
-#if !defined(FNV1_SIZE_MAX) || !(FNV1_SIZE_MAX == UINT32_MAX || FNV1_SIZE_MAX == UINT64_MAX)
-# error "node::util::fnv1a is not supported"
-#endif
+template<typename T>
+struct fnv1a_statics;
 
-#define fnv1a_generator(_type_, _base_, _prime_)                                                               \
-	template<typename CharT>                                                                                   \
-	static constexpr std::size_t fnv1a(const CharT* str, const _type_ val = _base_) {                          \
-		return (*str == '\0') ? val : fnv1a(str + 1, (val ^ _type_(*str)) * _prime_);                          \
-	}                                                                                                          \
-	                                                                                                           \
-	template<typename CharT>                                                                                   \
-	static constexpr std::size_t fnv1a(const CharT* str, const std::size_t len, const _type_ val = _base_) {   \
-		return (len == 0) ? val : fnv1a(str + 1, len - 1, (val ^ _type_(*str)) * _prime_);                     \
-	}                                                                                                          \
+template<>
+struct fnv1a_statics<uint32_t> {
+	constexpr static uint32_t _basis = 2166136261UL;
+	constexpr static uint32_t _prime = 16777619UL;
+};
 
-#if FNV1_SIZE_MAX == UINT32_MAX
-  fnv1a_generator(uint32_t, 2166136261UL, 16777619UL)
-#else
-  fnv1a_generator(uint64_t, 14695981039346656037ULL, 1099511628211ULL)
-#endif
+template<>
+struct fnv1a_statics<uint64_t> {
+	constexpr static uint64_t _basis = 14695981039346656037ULL;
+	constexpr static uint64_t _prime = 1099511628211ULL;
+};
 
-#undef fnv1a_generator
-#undef FNV1_SIZE_MAX
+} // namespace detail
+
+
+template<typename T>
+struct fnv1a : public detail::fnv1a_statics<T> {
+	static T hash(const node::buffer_view& view) {
+		T hash = _basis;
+
+		uint8_t* data = view.data();
+		const uint8_t* data_end = data + view.size();
+		
+		for (; data < data_end; data++) {
+			hash = (hash ^ static_cast<T>(*data)) * _prime;
+		}
+		
+		return hash;
+	}
+
+	static constexpr T const_hash(const char* str, const std::size_t len, const T hash = _basis) {
+		return (len == 0) ? hash : const_hash(str + 1, len - 1, (hash ^ static_cast<T>(*str)) * _prime);
+	}
+};
 
 } // namespace util
 } // namespace node
