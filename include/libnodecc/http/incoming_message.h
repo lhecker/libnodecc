@@ -27,10 +27,77 @@ class request_response_proto;
 namespace node {
 namespace http {
 
-
 class url {
-	explicit url(const node::buffer_view& view) {
+public:
+	explicit url() {}
+	explicit url(const node::buffer& url) : _url(url) {}
+
+	void set_url(const node::buffer& url) noexcept {
+		this->_url = url;
 	}
+
+	const node::buffer& operator()() const noexcept {
+		return this->_url;
+	}
+
+	const node::buffer& schema() const noexcept {
+		return this->_parts[UF_SCHEMA];
+	}
+
+	const node::buffer& host() const noexcept {
+		return this->_parts[UF_HOST];
+	}
+
+	const node::buffer& port() const noexcept {
+		return this->_parts[UF_PORT];
+	}
+
+	const node::buffer& path() const noexcept {
+		return this->_parts[UF_PATH];
+	}
+
+	const node::buffer& query() const noexcept {
+		return this->_parts[UF_QUERY];
+	}
+
+	const node::buffer& fragment() const noexcept {
+		return this->_parts[UF_FRAGMENT];
+	}
+
+	const node::buffer& userinfo() const noexcept {
+		return this->_parts[UF_USERINFO];
+	}
+
+	uint16_t port_num() const noexcept {
+		return this->_port;
+	}
+
+private:
+	bool _parse_url() {
+		http_parser_url u;
+
+		const int r =  http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &u);
+
+		if (r != 0) {
+			return false;
+		}
+
+		for (size_t i = 0; i < UF_MAX; i++) {
+			if (u.field_set & (1 << i)) {
+				this->_parts[i] = this->_url.slice(u.field_data[i].off, u.field_data[i].len);
+			}
+		}
+
+		if (u.field_set & (1 << UF_PORT)) {
+			this->_port = u.port;
+		}
+
+		return true;
+	}
+
+	node::buffer _url;
+	node::buffer _parts[UF_MAX];
+	uint16_t _port;
 };
 
 
@@ -46,19 +113,15 @@ public:
 	node::event<void(const node::buffer& buffer)> on_data;
 	node::event<void()> on_close;
 
-public:
-	typedef std::unordered_map<node::buffer, node::mutable_buffer> headers_t;
-
-
 	explicit incoming_message(node::net::socket& socket, http_parser_type type);
 
 	node::net::socket& socket();
 
-	node::buffer method() const;
-	node::buffer url() const;
+	const node::buffer& method() const;
+	node::http::url url;
 
 	bool has_header(const node::buffer_view& key) const;
-	node::buffer header(const node::buffer_view& key) const;
+	const node::buffer& header(const node::buffer_view& key) const;
 
 	uint16_t status_code() const;
 	uint8_t http_version_major() const;
@@ -80,10 +143,9 @@ private:
 
 	node::net::socket& _socket;
 
-	node::buffer _method;
-	node::mutable_buffer _url;
-	headers_t _headers;
+	std::unordered_map<node::buffer, node::mutable_buffer> _headers;
 
+	node::mutable_buffer _generic_value;
 	node::mutable_buffer _partial_header_field;
 	node::mutable_buffer _partial_header_value;
 

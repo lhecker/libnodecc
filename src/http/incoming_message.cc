@@ -53,23 +53,20 @@ node::net::socket& incoming_message::socket() {
 	return this->_socket;
 }
 
-node::buffer incoming_message::method() const {
-	return this->_method;
-}
-
-node::buffer incoming_message::url() const {
-	return this->_url;
+const node::buffer& incoming_message::method() const {
+	return this->_generic_value;
 }
 
 bool incoming_message::has_header(const node::buffer_view& key) const {
 	return this->_headers.find(key) != this->_headers.cend();
 }
 
-node::buffer incoming_message::header(const node::buffer_view& key) const {
+const node::buffer& incoming_message::header(const node::buffer_view& key) const {
 	try {
 		return this->_headers.at(key);
 	} catch (...) {
-		return node::buffer();
+		static const node::buffer empty;
+		return empty;
 	}
 }
 
@@ -112,7 +109,7 @@ bool incoming_message::is_websocket_request() {
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	self->_url.append(at, length);
+	self->_generic_value.append(at, length);
 
 	return 0;
 }
@@ -143,7 +140,10 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 	if (parser->type == HTTP_REQUEST) {
 		self->_http_version_major = static_cast<uint8_t>(parser->http_major);
 		self->_http_version_minor = static_cast<uint8_t>(parser->http_minor);
-		self->_method.reset(http_method_str(static_cast<http_method>(parser->method)), node::weak);
+
+		self->url.set_url(self->_generic_value);
+		
+		self->_generic_value.reset(node::buffer_view(http_method_str(static_cast<http_method>(parser->method))), node::weak);
 	} else {
 		// HTTP_RESPONSE
 		self->_status_code = static_cast<uint16_t>(parser->status_code);
@@ -168,8 +168,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->_is_websocket != 1) {
-		self->_method.reset();
-		self->_url.reset();
+		self->_generic_value.reset();
 		self->_headers.clear();
 		self->on_end.emit();
 	}
@@ -179,7 +178,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 
 void incoming_message::_add_header_partials() {
 	if (this->_partial_header_field && this->_partial_header_value) {
-		//std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
+		std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
 
 		const auto iter = this->_headers.emplace(this->_partial_header_field, this->_partial_header_value);
 

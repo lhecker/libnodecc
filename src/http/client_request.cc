@@ -15,8 +15,8 @@ client_request::client_request() : request_response_proto(), _incoming_message(_
 			this->on_error(nullptr);
 			this->on_connect(nullptr);
 		} else {
-			this->_incoming_message._url.reset(node::buffer_view(this->_path));
-			this->_incoming_message._method.reset(node::buffer_view(this->_method));
+			this->_incoming_message.url.set_url(node::buffer_view(this->_path));
+			this->_incoming_message._generic_value.reset(node::buffer_view(this->_method));
 			this->_socket.resume();
 			this->on_connect.emit(*this, this->_incoming_message);
 		}
