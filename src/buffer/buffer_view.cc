@@ -12,23 +12,39 @@ buffer_view& buffer_view::operator=(const buffer_view& other) {
 	return *this;
 }
 
-std::size_t buffer_view::hash() noexcept {
-	if (this->_hash == 0) {
-		this->_hash = node::util::fnv1a<std::size_t>::hash(*this);
+std::size_t buffer_view::hash() const noexcept {
+	std::size_t hash = this->_hash;
 
-		if (this->_hash == 0) {
-			this->_hash = 1;
+	if (hash == 0) {
+		hash = node::util::fnv1a<std::size_t>::hash(*this);
+
+		if (hash == 0) {
+			hash = 1;
 		}
+
+		const_cast<buffer_view*>(this)->_hash = hash;
 	}
 
-	return this->_hash;
+	return hash;
 }
 
-int buffer_view::compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept {
+bool buffer_view::equals(const buffer_view& other) const noexcept {
+	return this->data() && other.data()
+	    && this->size() == other.size()
+	    && this->hash() == other.hash()
+	    && memcmp(this->data(), other.data(), this->size()) == 0;
+}
+
+int buffer_view::compare(const buffer_view& other, std::size_t pos1, std::size_t size1) const noexcept {
+	const void* data2 = other.data<void>();
+	const std::size_t size2 = other.size();
 	int r = 0;
 
-	// this->_size must be greater than 0 and thus data1 must be non-null
-	if (pos1 < this->_size && size1 <= (this->_size - pos1) && data2) {
+	if (size1 > this->size()) {
+		size1 = this->size();
+	}
+
+	if (pos1 < size1 && data2) {
 		r = memcmp(this->data<uint8_t>() + pos1, data2, std::min(size1, size2));
 	}
 
@@ -37,6 +53,17 @@ int buffer_view::compare(std::size_t pos1, std::size_t size1, const void* data2,
 	}
 
 	return r;
+}
+
+std::size_t buffer_view::index_of(const buffer_view& other) const noexcept {
+	const uint8_t* data1     = this->data();
+	const uint8_t* data1_end = data1 + this->size();
+	const uint8_t* data2     = other.data();
+	const uint8_t* data2_end = data2 + other.size();
+
+	const uint8_t* pos = std::search(data1, data1_end, data2, data2_end);
+
+	return pos == data1_end ? npos : static_cast<std::size_t>(data1 - pos);
 }
 
 

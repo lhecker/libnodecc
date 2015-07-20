@@ -94,8 +94,8 @@ bool incoming_message::is_websocket_request() {
 			const auto versionField = this->header("sec-websocket-version"_buffer_view);
 			const auto keyField = this->header("sec-websocket-key"_buffer_view);
 
-			if (upgradeField.compare("websocket") == 0 &&
-				versionField.compare("13") == 0 &&
+			if (upgradeField.equals("websocket"_buffer_view) &&
+				versionField.equals("13"_buffer_view) &&
 				keyField)
 			{
 				this->_is_websocket = 1;

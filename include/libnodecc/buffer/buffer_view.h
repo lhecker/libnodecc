@@ -5,8 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "../util/fnv.h"
-
 
 namespace node {
 
@@ -38,6 +36,9 @@ class buffer_view {
 	friend constexpr node::buffer_view literals::operator "" _buffer_view(const char*, std::size_t) noexcept;
 
 public:
+	static constexpr std::size_t npos = -1;
+
+
 	constexpr buffer_view() : _data(nullptr), _size(0), _hash(0) {}
 	constexpr buffer_view(const buffer_view& other) : _data(other._data), _size(other._size), _hash(other._hash) {}
 	constexpr buffer_view(const void* data, std::size_t size) : _data(const_cast<void*>(data)), _size(size), _hash(0) {}
@@ -75,31 +76,14 @@ public:
 		return this->_data == nullptr;
 	}
 
-	constexpr std::size_t const_hash() const noexcept {
-		return this->_hash;
-	}
 
+	std::size_t hash() const noexcept;
 
-	std::size_t hash() noexcept;
+	bool equals(const buffer_view& other) const noexcept;
 
-	int compare(std::size_t pos1, std::size_t size1, const void* data2, std::size_t size2) const noexcept;
+	int compare(const buffer_view& other, std::size_t pos1 = 0, std::size_t size1 = npos) const noexcept;
 
-	inline int compare(std::size_t size1, const void* data2, std::size_t size2) const noexcept {
-		return this->compare(0, size1, data2, size2);
-	}
-
-	inline int compare(const void* data2, std::size_t size2) const noexcept {
-		return this->compare(0, this->size(), data2, size2);
-	}
-
-	inline int compare(const buffer_view& other) const noexcept {
-		return this->compare(0, this->size(), other.data(), other.size());
-	}
-
-	template<typename CharT>
-	inline int compare(const CharT* str) const noexcept {
-		return this->compare(static_cast<const void*>(str), std::char_traits<CharT>::length(str));
-	}
+	std::size_t index_of(const buffer_view& other) const noexcept;
 
 
 	template<typename CharT = char, typename Traits = std::char_traits<CharT>, typename Allocator = std::allocator<CharT>>
@@ -115,6 +99,13 @@ private:
 	std::size_t _hash;
 }; // class buffer_view
 
+} // namespace node
+
+
+#include "../util/fnv.h"
+
+
+namespace node {
 
 inline namespace literals {
 	constexpr node::buffer_view operator "" _buffer_view(const char* str, std::size_t len) noexcept {
@@ -128,14 +119,14 @@ inline namespace literals {
 template<>
 struct std::hash<node::buffer_view> {
 	std::size_t operator()(const node::buffer_view& buf) const {
-		return const_cast<node::buffer_view&>(buf).hash();
+		return buf.hash();
 	}
 };
 
 template<>
 struct std::equal_to<node::buffer_view> {
 	bool operator()(const node::buffer_view& lhs, const node::buffer_view& rhs) const {
-		return const_cast<node::buffer_view&>(lhs).hash() == const_cast<node::buffer_view&>(rhs).hash() && lhs.compare(rhs) == 0;
+		return lhs.equals(rhs);
 	}
 };
 

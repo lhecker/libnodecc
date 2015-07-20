@@ -1,8 +1,6 @@
 #ifndef nodecc_buffer_mutable_buffer_h
 #define nodecc_buffer_mutable_buffer_h
 
-#include <limits>
-
 #include "buffer.h"
 
 
@@ -31,7 +29,7 @@ public:
 	mutable_buffer& operator=(const mutable_buffer& other) noexcept;
 
 	mutable_buffer& append(const void* data, std::size_t size) noexcept;
-	mutable_buffer& append(const node::buffer& buf, std::size_t pos = 0, std::size_t count = std::numeric_limits<size_t>::max()) noexcept;
+	mutable_buffer& append(const node::buffer& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
 
 	template<typename charT>
 	void push_back(charT ch) noexcept {

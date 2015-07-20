@@ -27,18 +27,24 @@ class request_response_proto;
 namespace node {
 namespace http {
 
+
+class url {
+	explicit url(const node::buffer_view& view) {
+	}
+};
+
+
 class incoming_message {
 	friend class client_request;
 	friend class server;
+
+	// for node::http::server/client_request
+	node::event<void()> on_end;
 
 public:
 	node::event<void(bool upgrade, bool keep_alive)> on_headers_complete;
 	node::event<void(const node::buffer& buffer)> on_data;
 	node::event<void()> on_close;
-
-private:
-	// for node::http::server/client_request
-	node::event<void()> on_end;
 
 public:
 	typedef std::unordered_map<node::buffer, node::mutable_buffer> headers_t;

@@ -1,10 +1,6 @@
 #ifndef nodecc_util_fnv_h
 #define nodecc_util_fnv_h
 
-#include <climits>
-#include <cstdint>
-
-
 /*
  * TODO: add tests!
  *   raw string
@@ -30,43 +26,23 @@
 
 namespace node {
 
-class buffer_view;
-
-
 namespace util {
 
-namespace detail {
-
 template<typename T>
-struct fnv1a_statics;
+struct fnv1a {
+	static constexpr std::size_t _basis = sizeof(std::size_t) == 4 ? 2166136261UL : sizeof(std::size_t) == 8 ? 14695981039346656037ULL : throw "unsupported";
+	static constexpr std::size_t _prime = sizeof(std::size_t) == 4 ? 16777619UL   : sizeof(std::size_t) == 8 ? 1099511628211ULL        : throw "unsupported";
 
-template<>
-struct fnv1a_statics<uint32_t> {
-	constexpr static uint32_t _basis = 2166136261UL;
-	constexpr static uint32_t _prime = 16777619UL;
-};
-
-template<>
-struct fnv1a_statics<uint64_t> {
-	constexpr static uint64_t _basis = 14695981039346656037ULL;
-	constexpr static uint64_t _prime = 1099511628211ULL;
-};
-
-} // namespace detail
-
-
-template<typename T>
-struct fnv1a : public detail::fnv1a_statics<T> {
-	static T hash(const node::buffer_view& view) {
+	static T hash(const buffer_view& view) {
 		T hash = _basis;
 
 		uint8_t* data = view.data();
 		const uint8_t* data_end = data + view.size();
-		
+
 		for (; data < data_end; data++) {
 			hash = (hash ^ static_cast<T>(*data)) * _prime;
 		}
-		
+
 		return hash;
 	}
 
