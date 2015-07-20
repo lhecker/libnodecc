@@ -56,6 +56,28 @@ public:
 
 
 	template<typename T = uint8_t>
+	T* begin() const noexcept {
+		return static_cast<T*>(this->_data);
+	}
+
+	template<typename T = uint8_t>
+	const T* cbegin() const noexcept {
+		return this->begin<T>();
+	}
+
+	template<typename T = uint8_t>
+	T* end() const noexcept {
+		const auto data = this->data<uint8_t>();
+		return data ? static_cast<T*>(data + this->size()) : nullptr;
+	}
+
+	template<typename T = uint8_t>
+	const T* cend() const noexcept {
+		return this->end<T>();
+	}
+
+
+	template<typename T = uint8_t>
 	T* data() const noexcept {
 		return static_cast<T*>(this->_data);
 	}
@@ -83,6 +105,7 @@ public:
 
 	int compare(const buffer_view& other, std::size_t pos1 = 0, std::size_t size1 = npos) const noexcept;
 
+	std::size_t index_of(const char ch) const noexcept;
 	std::size_t index_of(const buffer_view& other) const noexcept;
 
 

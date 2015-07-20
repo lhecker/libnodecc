@@ -55,15 +55,30 @@ int buffer_view::compare(const buffer_view& other, std::size_t pos1, std::size_t
 	return r;
 }
 
+std::size_t buffer_view::index_of(const char ch) const noexcept {
+	if (this->data() && this->size()) {
+		const uint8_t* pos = static_cast<uint8_t*>(memchr(this->data(), ch, this->size()));
+
+		if (pos) {
+			return static_cast<std::size_t>(this->data() - pos);
+		}
+	}
+
+	return npos;
+}
+
 std::size_t buffer_view::index_of(const buffer_view& other) const noexcept {
 	const uint8_t* data1     = this->data();
 	const uint8_t* data1_end = data1 + this->size();
 	const uint8_t* data2     = other.data();
 	const uint8_t* data2_end = data2 + other.size();
 
-	const uint8_t* pos = std::search(data1, data1_end, data2, data2_end);
-
-	return pos == data1_end ? npos : static_cast<std::size_t>(data1 - pos);
+	if (data1 && data2) {
+		const uint8_t* pos = std::search(data1, data1_end, data2, data2_end);
+		return pos == data1_end ? npos : static_cast<std::size_t>(data1 - pos);
+	} else {
+		return npos;
+	}
 }
 
 

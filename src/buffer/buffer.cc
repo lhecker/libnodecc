@@ -20,18 +20,18 @@ buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept 
 }
 
 buffer::buffer(buffer&& other) noexcept : buffer_view(other), _p(other._p) {
-	memset(&other, 0, sizeof(other));
+	other._reset_zero();
 }
 
 buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other), _p(other._p) {
-	memset(&other, 0, sizeof(other));
+	other._reset_zero();
 }
 
 buffer::buffer(const buffer& other) noexcept : buffer_view(other), _p(other._p) {
 	this->_retain();
 }
 
-buffer& buffer::operator=(buffer_view&& other) noexcept {
+buffer& buffer::operator=(buffer_view&& other) {
 	this->_release();
 
 	std::swap(this->_data, other._data);
@@ -41,7 +41,7 @@ buffer& buffer::operator=(buffer_view&& other) noexcept {
 	return *this;
 }
 
-buffer& buffer::operator=(const buffer_view& other) noexcept {
+buffer& buffer::operator=(const buffer_view& other) {
 	this->_release();
 
 	this->_data = other._data;
@@ -51,14 +51,14 @@ buffer& buffer::operator=(const buffer_view& other) noexcept {
 	return *this;
 }
 
-buffer& buffer::operator=(buffer&& other) noexcept {
+buffer& buffer::operator=(buffer&& other) {
 	this->_release();
 	this->swap(other);
 
 	return *this;
 }
 
-buffer& buffer::operator=(const buffer& other) noexcept {
+buffer& buffer::operator=(const buffer& other) {
 	this->_release();
 	this->_data = other._data;
 	this->_size = other._size;
@@ -69,7 +69,7 @@ buffer& buffer::operator=(const buffer& other) noexcept {
 	return *this;
 }
 
-buffer::~buffer() noexcept {
+buffer::~buffer() {
 	this->_release();
 }
 
@@ -93,16 +93,16 @@ void buffer::swap(mutable_buffer& other) noexcept {
 	other._capacity = other._size;
 }
 
-void buffer::reset() noexcept {
+void buffer::reset() {
 	this->_release();
 }
 
-void buffer::reset(std::size_t size) noexcept {
+void buffer::reset(std::size_t size) {
 	this->_release();
 	this->_reset_unsafe(size);
 }
 
-void buffer::reset(const buffer_view& other, buffer_flags flags) noexcept {
+void buffer::reset(const buffer_view& other, buffer_flags flags) {
 	this->_release();
 
 	this->_data = other._data;
@@ -112,14 +112,6 @@ void buffer::reset(const buffer_view& other, buffer_flags flags) noexcept {
 	if (flags == node::copy) {
 		this->copy(*this);
 	}
-}
-
-void buffer::reset(const void* data, std::size_t size, buffer_flags flags) noexcept {
-	this->reset(buffer_view(data, size), flags);
-}
-
-void buffer::reset(const char str[], buffer_flags flags) noexcept {
-	this->reset(buffer_view(str), flags);
 }
 
 buffer buffer::copy(std::size_t size) const noexcept {
@@ -171,7 +163,7 @@ buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
 	return buf;
 }
 
-void buffer::_copy(buffer& target, std::size_t size) const noexcept {
+void buffer::_copy(buffer& target, std::size_t size) const {
 	if (size == 0) {
 		size = this->_size;
 	}
@@ -226,7 +218,7 @@ void buffer::_retain() noexcept {
 	}
 }
 
-void buffer::_release() noexcept {
+void buffer::_release() {
 	if (this->_p) {
 		this->_p->release();
 	}
@@ -243,7 +235,7 @@ void buffer::control_base::retain() noexcept {
 	this->use_count.fetch_add(1, std::memory_order_relaxed);
 }
 
-void buffer::control_base::release() noexcept {
+void buffer::control_base::release() {
 	/*
 	 * Normally std::memory_order_acq_rel should be used for the fetch_sub operation
 	 * (to make all read/writes to the backing buffer visible before it's possibly freed),

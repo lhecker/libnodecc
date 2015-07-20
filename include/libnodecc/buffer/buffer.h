@@ -53,18 +53,18 @@ public:
 	 */
 	buffer(const buffer& other) noexcept;
 
-	buffer& operator=(buffer_view&& other) noexcept;
-	buffer& operator=(const buffer_view& other) noexcept;
+	buffer& operator=(buffer_view&& other);
+	buffer& operator=(const buffer_view& other);
 
 	/**
 	 * Takes over another buffer.
 	 */
-	buffer& operator=(buffer&& other) noexcept;
+	buffer& operator=(buffer&& other);
 
 	/**
 	 * Retains another buffer, while referring to it's data.
 	 */
-	buffer& operator=(const buffer& other) noexcept;
+	buffer& operator=(const buffer& other);
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -112,7 +112,7 @@ public:
 	template<typename charT, typename traits, typename Allocator>
 	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, buffer_flags flags = node::copy) noexcept : buffer(str.data(), str.size() * sizeof(charT), flags) {}
 
-	~buffer() noexcept;
+	~buffer();
 
 
 	inline bool is_strong() const noexcept {
@@ -139,12 +139,14 @@ public:
 	/**
 	 * Releases the buffer and resets it's data and size to zero.
 	 */
-	void reset() noexcept;
+	void reset();
 
 	/**
 	 * Releases the buffer and allocates a new one with the specified size.
 	 */
-	void reset(size_t size) noexcept;
+	void reset(size_t size);
+
+	void reset(const buffer_view& other, buffer_flags flags = node::copy);
 
 	/**
 	 * Releases the current buffer and starts managing the given memory area.
@@ -154,7 +156,7 @@ public:
 	 * @param d     An optional custom deleter callback. The default simply calls free().
 	 */
 	template<typename D>
-	void reset(const void* data, std::size_t size, D d) noexcept {
+	void reset(const void* data, std::size_t size, D d) {
 		this->_release();
 
 		control_base* p = new(std::nothrow) control<D>(data, std::forward<D>(d));
@@ -165,10 +167,6 @@ public:
 			this->_p = p;
 		}
 	}
-
-	void reset(const buffer_view& other, buffer_flags flags = node::copy) noexcept;
-	void reset(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
-	void reset(const char str[], buffer_flags flags = node::copy) noexcept;
 
 	/**
 	 * Returns a copy of the buffer, while optionally resizing it.
@@ -196,7 +194,7 @@ protected:
 		virtual void free() = 0;
 
 		void retain() noexcept;
-		void release() noexcept;
+		void release();
 
 		const void* base;
 		std::atomic<uintptr_t> use_count;
@@ -223,7 +221,7 @@ protected:
 	/**
 	 * Creates a copy of this buffer in target, while optionally resizing it.
 	 */
-	void _copy(buffer& target, std::size_t size = 0) const noexcept;
+	void _copy(buffer& target, std::size_t size = 0) const;
 
 	void _reset_zero() noexcept;
 	void _reset_unsafe(std::size_t size) noexcept;
@@ -238,7 +236,7 @@ protected:
 	 * Releases this buffer, decrementing it's reference count by one,
 	 * using std::memory_order_release and a std::memory_order_acquire fence.
 	 */
-	void _release() noexcept;
+	void _release();
 
 	control_base* _p;
 };
