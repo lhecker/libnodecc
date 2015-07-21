@@ -49,7 +49,7 @@ server::server() : net::server() {
 			pack->res._shutdown_on_end = !keep_alive;
 
 			// RFC 2616 - 14.23
-			if (pack->req.has_header("host"_buffer_view)) {
+			if (!pack->req.has_header("host"_buffer_view)) {
 				pack->res.set_status_code(400);
 				pack->res.end();
 				return;

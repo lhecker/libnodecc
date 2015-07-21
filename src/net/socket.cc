@@ -3,7 +3,6 @@
 #include "libnodecc/dns/lookup.h"
 
 
-
 namespace node {
 namespace net {
 

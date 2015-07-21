@@ -247,14 +247,14 @@ protected:
 template<>
 struct std::hash<node::buffer> {
 	std::size_t operator()(const node::buffer& buf) const {
-		return const_cast<node::buffer&>(buf).hash();
+		return buf.hash();
 	}
 };
 
 template<>
 struct std::equal_to<node::buffer> {
 	bool operator()(const node::buffer& lhs, const node::buffer& rhs) const {
-		return const_cast<node::buffer&>(lhs).hash() == const_cast<node::buffer&>(rhs).hash() && lhs.compare(rhs) == 0;
+		return lhs.equals(rhs);
 	}
 };
 

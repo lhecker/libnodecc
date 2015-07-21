@@ -1,9 +1,6 @@
 #ifndef nodecc_uv_handle_h
 #define nodecc_uv_handle_h
 
-#include <cmath>
-#include <functional>
-
 #include "../event.h"
 #include "../loop.h"
 

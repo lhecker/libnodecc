@@ -1,6 +1,5 @@
 #include "libnodecc/http/incoming_message.h"
 
-#include <algorithm>
 #include <cctype>
 
 #include "libnodecc/net/socket.h"
@@ -178,7 +177,14 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 
 void incoming_message::_add_header_partials() {
 	if (this->_partial_header_field && this->_partial_header_value) {
-		std::transform(this->_partial_header_field.begin(), this->_partial_header_field.end(), this->_partial_header_field.begin(), std::tolower);
+		// manual tolower() to workaround some compiler hickups & issues
+		for (uint8_t* data = this->_partial_header_field.begin(), *end = this->_partial_header_field.end(); data < end; data++) {
+			const uint8_t ch = *data;
+
+			if (ch >= 0x41 && ch <= 0x5a) {
+				*data = ch + 0x20;
+			}
+		}
 
 		const auto iter = this->_headers.emplace(this->_partial_header_field, this->_partial_header_value);
 
