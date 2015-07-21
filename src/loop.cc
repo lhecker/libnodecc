@@ -1,30 +1,21 @@
 #include "libnodecc/loop.h"
 
+#include <system_error>
+
 
 namespace node {
 
 loop::loop() noexcept {
+	// always returns 0
 	uv_loop_init(&this->_loop);
-	uv_async_init(&this->_loop, &this->_tick_async, [](uv_async_t* handle) {
-		auto self = reinterpret_cast<loop*>(handle->data);
 
-		std::vector<on_tick_t> callbacks;
-		std::swap(callbacks, self->_tick_callbacks);
-
-		for (const on_tick_t& cb : callbacks) {
-			cb();
-
-			if (self->_loop.stop_flag) {
-				return;
-			}
-		}
-	});
+	// always returns 0
+	uv_async_init(&this->_loop, &this->_tick_async, &loop::_on_async);
 
 	uv_unref(reinterpret_cast<uv_handle_t*>(&this->_tick_async));
 
 	this->_loop.data = this;
 	this->_tick_async.data = this;
-	this->_tick_callbacks.reserve(8);
 }
 
 loop::~loop() noexcept {
@@ -33,8 +24,8 @@ loop::~loop() noexcept {
 	uv_loop_close(&this->_loop);
 }
 
-void loop::run() {
-	uv_run(&this->_loop, UV_RUN_DEFAULT);
+bool loop::run() {
+	return 0 != uv_run(&this->_loop, UV_RUN_DEFAULT);
 }
 
 bool loop::run_once() {
@@ -59,6 +50,29 @@ loop::operator uv_loop_t*() {
 
 loop::operator const uv_loop_t*() const {
 	return &this->_loop;
+}
+
+void loop::_on_async(uv_async_t* handle) noexcept {
+	auto self = reinterpret_cast<loop*>(handle->data);
+
+	for (const auto& cb : self->_tick_callbacks) {
+		cb();
+
+		if (self->_loop.stop_flag) {
+			return;
+		}
+	}
+
+	/*
+	 * We do the shrink first and the clear, because:
+	 * The vector for the next loop iteration will be empty (all elements are deconstructed),
+	 * BUT it will be always have a capacity at least as large as the size of the previous iteration.
+	 *
+	 * TODO: Using a the a formulae similiar to "average_size_over_last_N_iterations * a_factor_greater_one"
+	 * should perform better if the amount of callbacks fluctuates heavily  than the current implementation.
+	 */
+	self->_tick_callbacks.shrink_to_fit();
+	self->_tick_callbacks.clear();
 }
 
 } // namespace node

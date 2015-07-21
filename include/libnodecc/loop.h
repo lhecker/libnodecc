@@ -19,7 +19,7 @@ public:
 	loop(const loop&) = delete;
 	loop& operator=(const loop&) = delete;
 
-	void run();
+	bool run();
 	bool run_once();
 	bool run_nowait();
 
@@ -37,8 +37,11 @@ public:
 	operator uv_loop_t*();
 	operator const uv_loop_t*() const;
 
-protected:
+public:
+	static void _on_async(uv_async_t* handle) noexcept;
+
 	uv_loop_t _loop;
+
 	uv_async_t _tick_async;
 	std::vector<on_tick_t> _tick_callbacks;
 };
