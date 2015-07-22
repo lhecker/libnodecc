@@ -141,7 +141,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 		self->_http_version_minor = static_cast<uint8_t>(parser->http_minor);
 
 		self->url.set_url(self->_generic_value);
-		
+
 		self->_generic_value.reset(node::buffer_view(http_method_str(static_cast<http_method>(parser->method))), node::weak);
 	} else {
 		// HTTP_RESPONSE

@@ -29,75 +29,132 @@ namespace http {
 
 class url {
 public:
-	explicit url() {}
-	explicit url(const node::buffer& url) : _url(url) {}
+	explicit url() : _parser_stale(false), _params_stale(false) {}
+	explicit url(const node::buffer& url) : _url(url), _parser_stale(true), _params_stale(true) {}
 
 	void set_url(const node::buffer& url) noexcept {
 		this->_url = url;
+		this->_params.clear();
+		this->_parser_stale = true;
+		this->_params_stale = true;
 	}
 
-	const node::buffer& operator()() const noexcept {
+	const node::buffer operator()() noexcept {
 		return this->_url;
 	}
 
-	const node::buffer& schema() const noexcept {
-		return this->_parts[UF_SCHEMA];
+	const node::buffer schema() noexcept {
+		return this->_get(UF_SCHEMA);
 	}
 
-	const node::buffer& host() const noexcept {
-		return this->_parts[UF_HOST];
+	const node::buffer host() noexcept {
+		return this->_get(UF_HOST);
 	}
 
-	const node::buffer& port() const noexcept {
-		return this->_parts[UF_PORT];
+	const node::buffer port() noexcept {
+		return this->_get(UF_PORT);
 	}
 
-	const node::buffer& path() const noexcept {
-		return this->_parts[UF_PATH];
+	const node::buffer path() noexcept {
+		return this->_get(UF_PATH);
 	}
 
-	const node::buffer& query() const noexcept {
-		return this->_parts[UF_QUERY];
+	const node::buffer query() noexcept {
+		return this->_get(UF_QUERY);
 	}
 
-	const node::buffer& fragment() const noexcept {
-		return this->_parts[UF_FRAGMENT];
+	const node::buffer fragment() noexcept {
+		return this->_get(UF_FRAGMENT);
 	}
 
-	const node::buffer& userinfo() const noexcept {
-		return this->_parts[UF_USERINFO];
+	const node::buffer userinfo() noexcept {
+		return this->_get(UF_USERINFO);
 	}
 
-	uint16_t port_num() const noexcept {
-		return this->_port;
+	uint16_t port_num() noexcept {
+		this->_parse_url();
+
+		if (this->_parser.field_set & (1 << UF_PORT)) {
+			return this->_parser.port;
+		} else {
+			return 0;
+		}
+	}
+
+	bool has_param(const node::buffer_view& key) noexcept {
+		return this->_params.find(key) != this->_params.cend();
+	}
+
+	const node::buffer& param(const node::buffer_view& key) noexcept {
+		try {
+			return this->_params.at(key);
+		} catch (...) {
+			static const node::buffer empty;
+			return empty;
+		}
 	}
 
 private:
 	bool _parse_url() {
-		http_parser_url u;
+		if (!this->_parser_stale) {
+			return true;
+		}
 
-		const int r =  http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &u);
+		this->_parser_stale = false;
+
+		const int r = http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
 
 		if (r != 0) {
 			return false;
 		}
-
-		for (size_t i = 0; i < UF_MAX; i++) {
-			if (u.field_set & (1 << i)) {
-				this->_parts[i] = this->_url.slice(u.field_data[i].off, u.field_data[i].len);
-			}
-		}
-
-		if (u.field_set & (1 << UF_PORT)) {
-			this->_port = u.port;
-		}
-
-		return true;
 	}
 
+	bool _parse_params() {
+		if (this->_params_stale && this->_parse_url()) {
+			this->_params_stale = false;
+
+			const node::buffer query = this->query();
+			uint8_t* data = query.data();
+			const size_t size = query.size();
+			size_t current_amp_pos = 0;
+			size_t current_eq_pos = 0;
+
+			for (size_t i = 0; i < size; i++) {
+				const auto ch = data[i];
+
+				if (ch == '&') {
+					current_amp_pos = i;
+
+					// TODO: split value with (current_eq_pos, i)
+
+					current_eq_pos = 0;
+				} else if (ch == '=' && current_eq_pos == 0) {
+					current_eq_pos = i;
+
+					// TODO: split field with (current_amp_pos, i)
+
+					current_amp_pos = 0;
+				}
+			}
+		}
+	}
+
+	node::buffer _get(uint_fast8_t type) noexcept {
+		this->_parse_url();
+
+		if (this->_parser.field_set & (1 << type)) {
+			const auto& u = this->_parser.field_data[type];
+			return this->_url.slice(u.off, u.off + u.len);
+		} else {
+			return node::buffer();
+		}
+	}
+
+	std::unordered_map<node::buffer, node::buffer> _params;
 	node::buffer _url;
-	node::buffer _parts[UF_MAX];
-	uint16_t _port;
+	http_parser_url _parser;
+	bool _parser_stale;
+	bool _params_stale;
 };
 
 
