@@ -1,6 +1,7 @@
 #ifndef nodecc_http_incoming_message_h
 #define nodecc_http_incoming_message_h
 
+#include <array>
 #include <functional>
 #include <http-parser/http_parser.h>
 #include <unordered_map>
@@ -29,14 +30,19 @@ namespace http {
 
 class url {
 public:
-	explicit url() : _parser_stale(false), _params_stale(false) {}
-	explicit url(const node::buffer& url) : _url(url), _parser_stale(true), _params_stale(true) {}
+	typedef std::unordered_map<node::buffer, node::buffer> params_type;
+
+
+	explicit url() : _state(state::uninitialized) {}
+
+	explicit url(const node::buffer& url) : _url(url), _state(state::uninitialized) {
+		this->_parse_url();
+	}
 
 	void set_url(const node::buffer& url) noexcept {
 		this->_url = url;
 		this->_params.clear();
-		this->_parser_stale = true;
-		this->_params_stale = true;
+		this->_state = state::uninitialized;
 	}
 
 	const node::buffer operator()() noexcept {
@@ -73,19 +79,17 @@ public:
 
 	uint16_t port_num() noexcept {
 		this->_parse_url();
-
-		if (this->_parser.field_set & (1 << UF_PORT)) {
-			return this->_parser.port;
-		} else {
-			return 0;
-		}
+		return this->_parser.field_set & (1 << UF_PORT) ? this->_parser.port : 0;
 	}
 
 	bool has_param(const node::buffer_view& key) noexcept {
+		this->_parse_params();
 		return this->_params.find(key) != this->_params.cend();
 	}
 
 	const node::buffer& param(const node::buffer_view& key) noexcept {
+		this->_parse_params();
+
 		try {
 			return this->_params.at(key);
 		} catch (...) {
@@ -94,46 +98,73 @@ public:
 		}
 	}
 
-private:
-	bool _parse_url() {
-		if (!this->_parser_stale) {
-			return true;
-		}
-
-		this->_parser_stale = false;
-
-		const int r = http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
-
-		if (r != 0) {
-			return false;
-		}
+	const params_type& params() noexcept {
+		this->_parse_params();
+		return this->_params;
 	}
 
-	bool _parse_params() {
-		if (this->_params_stale && this->_parse_url()) {
-			this->_params_stale = false;
+private:
+	enum state : uint8_t {
+		uninitialized = 0,
+		url_parsed,
+		params_parsed,
+		error,
+	};
 
-			const node::buffer query = this->query();
-			uint8_t* data = query.data();
-			const size_t size = query.size();
-			size_t current_amp_pos = 0;
-			size_t current_eq_pos = 0;
 
-			for (size_t i = 0; i < size; i++) {
-				const auto ch = data[i];
+	bool _parse_url() {
+		if (this->_state < state::url_parsed && this->_url) {
+			this->_state = state::url_parsed;
 
-				if (ch == '&') {
-					current_amp_pos = i;
+			const int r =  http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
 
-					// TODO: split value with (current_eq_pos, i)
+			if (r != 0) {
+				this->_state = state::error;
+				return false;
+			}
+		}
 
-					current_eq_pos = 0;
-				} else if (ch == '=' && current_eq_pos == 0) {
-					current_eq_pos = i;
+		return true;
+	}
 
-					// TODO: split field with (current_amp_pos, i)
+	void _parse_params() {
+		if (this->_state < state::params_parsed && this->_parse_url()) {
+			this->_state = state::params_parsed;
 
-					current_amp_pos = 0;
+			const node::buffer& query = this->query();
+
+			if (query) {
+				uint8_t* data = query.data();
+				const size_t size = query.size();
+
+				size_t current_amp_pos = size_t(-1);
+				size_t current_eq_pos = 0;
+				size_t i = 0;
+				node::buffer field;
+
+				for (; i < size; i++) {
+					const auto ch = data[i];
+
+					if (ch == '&') {
+						if ((i - current_eq_pos) > 1 && field) {
+							this->_params.emplace(std::move(field), query.slice(current_eq_pos + 1, i));
+						}
+
+						current_amp_pos = i;
+						current_eq_pos = 0;
+					} else if (ch == '=' && current_eq_pos == 0) {
+						if ((i - current_amp_pos) > 1) {
+							field = query.slice(current_amp_pos + 1, i);
+						}
+
+						current_amp_pos = 0;
+						current_eq_pos = i;
+					}
+				}
+
+				// try to insert leftovers
+				if ((i - current_eq_pos) > 1 && field) {
+					this->_params.emplace(std::move(field), query.slice(current_eq_pos + 1, i));
 				}
 			}
 		}
@@ -150,11 +181,10 @@ private:
 		}
 	}
 
-	std::unordered_map<node::buffer, node::buffer> _params;
+	params_type _params;
 	node::buffer _url;
 	http_parser_url _parser;
-	bool _parser_stale;
-	bool _params_stale;
+	uint8_t _state;
 };
 
 

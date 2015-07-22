@@ -176,9 +176,16 @@ public:
 	buffer copy(std::size_t size = 0) const noexcept;
 
 	/**
-	 * Returns a buffer, referencing this buffer, but offset and cropped.
+	 * Returns a new buffer, pointing to a section of this one.
 	 *
-	 * Negative indexes (start/end) start at the end of the buffer.
+	 * The referenced section will start at "start" and end just BEFORE "end".
+	 * Or to express this in math: The Interval is [start, end).
+	 *
+	 * REMEMBER: If the old buffer held a strong reference
+	 * to it's backing memory the new one will too.
+	 * => The backing memory of the old buffer will NOT be freed!
+	 *
+	 * Negative indexes (start/end) are counted beginning from the end of the buffer.
 	 *
 	 * @param start The new buffer is offset by the index start.
 	 * @param end   The new buffer is cropped to the index end.
