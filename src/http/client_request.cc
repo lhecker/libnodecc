@@ -8,7 +8,7 @@
 namespace node {
 namespace http {
 
-client_request::client_request() : request_response_proto(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
+client_request::client_request() : outgoing_message(), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
 	this->_socket.on_connect([this](int err) {
 		if (err) {
 			this->on_error.emit();

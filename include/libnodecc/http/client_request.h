@@ -2,7 +2,7 @@
 #define nodecc_http_client_request_h
 
 #include "incoming_message.h"
-#include "request_response_proto.h"
+#include "outgoing_message.h"
 
 #include "../net/socket.h"
 
@@ -10,7 +10,7 @@
 namespace node {
 namespace http {
 
-class client_request : public node::http::request_response_proto {
+class client_request : public node::http::outgoing_message {
 public:
 	node::event<void(node::http::client_request& req, node::http::incoming_message& res)> on_connect;
 	node::event<void()> on_error;

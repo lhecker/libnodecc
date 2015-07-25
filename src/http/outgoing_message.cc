@@ -1,4 +1,4 @@
-#include "libnodecc/http/request_response_proto.h"
+#include "libnodecc/http/outgoing_message.h"
 
 #include "libnodecc/net/socket.h"
 #include "libnodecc/util/math.h"
@@ -7,34 +7,34 @@
 namespace node {
 namespace http {
 
-request_response_proto::request_response_proto() : _headers_sent(false) {
+outgoing_message::outgoing_message() : _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 
-request_response_proto::~request_response_proto() {
+outgoing_message::~outgoing_message() {
 }
 
-const node::buffer request_response_proto::header(node::buffer_view& key) {
+const node::buffer outgoing_message::header(node::buffer_view& key) {
 	return this->_headers.at(key);
 }
 
-void request_response_proto::set_header(node::buffer key, node::buffer value) {
+void outgoing_message::set_header(node::buffer key, node::buffer value) {
 	this->_headers.emplace(key, value);
 }
 
-bool request_response_proto::headers_sent() const {
+bool outgoing_message::headers_sent() const {
 	return this->_headers_sent;
 }
 
-void request_response_proto::_write(const node::buffer chunks[], size_t chunkcnt) {
+void outgoing_message::_write(const node::buffer chunks[], size_t chunkcnt) {
 	this->http_write(chunks, chunkcnt, false);
 }
 
-void request_response_proto::_end(const node::buffer chunks[], size_t chunkcnt) {
+void outgoing_message::_end(const node::buffer chunks[], size_t chunkcnt) {
 	this->http_write(chunks, chunkcnt, true);
 }
 
-void request_response_proto::http_write(const node::buffer bufs[], size_t bufcnt, bool end) {
+void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool end) {
 	size_t compiledBufcnt = 0;
 	size_t compiledBufsPos = 0;
 	node::buffer* compiledBufs = nullptr;

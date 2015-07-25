@@ -1,13 +1,13 @@
 #ifndef nodecc_http_server_response_h
 #define nodecc_http_server_response_h
 
-#include "request_response_proto.h"
+#include "outgoing_message.h"
 
 
 namespace node {
 namespace http {
 
-class server_response : public node::http::request_response_proto {
+class server_response : public node::http::outgoing_message {
 public:
 	explicit server_response(node::net::socket& socket);
 
@@ -18,7 +18,7 @@ public:
 
 protected:
 	void _end(const node::buffer chunks[], size_t chunkcnt) override;
-	
+
 	void compile_headers(node::mutable_buffer& buf) override;
 	void socket_write(const node::buffer bufs[], size_t bufcnt) override;
 

@@ -19,7 +19,7 @@ class socket;
 }
 
 namespace http {
-class request_response_proto;
+class outgoing_message;
 }
 
 }

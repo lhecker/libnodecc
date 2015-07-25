@@ -33,8 +33,8 @@ template<typename T>
 struct fnv1a {
 	static_assert(sizeof(std::size_t) == 4 || sizeof(std::size_t) == 8, "node::http::fnv1a relies on 32/64 Bit systems");
 
-	static constexpr std::size_t _basis = std::conditional<sizeof(std::size_t) == 4, std::integral_constant<int32_t, 2166136261UL>, std::integral_constant<int64_t, 14695981039346656037ULL>>::type::value;
-	static constexpr std::size_t _prime = std::conditional<sizeof(std::size_t) == 4, std::integral_constant<int32_t,   16777619UL>, std::integral_constant<int64_t,        1099511628211ULL>>::type::value;
+	static constexpr std::size_t _basis = std::conditional<sizeof(std::size_t) == 4, std::integral_constant<uint32_t, 2166136261UL>, std::integral_constant<uint64_t, 14695981039346656037ULL>>::type::value;
+	static constexpr std::size_t _prime = std::conditional<sizeof(std::size_t) == 4, std::integral_constant<uint32_t,   16777619UL>, std::integral_constant<uint64_t,        1099511628211ULL>>::type::value;
 
 	static T hash(const buffer_view& view) {
 		T hash = _basis;

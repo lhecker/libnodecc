@@ -1,5 +1,5 @@
-#ifndef nodecc_http_request_response_proto_h
-#define nodecc_http_request_response_proto_h
+#ifndef nodecc_http_outgoing_message_h
+#define nodecc_http_outgoing_message_h
 
 #include <string>
 #include <unordered_map>
@@ -19,11 +19,11 @@ class socket;
 namespace node {
 namespace http {
 
-class request_response_proto : public node::stream::writable<node::buffer, int> {
+class outgoing_message : public node::stream::writable<node::buffer, int> {
 public:
-	explicit request_response_proto();
+	explicit outgoing_message();
 
-	virtual ~request_response_proto();
+	virtual ~outgoing_message();
 
 
 	const node::buffer header(node::buffer_view& key);
@@ -61,4 +61,4 @@ protected:
 } // namespace http
 } // namespace node
 
-#endif // nodecc_http_request_response_proto_h
+#endif // nodecc_http_outgoing_message_h

@@ -111,6 +111,14 @@ protected:
 };
 
 } // namespace uv
+
+template<typename T, typename... Args>
+void make_shared(Args... args) {
+	auto p = std::make_shared<T>(std::forward<Args>(args)...);
+	p->on_close([p]() {});
+	return p;
+}
+
 } // namespace node
 
 template<typename T>
