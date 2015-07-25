@@ -14,7 +14,7 @@ namespace node {
 namespace uv {
 
 template<typename T>
-class stream : public node::uv::handle<T>, public node::stream::duplex<node::buffer, int> {
+class stream : public node::uv::handle<T>, public node::stream::duplex<int, node::buffer> {
 public:
 	node::event<node::buffer(size_t suggested_size)> on_alloc;
 

@@ -5,7 +5,7 @@
 namespace node {
 namespace fs {
 
-class readable_stream : node::uv::handle<uv_fs_t>, node::stream::readable<node::buffer, int> {
+class readable_stream : node::uv::handle<uv_fs_t>, node::stream::readable<int, node::buffer> {
 public:
 	explicit reable_stream(const char* path) {
 		uv_fs_open(*this, path, OPEN);

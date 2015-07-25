@@ -19,7 +19,7 @@ class socket;
 namespace node {
 namespace http {
 
-class outgoing_message : public node::stream::writable<node::buffer, int> {
+class outgoing_message : public node::stream::writable<int, node::buffer> {
 public:
 	explicit outgoing_message();
 

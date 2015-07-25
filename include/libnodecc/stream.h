@@ -7,13 +7,13 @@
 namespace node {
 namespace stream {
 
-template <typename T, typename E>
+template <typename E, typename T>
 class writable;
 
 
 namespace detail {
 
-template<typename T, typename E>
+template<typename E, typename T>
 class base {
 public:
 	node::event<void(E err)> on_error;
@@ -22,15 +22,15 @@ public:
 } // namespace detail
 
 
-template<typename T, typename E>
-class readable : public virtual detail::base<T, E> {
+template<typename E, typename T>
+class readable : public virtual detail::base<E, T> {
 public:
-	friend class writable<T, E>;
+	friend class writable<E, T>;
 
 	virtual void resume() = 0;
 	virtual void pause() = 0;
 
-	void pipe(const node::stream::writable<T, E>& target, bool end = true) {
+	void pipe(const node::stream::writable<E, T>& target, bool end = true) {
 		this->on_data([this, &target](const T chunks[], size_t chunkcnt) {
 			if (!target.write(chunks, chunkcnt)) {
 				this->pause();
@@ -52,8 +52,8 @@ public:
 	node::event<void()> on_end;
 };
 
-template<typename T, typename E>
-class writable : public virtual detail::base<T, E> {
+template<typename E, typename T>
+class writable : public virtual detail::base<E, T> {
 public:
 	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0), _was_flooded(false) {}
 
@@ -134,8 +134,8 @@ private:
 	bool _was_flooded;
 };
 
-template<typename T, typename E>
-class duplex : public readable<T, E>, public writable<T, E> {
+template<typename E, typename T>
+class duplex : public readable<E, T>, public writable<E, T> {
 };
 
 } // namespace stream
