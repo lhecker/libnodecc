@@ -16,9 +16,6 @@ namespace uv {
 template<typename T>
 class stream : public node::uv::handle<T>, public node::stream::duplex<int, node::buffer> {
 public:
-	node::event<node::buffer(size_t suggested_size)> on_alloc;
-
-public:
 	explicit stream() : node::uv::handle<T>() {
 	}
 
@@ -30,7 +27,7 @@ public:
 		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
-			const auto r = self->on_alloc.emit(suggested_size);
+			const auto r = self->on_alloc.emit();
 
 			if (r) {
 				self->_alloc_buffer = r.value();
@@ -175,6 +172,9 @@ public:
 			}
 		}
 	}
+
+
+	node::event<node::buffer()> on_alloc;
 
 private:
 	node::buffer _alloc_buffer;

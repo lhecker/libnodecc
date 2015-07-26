@@ -19,6 +19,7 @@
 				'include/libnodecc/dns/lookup.h',
 				'include/libnodecc/event.h',
 				'include/libnodecc/fs/event.h',
+				'include/libnodecc/fs/read_stream.h',
 				'include/libnodecc/http/_http_date_buffer.h',
 				'include/libnodecc/http/client_request.h',
 				'include/libnodecc/http/incoming_message.h',

@@ -65,4 +65,4 @@
 	XX(508, 17, "508 Loop Detected"                  ) /* RFC 5842 */    \
 	XX(509, 28, "509 Bandwidth Limit Exceeded"       )                   \
 	XX(510, 16, "510 Not Extended"                   ) /* RFC 2774 */    \
-	XX(511, 35, "511 Network Authentication Required") /* RFC 6585 */    \
+	XX(511, 35, "511 Network Authentication Required") /* RFC 6585 */

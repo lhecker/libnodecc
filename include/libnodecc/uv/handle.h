@@ -67,7 +67,7 @@ public:
 	void close() {
 		if (this->_handle.loop && !this->is_closing()) {
 			uv_close(*this, [](uv_handle_t* handle) {
-				uv::handle<T>* self = reinterpret_cast<uv::handle<T>*>(handle->data);
+				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
 				if (self && self->on_close) {
 					/*
