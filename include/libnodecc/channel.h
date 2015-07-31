@@ -84,7 +84,7 @@ public:
 
 	template<typename... Args>
 	void close(Args&&... args) {
-		this->_on_notifications = nullptr;
+		this->on_notifications.clear();
 		node::uv::handle<uv_async_t>::close(std::forward<Args>(args)...);
 	}
 

@@ -148,6 +148,10 @@ public:
 
 	void reset(const buffer_view& other, buffer_flags flags = node::copy);
 
+	inline void reset(const void* data, std::size_t size, buffer_flags flags = node::copy) {
+		this->reset(node::buffer_view(data, size), flags);
+	}
+
 	/**
 	 * Releases the current buffer and starts managing the given memory area.
 	 *

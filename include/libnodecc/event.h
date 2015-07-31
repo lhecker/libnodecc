@@ -2,6 +2,7 @@
 #define nodecc_event_h
 
 #include <functional>
+#include <mutex>
 #include <stdexcept>
 #include <utility>
 
@@ -36,29 +37,28 @@ struct event_optional : std::pair<T, bool> {
 		return this->first;
 	}
 
-	template<class V>
+	template<typename V>
 	constexpr T value_or(V&& v) const & {
 		return *this ? **this : std::forward<V>(v);
 	}
 
-	template<class V>
+	template<typename V>
 	constexpr T&& value_or(V&& v) const && {
 		return *this ? **this : std::forward<V>(v);
 	}
 };
 
 
-template<class T>
+template<typename T>
 class event;
 
-template<class R, class... Args>
+template<typename R, typename... Args>
 class event<R(Args...)> {
 public:
 	typedef std::function<R(Args...)> function_type;
 
 
 	constexpr event() {}
-	~event() {}
 
 	event(const event&) = delete;
 	event& operator=(const event&) = delete;
@@ -104,8 +104,76 @@ public:
 		}
 	}
 
-private:
+protected:
 	function_type _f;
+};
+
+
+namespace detail {
+
+template<typename M, typename T>
+class locking_event;
+
+template<typename M, typename R, typename... Args>
+class locking_event<M, R(Args...)> : public event<R(Args...)> {
+public:
+	template<typename F>
+	void operator()(F&& f) {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		event<R(Args...)>::operator()(std::forward<F>(f));
+	}
+
+	operator bool() const noexcept {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		return event<R(Args...)>::operator bool();
+	}
+
+	bool empty() const noexcept {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		return event<R(Args...)>::empty();
+	}
+
+	void clear() noexcept {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		event<R(Args...)>::clear();
+	}
+
+	template<typename S = R, typename = typename std::enable_if<std::is_void<S>::value>::type>
+	bool emit(Args... args) {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		return event<R(Args...)>::emit(std::forward<Args>(args)...);
+	}
+
+	template<typename S = R, typename = typename std::enable_if<!std::is_void<S>::value>::type>
+	event_optional<S> emit(Args... args) {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		return event<R(Args...)>::emit(std::forward<Args>(args)...);
+	}
+
+protected:
+	locking_event(M m) : _m(m) {}
+
+	M _m;
+};
+
+} // namespace detail
+
+
+template<typename T>
+class threadsafe_event;
+
+template<typename R, typename... Args>
+class threadsafe_event<R(Args...)> : public detail::locking_event<std::mutex, R(Args...)> {
+};
+
+
+template<typename M, typename T>
+class locking_event;
+
+template<typename M, typename R, typename... Args>
+class locking_event<M, R(Args...)> : public detail::locking_event<M&, R(Args...)> {
+public:
+	locking_event(M& m) : detail::locking_event<M&, R(Args...)>(m) {}
 };
 
 } // namespace node
