@@ -14,12 +14,12 @@ outgoing_message::outgoing_message() : _headers_sent(false) {
 outgoing_message::~outgoing_message() {
 }
 
-const node::buffer outgoing_message::header(node::hashed_view& key) {
+const node::buffer outgoing_message::header(node::hashed_buffer& key) {
 	return this->_headers.at(key);
 }
 
-void outgoing_message::set_header(node::buffer key, node::buffer value) {
-	this->_headers.emplace(key, value);
+void outgoing_message::set_header(node::hashed_buffer key, node::buffer value) {
+	this->_headers.emplace(std::forward<node::hashed_buffer>(key), std::forward<node::buffer>(value));
 }
 
 bool outgoing_message::headers_sent() const {
@@ -45,10 +45,10 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 	if (!this->_headers_sent) {
 		using namespace node::literals;
 
-		if (this->_headers.find("content-length"_hashed_view) != this->_headers.end()) {
+		if (this->_headers.find("content-length"_view) != this->_headers.end()) {
 			this->_is_chunked = false;
 		} else {
-			const auto p = this->_headers.find("transfer-encoding"_hashed_view);
+			const auto p = this->_headers.find("transfer-encoding"_view);
 
 			/*
 			 * It's the first an last write call and
@@ -56,7 +56,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 			 * ---> Try to set the content-length.
 			 */
 			if (p != this->_headers.end()) {
-				this->_is_chunked = p->second.compare("chunked"_hashed_view) == 0;
+				this->_is_chunked = p->second.compare("chunked"_view) == 0;
 			} else {
 				if (end) {
 					size_t contentLength = 0;
@@ -86,7 +86,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 						node::mutable_buffer buf;
 						buf.append_number(contentLength, 10);
 
-						this->set_header("content-length"_hashed_view, buf);
+						this->set_header("content-length"_view, buf);
 						this->_is_chunked = false;
 
 						goto contentLengthSuccessfullySet;
@@ -97,7 +97,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 				 * Calculating the content-length failed.
 				 * ---> Use chunked encoding.
 				 */
-				this->_headers.emplace_hint(p, "transfer-encoding"_hashed_view, "chunked"_hashed_view);
+				this->_headers.emplace_hint(p, "transfer-encoding"_view, "chunked"_view);
 				this->_is_chunked = true;
 			}
 		}

@@ -56,23 +56,36 @@ mutable_buffer& mutable_buffer::append(const void* data, std::size_t size) noexc
 
 	if (p) {
 		memcpy(p, data, size);
-		this->_hash = 0;
+	}
+
+	return *this;
+}
+
+mutable_buffer& mutable_buffer::append(const node::buffer_view& buf, std::size_t pos, std::size_t count) noexcept {
+	if (pos < buf.size() && count > 0) {
+		if (count > buf.size() - pos) {
+			count = buf.size() - pos;
+		}
+
+		if (this->size() > 0) {
+			this->append(buf.data() + pos, count);
+		}
 	}
 
 	return *this;
 }
 
 mutable_buffer& mutable_buffer::append(const node::buffer& buf, std::size_t pos, std::size_t count) noexcept {
-	if (pos < buf._size && count > 0) {
-		if (count > buf._size - pos) {
-			count = buf._size - pos;
+	if (pos < buf.size() && count > 0) {
+		if (count > buf.size() - pos) {
+			count = buf.size() - pos;
 		}
 
-		if (this->_size > 0) {
+		if (this->size() > 0) {
 			this->append(buf.data() + pos, count);
 		} else {
 			node::buffer::operator=(buf.slice(pos, count));
-			this->_capacity = this->_size;
+			this->_capacity = this->size();
 		}
 	}
 
@@ -92,8 +105,6 @@ mutable_buffer& mutable_buffer::append_number(std::size_t n, uint8_t base) {
 				*p++ = chars[(n / div) % base];
 				div /= base;
 			} while (div > 0);
-
-			this->_hash = 0;
 		}
 	}
 
@@ -155,7 +166,6 @@ void mutable_buffer::set_size(std::size_t size) noexcept {
 	}
 
 	this->_size = std::min(this->_capacity, size);
-	this->_hash = 0;
 }
 
 void mutable_buffer::clear() noexcept {

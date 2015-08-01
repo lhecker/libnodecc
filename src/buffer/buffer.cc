@@ -13,30 +13,28 @@ buffer::buffer(std::size_t size) noexcept : buffer() {
 	this->_reset_unsafe(size);
 }
 
-buffer::buffer(const buffer& other) noexcept : hashed_view(other), _p(other._p) {
+buffer::buffer(const buffer& other) noexcept : buffer_view(other), _p(other._p) {
 	this->_retain();
 }
 
-buffer::buffer(buffer&& other) noexcept : hashed_view(other), _p(other._p) {
+buffer::buffer(buffer&& other) noexcept : buffer_view(other), _p(other._p) {
 	other._reset_zero();
 }
 
-buffer::buffer(mutable_buffer&& other) noexcept : hashed_view(other), _p(other._p) {
+buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other), _p(other._p) {
 	other._reset_zero();
+}
+
+buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept : buffer_view(data, size), _p(nullptr) {
+	if (flags == node::copy) {
+		this->copy(*this);
+	}
 }
 
 buffer& buffer::operator=(const buffer_view& other) {
 	this->_release();
 
-	hashed_view::operator=(other);
-
-	return *this;
-}
-
-buffer& buffer::operator=(const hashed_view& other) {
-	this->_release();
-
-	hashed_view::operator=(other);
+	buffer_view::operator=(other);
 
 	return *this;
 }
@@ -52,17 +50,10 @@ buffer& buffer::operator=(const buffer& other) {
 	this->_release();
 	this->_data = other._data;
 	this->_size = other._size;
-	this->_hash = other._hash;
 	this->_p = other._p;
 	this->_retain();
 
 	return *this;
-}
-
-buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept : hashed_view(data, size), _p(nullptr) {
-	if (flags == node::copy) {
-		this->copy(*this);
-	}
 }
 
 buffer::~buffer() {
@@ -76,14 +67,12 @@ std::size_t buffer::use_count() const noexcept {
 void buffer::swap(buffer& other) noexcept {
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
-	std::swap(this->_hash, other._hash);
 	std::swap(this->_p, other._p);
 }
 
 void buffer::swap(mutable_buffer& other) noexcept {
 	std::swap(this->_data, other._data);
 	std::swap(this->_size, other._size);
-	std::swap(this->_hash, other._hash);
 	std::swap(this->_p, other._p);
 
 	other._capacity = other._size;
@@ -101,7 +90,7 @@ void buffer::reset(std::size_t size) {
 void buffer::reset(const buffer_view& other, buffer_flags flags) {
 	this->_release();
 
-	hashed_view(other.data(), other.size());
+	buffer_view(other.data(), other.size());
 
 	if (flags == node::copy) {
 		this->copy(*this);
@@ -183,7 +172,6 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 void buffer::_reset_zero() noexcept {
 	this->_data = nullptr;
 	this->_size = 0;
-	this->_hash = 0;
 	this->_p = nullptr;
 }
 

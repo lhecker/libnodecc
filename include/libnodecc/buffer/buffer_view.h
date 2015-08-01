@@ -35,16 +35,15 @@ public:
 	constexpr buffer_view(const buffer_view& other) : _data(other._data), _size(other._size) {}
 	constexpr buffer_view(const void* data, std::size_t size) : _data(const_cast<void*>(data)), _size(size) {}
 
-	buffer_view& operator=(const buffer_view& other);
-
-	template<typename T>
-	explicit buffer_view(const std::vector<T>& vec) noexcept : buffer_view(vec.data(), vec.size()) {}
 
 	template<typename CharT>
 	explicit buffer_view(const CharT* str) noexcept : buffer_view(const_cast<CharT*>(str), std::char_traits<CharT>::length(str) * sizeof(CharT)) {}
 
 	template<typename CharT, typename traits, typename Allocator>
 	explicit buffer_view(const std::basic_string<CharT, traits, Allocator>& str) noexcept : buffer_view(str.data(), str.size() * sizeof(CharT)) {}
+
+
+	buffer_view& operator=(const buffer_view& other);
 
 
 	template<typename T = uint8_t>

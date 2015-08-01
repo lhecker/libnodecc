@@ -2,7 +2,7 @@
 #define nodecc_buffer_buffer_h
 
 #include "../util/function_traits.h"
-#include "hashed_view.h"
+#include "hashed_buffer_view.h"
 
 #include <atomic>
 
@@ -14,8 +14,8 @@ enum buffer_flags {
 	copy = 1,
 };
 
-class mutable_buffer;
 class buffer_ref_list;
+class mutable_buffer;
 
 
 /**
@@ -25,7 +25,7 @@ class buffer_ref_list;
  * is inherently NOT thread safe and never will be.
  * Please use some other synchronization mechanism, like node::channel.
  */
-class buffer : public hashed_view {
+class buffer : public buffer_view {
 	friend class mutable_buffer;
 	friend class buffer_ref_list;
 
@@ -33,13 +33,7 @@ public:
 	/**
 	 * Creates an empty buffer.
 	 */
-	constexpr buffer() : hashed_view(), _p(nullptr) {}
-
-	constexpr buffer(buffer_view&& other) : hashed_view(other), _p(nullptr) {}
-	constexpr buffer(const buffer_view& other) : hashed_view(other), _p(nullptr) {}
-
-	constexpr buffer(hashed_view&& other) : hashed_view(other), _p(nullptr) {}
-	constexpr buffer(const hashed_view& other) : hashed_view(other), _p(nullptr) {}
+	constexpr buffer() : buffer_view(), _p(nullptr) {}
 
 	/**
 	 * Retains another buffer, while referring to it's data.
@@ -52,22 +46,22 @@ public:
 	buffer(buffer&& other) noexcept;
 
 	/**
+	 * Creates a buffer referring the specified memory area.
+	 *
+	 * @param data  The base address of the memory area.
+	 * @param size  The size of the memory area.
+	 * @param flags node::weak or node::copy
+	 */
+	explicit buffer(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
+	explicit buffer(const buffer_view& other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
+
+
+	constexpr buffer(const literal_buffer_view& other) noexcept : buffer_view(other.data(), other.size()), _p(nullptr) {}
+
+	/**
 	 * Takes over another mutable_buffer.
 	 */
 	buffer(mutable_buffer&& other) noexcept;
-
-	buffer& operator=(const buffer_view& other);
-	buffer& operator=(const hashed_view& other);
-
-	/**
-	 * Takes over another buffer.
-	 */
-	buffer& operator=(buffer&& other);
-
-	/**
-	 * Retains another buffer, while referring to it's data.
-	 */
-	buffer& operator=(const buffer& other);
 
 	/**
 	 * Creates a buffer with the specified size.
@@ -98,22 +92,19 @@ public:
 		}
 	}
 
+
+	buffer& operator=(const buffer_view& other);
+
 	/**
-	 * Creates a buffer referring the specified memory area.
-	 *
-	 * @param data  The base address of the memory area.
-	 * @param size  The size of the memory area.
-	 * @param flags node::weak or node::copy
+	 * Retains another buffer, while referring to it's data.
 	 */
-	explicit buffer(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
+	buffer& operator=(const buffer& other);
 
-	explicit buffer(const buffer_view& other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
+	/**
+	 * Takes over another buffer.
+	 */
+	buffer& operator=(buffer&& other);
 
-	template<typename charT>
-	explicit buffer(const charT* str, buffer_flags flags = node::copy) noexcept : buffer(const_cast<charT*>(str), std::char_traits<charT>::length(str) * sizeof(charT), flags) {}
-
-	template<typename charT, typename traits, typename Allocator>
-	explicit buffer(const std::basic_string<charT, traits, Allocator>& str, buffer_flags flags = node::copy) noexcept : buffer(str.data(), str.size() * sizeof(charT), flags) {}
 
 	~buffer();
 
@@ -231,6 +222,7 @@ protected:
 		D _deleter;
 	};
 
+
 	/**
 	 * Creates a copy of this buffer in target, while optionally resizing it.
 	 */
@@ -255,20 +247,5 @@ protected:
 };
 
 } // namespace node
-
-
-template<>
-struct std::hash<node::buffer> {
-	std::size_t operator()(const node::buffer& buf) const {
-		return buf.hash();
-	}
-};
-
-template<>
-struct std::equal_to<node::buffer> {
-	bool operator()(const node::buffer& lhs, const node::buffer& rhs) const {
-		return lhs.equals(rhs);
-	}
-};
 
 #endif // nodecc_buffer_buffer_h

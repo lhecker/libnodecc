@@ -29,6 +29,7 @@ public:
 	mutable_buffer& operator=(const mutable_buffer& other) noexcept;
 
 	mutable_buffer& append(const void* data, std::size_t size) noexcept;
+	mutable_buffer& append(const node::buffer_view& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
 	mutable_buffer& append(const node::buffer& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
 
 	template<typename charT>
@@ -37,7 +38,6 @@ public:
 
 		if (p) {
 			*p = ch;
-			this->_hash = 0;
 		}
 	}
 

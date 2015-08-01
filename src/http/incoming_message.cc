@@ -5,6 +5,13 @@
 #include "libnodecc/net/socket.h"
 
 
+static const node::buffer_view method_map[] = {
+#define XX(num, name, string) node::buffer_view(#string, strlen(#string)),
+	HTTP_METHOD_MAP(XX)
+#undef XX
+};
+
+
 namespace node {
 namespace http {
 
@@ -56,11 +63,11 @@ const node::buffer& incoming_message::method() const {
 	return this->_generic_value;
 }
 
-bool incoming_message::has_header(const node::hashed_view& key) const {
+bool incoming_message::has_header(const node::hashed_buffer& key) const {
 	return this->_headers.find(key) != this->_headers.cend();
 }
 
-const node::buffer& incoming_message::header(const node::hashed_view& key) const {
+const node::buffer& incoming_message::header(const node::hashed_buffer& key) const {
 	try {
 		return this->_headers.at(key);
 	} catch (...) {
@@ -86,12 +93,12 @@ bool incoming_message::is_websocket_request() {
 		if (this->_parser.upgrade != 0) {
 			using namespace node::literals;
 
-			const auto upgradeField = this->header("upgrade"_hashed_view);
-			const auto versionField = this->header("sec-websocket-version"_hashed_view);
-			const auto keyField = this->header("sec-websocket-key"_hashed_view);
+			const auto upgradeField = this->header("upgrade"_view);
+			const auto versionField = this->header("sec-websocket-version"_view);
+			const auto keyField = this->header("sec-websocket-key"_view);
 
-			if (upgradeField.equals("websocket"_hashed_view) &&
-				versionField.equals("13"_hashed_view) &&
+			if (upgradeField.equals("websocket"_view) &&
+				versionField.equals("13"_view) &&
 				keyField)
 			{
 				this->_is_websocket = 1;
@@ -142,7 +149,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 
 		self->url.set_url(self->_generic_value);
 
-		self->_generic_value.reset(node::buffer_view(http_method_str(static_cast<http_method>(parser->method))), node::weak);
+		self->_generic_value.reset(method_map[parser->method], node::weak);
 	} else {
 		// HTTP_RESPONSE
 		self->_status_code = static_cast<uint16_t>(parser->status_code);
