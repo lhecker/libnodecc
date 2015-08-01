@@ -56,11 +56,11 @@ const node::buffer& incoming_message::method() const {
 	return this->_generic_value;
 }
 
-bool incoming_message::has_header(const node::buffer_view& key) const {
+bool incoming_message::has_header(const node::hashed_view& key) const {
 	return this->_headers.find(key) != this->_headers.cend();
 }
 
-const node::buffer& incoming_message::header(const node::buffer_view& key) const {
+const node::buffer& incoming_message::header(const node::hashed_view& key) const {
 	try {
 		return this->_headers.at(key);
 	} catch (...) {
@@ -86,12 +86,12 @@ bool incoming_message::is_websocket_request() {
 		if (this->_parser.upgrade != 0) {
 			using namespace node::literals;
 
-			const auto upgradeField = this->header("upgrade"_buffer_view);
-			const auto versionField = this->header("sec-websocket-version"_buffer_view);
-			const auto keyField = this->header("sec-websocket-key"_buffer_view);
+			const auto upgradeField = this->header("upgrade"_hashed_view);
+			const auto versionField = this->header("sec-websocket-version"_hashed_view);
+			const auto keyField = this->header("sec-websocket-key"_hashed_view);
 
-			if (upgradeField.equals("websocket"_buffer_view) &&
-				versionField.equals("13"_buffer_view) &&
+			if (upgradeField.equals("websocket"_hashed_view) &&
+				versionField.equals("13"_hashed_view) &&
 				keyField)
 			{
 				this->_is_websocket = 1;

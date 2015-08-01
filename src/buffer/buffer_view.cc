@@ -6,32 +6,14 @@
 namespace node {
 
 buffer_view& buffer_view::operator=(const buffer_view& other) {
-	_data = other._data;
-	_size = other._size;
-	_hash = other._hash;
+	this->_data = other._data;
+	this->_size = other._size;
 	return *this;
-}
-
-std::size_t buffer_view::hash() const noexcept {
-	std::size_t hash = this->_hash;
-
-	if (hash == 0) {
-		hash = node::util::fnv1a<std::size_t>::hash(*this);
-
-		if (hash == 0) {
-			hash = 1;
-		}
-
-		const_cast<buffer_view*>(this)->_hash = hash;
-	}
-
-	return hash;
 }
 
 bool buffer_view::equals(const buffer_view& other) const noexcept {
 	return this->data() && other.data()
 	    && this->size() == other.size()
-	    && this->hash() == other.hash()
 	    && memcmp(this->data(), other.data(), this->size()) == 0;
 }
 

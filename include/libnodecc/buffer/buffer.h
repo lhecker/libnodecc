@@ -2,7 +2,7 @@
 #define nodecc_buffer_buffer_h
 
 #include "../util/function_traits.h"
-#include "buffer_view.h"
+#include "hashed_view.h"
 
 #include <atomic>
 
@@ -25,7 +25,7 @@ class buffer_ref_list;
  * is inherently NOT thread safe and never will be.
  * Please use some other synchronization mechanism, like node::channel.
  */
-class buffer : public buffer_view {
+class buffer : public hashed_view {
 	friend class mutable_buffer;
 	friend class buffer_ref_list;
 
@@ -33,10 +33,18 @@ public:
 	/**
 	 * Creates an empty buffer.
 	 */
-	constexpr buffer() : buffer_view(), _p(nullptr) {}
+	constexpr buffer() : hashed_view(), _p(nullptr) {}
 
-	constexpr buffer(buffer_view&& other) : buffer_view(other), _p(nullptr) {}
-	constexpr buffer(const buffer_view& other) : buffer_view(other), _p(nullptr) {}
+	constexpr buffer(buffer_view&& other) : hashed_view(other), _p(nullptr) {}
+	constexpr buffer(const buffer_view& other) : hashed_view(other), _p(nullptr) {}
+
+	constexpr buffer(hashed_view&& other) : hashed_view(other), _p(nullptr) {}
+	constexpr buffer(const hashed_view& other) : hashed_view(other), _p(nullptr) {}
+
+	/**
+	 * Retains another buffer, while referring to it's data.
+	 */
+	buffer(const buffer& other) noexcept;
 
 	/**
 	 * Takes over another buffer.
@@ -48,13 +56,8 @@ public:
 	 */
 	buffer(mutable_buffer&& other) noexcept;
 
-	/**
-	 * Retains another buffer, while referring to it's data.
-	 */
-	buffer(const buffer& other) noexcept;
-
-	buffer& operator=(buffer_view&& other);
 	buffer& operator=(const buffer_view& other);
+	buffer& operator=(const hashed_view& other);
 
 	/**
 	 * Takes over another buffer.
@@ -124,7 +127,6 @@ public:
 	}
 
 	std::size_t use_count() const noexcept;
-
 
 	/**
 	 * Swaps the references of this buffer with the other one.

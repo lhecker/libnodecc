@@ -26,7 +26,7 @@ public:
 	virtual ~outgoing_message();
 
 
-	const node::buffer header(node::buffer_view& key);
+	const node::buffer header(node::hashed_view& key);
 
 	/**
 	 * Sets a header.

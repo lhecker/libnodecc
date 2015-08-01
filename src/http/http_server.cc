@@ -49,7 +49,7 @@ server::server() : net::server() {
 			pack->res._shutdown_on_end = !keep_alive;
 
 			// RFC 2616 - 14.23
-			if (!pack->req.has_header("host"_buffer_view)) {
+			if (!pack->req.has_header("host"_hashed_view)) {
 				pack->res.set_status_code(400);
 				pack->res.end();
 				return;
@@ -63,8 +63,8 @@ server::server() : net::server() {
 
 			if (upgrade) {
 				if (pack->req._is_websocket == 1) {
-					static const auto websocketMagic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_buffer_view;
-					const auto key = pack->req.header("sec-websocket-key"_buffer_view);
+					static const auto websocketMagic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_hashed_view;
+					const auto key = pack->req.header("sec-websocket-key"_hashed_view);
 					uint8_t digest[SHA1_DIGEST_LENGTH];
 
 					node::mutable_buffer buffer;
@@ -76,13 +76,13 @@ server::server() : net::server() {
 					s.push(buffer);
 					s.get_digest(digest);
 
-					const auto acceptHash = node::util::base64::encode(node::buffer_view(digest, sizeof(digest)));
+					const auto acceptHash = node::util::base64::encode(node::hashed_view(digest, sizeof(digest)));
 
 					pack->res._shutdown_on_end = true;
 					pack->res.set_status_code(101);
-					pack->res.set_header("connection"_buffer_view,           "upgrade"_buffer_view);
-					pack->res.set_header("upgrade"_buffer_view,              "websocket"_buffer_view);
-					pack->res.set_header("sec-websocket-accept"_buffer_view, acceptHash);
+					pack->res.set_header("connection"_hashed_view,           "upgrade"_hashed_view);
+					pack->res.set_header("upgrade"_hashed_view,              "websocket"_hashed_view);
+					pack->res.set_header("sec-websocket-accept"_hashed_view, acceptHash);
 					pack->res.send_headers();
 					return;
 				}

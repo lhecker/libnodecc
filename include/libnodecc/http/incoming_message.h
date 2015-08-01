@@ -82,12 +82,12 @@ public:
 		return this->_parser.field_set & (1 << UF_PORT) ? this->_parser.port : 0;
 	}
 
-	bool has_param(const node::buffer_view& key) noexcept {
+	bool has_param(const node::hashed_view& key) noexcept {
 		this->_parse_params();
 		return this->_params.find(key) != this->_params.cend();
 	}
 
-	const node::buffer& param(const node::buffer_view& key) noexcept {
+	const node::buffer& param(const node::hashed_view& key) noexcept {
 		this->_parse_params();
 
 		try {
@@ -207,8 +207,8 @@ public:
 	const node::buffer& method() const;
 	node::http::url url;
 
-	bool has_header(const node::buffer_view& key) const;
-	const node::buffer& header(const node::buffer_view& key) const;
+	bool has_header(const node::hashed_view& key) const;
+	const node::buffer& header(const node::hashed_view& key) const;
 
 	uint16_t status_code() const;
 	uint8_t http_version_major() const;

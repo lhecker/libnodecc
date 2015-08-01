@@ -9,9 +9,6 @@
 namespace node {
 
 class buffer_view;
-class buffer;
-class mutable_buffer;
-
 
 inline namespace literals {
 	constexpr buffer_view operator "" _buffer_view(const char*, std::size_t) noexcept;
@@ -27,21 +24,16 @@ inline namespace literals {
  * other buffers, strings and pointers, without worrying about whether
  */
 class buffer_view {
-	friend class buffer;
-	friend class mutable_buffer;
-
 	friend bool operator==(buffer_view&, buffer_view&) noexcept;
 	friend bool operator!=(buffer_view&, buffer_view&) noexcept;
-
-	friend constexpr node::buffer_view literals::operator "" _buffer_view(const char*, std::size_t) noexcept;
 
 public:
 	static constexpr std::size_t npos = -1;
 
 
-	constexpr buffer_view() : _data(nullptr), _size(0), _hash(0) {}
-	constexpr buffer_view(const buffer_view& other) : _data(other._data), _size(other._size), _hash(other._hash) {}
-	constexpr buffer_view(const void* data, std::size_t size) : _data(const_cast<void*>(data)), _size(size), _hash(0) {}
+	constexpr buffer_view() : _data(nullptr), _size(0) {}
+	constexpr buffer_view(const buffer_view& other) : _data(other._data), _size(other._size) {}
+	constexpr buffer_view(const void* data, std::size_t size) : _data(const_cast<void*>(data)), _size(size) {}
 
 	buffer_view& operator=(const buffer_view& other);
 
@@ -99,8 +91,6 @@ public:
 	}
 
 
-	std::size_t hash() const noexcept;
-
 	bool equals(const buffer_view& other) const noexcept;
 
 	int compare(const buffer_view& other, std::size_t pos1 = 0, std::size_t size1 = npos) const noexcept;
@@ -114,12 +104,9 @@ public:
 		return std::basic_string<CharT, Traits, Allocator>(reinterpret_cast<CharT*>(this->_data), this->_size);
 	}
 
-private:
-	constexpr buffer_view(const void* data, std::size_t size, std::size_t hash) : _data(const_cast<void*>(data)), _size(size), _hash(hash) {}
-
+protected:
 	void* _data;
 	std::size_t _size;
-	std::size_t _hash;
 }; // class buffer_view
 
 } // namespace node
@@ -132,25 +119,10 @@ namespace node {
 
 inline namespace literals {
 	constexpr node::buffer_view operator "" _buffer_view(const char* str, std::size_t len) noexcept {
-		return node::buffer_view(str, len, node::util::fnv1a<std::size_t>::const_hash(str, len));
+		return node::buffer_view(str, len);
 	}
 } // inline namespace literals
 
 } // namespace node
-
-
-template<>
-struct std::hash<node::buffer_view> {
-	std::size_t operator()(const node::buffer_view& buf) const {
-		return buf.hash();
-	}
-};
-
-template<>
-struct std::equal_to<node::buffer_view> {
-	bool operator()(const node::buffer_view& lhs, const node::buffer_view& rhs) const {
-		return lhs.equals(rhs);
-	}
-};
 
 #endif // nodecc_buffer_buffer_view_h
