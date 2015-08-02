@@ -7,11 +7,6 @@
 namespace node {
 
 class hashed_buffer;
-class literal_buffer_view;
-
-inline namespace literals {
-	constexpr literal_buffer_view operator "" _view(const char*, std::size_t) noexcept;
-} // inline namespace literals
 
 
 /**
@@ -24,9 +19,7 @@ inline namespace literals {
  */
 class hashed_buffer_view : public buffer_view {
 	friend class hashed_buffer;
-	friend class literal_buffer_view;
-
-	friend constexpr literal_buffer_view literals::operator "" _view(const char*, std::size_t) noexcept;
+	friend class literal_string;
 
 public:
 	constexpr hashed_buffer_view() : buffer_view(), _hash(0) {}
@@ -47,26 +40,6 @@ protected:
 
 	std::size_t _hash;
 }; // class hashed_buffer_view
-
-
-class literal_buffer_view : public hashed_buffer_view {
-public:
-	constexpr literal_buffer_view(const void* data, std::size_t size, std::size_t hash) : hashed_buffer_view(data, size, hash) {}
-}; // class literal_buffer_view
-
-} // namespace node
-
-
-#include "../util/fnv.h"
-
-
-namespace node {
-
-inline namespace literals {
-	constexpr literal_buffer_view operator "" _view(const char* str, std::size_t len) noexcept {
-		return literal_buffer_view(str, len, node::util::fnv1a<std::size_t>::const_hash(str, len));
-	}
-} // inline namespace literals
 
 } // namespace node
 

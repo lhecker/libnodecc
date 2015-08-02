@@ -103,6 +103,18 @@ public:
 		return std::basic_string<CharT, Traits, Allocator>(reinterpret_cast<CharT*>(this->_data), this->_size);
 	}
 
+	std::unique_ptr<char> c_str() const noexcept {
+		char* str = nullptr;
+
+		if (this->size()) {
+			str = new char[this->size() + 1];
+			memcpy(str, this->data(), this->size());
+			str[this->size()] = '\0';
+		}
+
+		return std::unique_ptr<char>(str);
+	}
+
 protected:
 	void* _data;
 	std::size_t _size;
@@ -117,9 +129,11 @@ protected:
 namespace node {
 
 inline namespace literals {
-	constexpr node::buffer_view operator "" _buffer_view(const char* str, std::size_t len) noexcept {
-		return node::buffer_view(str, len);
-	}
+
+constexpr node::buffer_view operator "" _buffer_view(const char* str, std::size_t len) noexcept {
+	return node::buffer_view(str, len);
+}
+
 } // inline namespace literals
 
 } // namespace node

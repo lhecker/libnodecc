@@ -33,7 +33,6 @@ buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept 
 
 buffer& buffer::operator=(const buffer_view& other) {
 	this->_release();
-
 	buffer_view::operator=(other);
 
 	return *this;

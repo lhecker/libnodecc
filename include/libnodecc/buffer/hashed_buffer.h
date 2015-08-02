@@ -9,12 +9,12 @@ namespace node {
 class hashed_buffer : public buffer {
 public:
 	hashed_buffer() : buffer(), _hash(0) {}
-	hashed_buffer(const hashed_buffer& other) : buffer(other), _hash(0) {}
+	hashed_buffer(const hashed_buffer& other) : buffer(other), _hash(other._hash) {}
 	hashed_buffer(const void* data, std::size_t size) : buffer(data, size), _hash(0) {}
 
 	hashed_buffer(const buffer& other) : buffer(other), _hash(0) {}
 
-	hashed_buffer(const literal_buffer_view& other) noexcept : buffer(other, node::weak), _hash(other._hash) {}
+	hashed_buffer(const literal_string& other) noexcept : buffer(other, node::weak), _hash(other._hash) {}
 
 	hashed_buffer& operator=(const buffer_view& other);
 	hashed_buffer& operator=(const buffer& other);
@@ -24,7 +24,6 @@ public:
 	std::size_t hash() const noexcept;
 
 	bool equals(const hashed_buffer_view& other) const noexcept;
-	bool equals(const hashed_buffer& other) const noexcept;
 
 protected:
 	std::size_t _hash;

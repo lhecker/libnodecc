@@ -44,11 +44,4 @@ bool hashed_buffer::equals(const hashed_buffer_view& other) const noexcept {
 	    && memcmp(this->data(), other.data(), this->size()) == 0;
 }
 
-bool hashed_buffer::equals(const hashed_buffer& other) const noexcept {
-	return this->data() && other.data()
-	    && this->size() == other.size()
-	    && this->hash() == other.hash()
-	    && memcmp(this->data(), other.data(), this->size()) == 0;
-}
-
 } // namespace node

@@ -2,7 +2,8 @@
 #define nodecc_buffer_buffer_h
 
 #include "../util/function_traits.h"
-#include "hashed_buffer_view.h"
+#include "buffer_view.h"
+#include "literal_string.h"
 
 #include <atomic>
 
@@ -26,8 +27,8 @@ class mutable_buffer;
  * Please use some other synchronization mechanism, like node::channel.
  */
 class buffer : public buffer_view {
-	friend class mutable_buffer;
 	friend class buffer_ref_list;
+	friend class mutable_buffer;
 
 public:
 	/**
@@ -56,7 +57,15 @@ public:
 	explicit buffer(const buffer_view& other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
 
 
-	constexpr buffer(const literal_buffer_view& other) noexcept : buffer_view(other.data(), other.size()), _p(nullptr) {}
+	/**
+	 * Constructs a buffer from a literal string view.
+	 *
+	 * This works as a shortcut to the
+	 *   buffer(const buffer_view&, buffer_flags)
+	 * constructor and allows a buffer being constructed implicitely from
+	 * a literal string, since those have a static storage duration.
+	 */
+	constexpr buffer(const literal_string& other) noexcept : buffer_view(other.data(), other.size()), _p(nullptr) {}
 
 	/**
 	 * Takes over another mutable_buffer.
