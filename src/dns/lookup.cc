@@ -26,15 +26,15 @@ struct addrinfo_deleter {
 namespace node {
 namespace dns {
 
-void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, const addrinfo* hints) {
-	lookup(cb, loop, domain, std::string(), hints);
+void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, const addrinfo* hints) {
+	lookup(cb, loop, domain, node::string(), hints);
 }
 
-void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, uint16_t port, const addrinfo* hints) {
-	lookup(cb, loop, domain, std::to_string(port), hints);
+void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, uint16_t port, const addrinfo* hints) {
+	lookup(cb, loop, domain, node::to_string(port), hints);
 }
 
-void lookup(on_lookup_t cb, node::loop& loop, const std::string& domain, const std::string& service, const addrinfo* hints) {
+void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, const node::string& service, const addrinfo* hints) {
 	auto packed_req = new getaddrinfo_packed_req(std::move(cb));
 
 	if (!hints) {
