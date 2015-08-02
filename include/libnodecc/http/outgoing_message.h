@@ -21,10 +21,9 @@ namespace http {
 
 class outgoing_message : public node::stream::writable<int, node::buffer> {
 public:
-	explicit outgoing_message();
+	explicit outgoing_message(const std::shared_ptr<node::net::socket>& socket);
 
-	virtual ~outgoing_message();
-
+	std::shared_ptr<node::net::socket> socket();
 
 	const node::buffer header(node::hashed_buffer& key);
 
@@ -50,10 +49,10 @@ protected:
 	void _end(const node::buffer chunks[], size_t chunkcnt) override;
 
 	virtual void compile_headers(node::mutable_buffer& buf) = 0;
-	virtual void socket_write(const node::buffer bufs[], size_t bufcnt) = 0;
 
 	// needs to be directly accessed by certain subclasses
 	std::unordered_map<node::hashed_buffer, node::buffer> _headers;
+	std::shared_ptr<node::net::socket> _socket;
 	bool _headers_sent;
 	bool _is_chunked;
 };

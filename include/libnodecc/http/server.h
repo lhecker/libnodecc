@@ -21,18 +21,6 @@ public:
 
 public:
 	explicit server();
-
-	void close();
-
-	template<typename F>
-	void close(F f) {
-		this->on_close(std::forward<F>(f));
-		this->close();
-	}
-
-private:
-	class req_res_pack;
-	std::weak_ptr<req_res_pack> _clients_head;
 };
 
 } // namespace http

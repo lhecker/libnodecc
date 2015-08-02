@@ -30,14 +30,14 @@ public:
 	virtual void resume() = 0;
 	virtual void pause() = 0;
 
-	void pipe(const node::stream::writable<E, T>& target, bool end = true) {
+	void pipe(node::stream::writable<E, T>& target, bool end = true) {
 		this->on_data([this, &target](const T chunks[], size_t chunkcnt) {
-			if (!target.write(chunks, chunkcnt)) {
+			if (target.write(chunks, chunkcnt)) {
 				this->pause();
 			}
 		});
 
-		target->on_drain([this]() {
+		target.on_drain([this]() {
 			this->resume();
 		});
 
@@ -46,6 +46,8 @@ public:
 				target.end();
 			});
 		}
+
+		this->resume();
 	}
 
 	node::event<void(const T chunks[], size_t chunkcnt)> on_data;

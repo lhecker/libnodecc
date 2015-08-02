@@ -34,11 +34,7 @@ namespace http {
 static node::http::http_date_buffer date_buffer;
 
 
-server_response::server_response(net::socket& socket) : outgoing_message(), _socket(socket), _status_code(200), _shutdown_on_end(true) {
-}
-
-node::net::socket& server_response::socket() {
-	return this->_socket;
+server_response::server_response(const std::shared_ptr<node::net::socket>& socket) : outgoing_message(socket), _status_code(200), _shutdown_on_end(true) {
 }
 
 uint16_t server_response::status_code() const {
@@ -71,7 +67,7 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 	}
 
 	if (this->_headers.find("date"_view) == this->_headers.end()) {
-		date_buffer.update(uv_now(this->_socket));
+		date_buffer.update(uv_now(*this->socket().get()));
 		buf.append(date_buffer.get_buffer());
 	}
 
@@ -87,15 +83,11 @@ void server_response::compile_headers(node::mutable_buffer& buf) {
 	}
 }
 
-void server_response::socket_write(const node::buffer bufs[], size_t bufcnt) {
-	this->socket().write(bufs, bufcnt);
-}
-
 void server_response::_end(const node::buffer chunks[], size_t chunkcnt) {
 	outgoing_message::_end(chunks, chunkcnt);
 
 	if (this->_shutdown_on_end) {
-		this->socket().end();
+		this->socket()->end();
 	}
 
 	// reset fields for the next response in a keepalive connection

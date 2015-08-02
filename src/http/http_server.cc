@@ -7,64 +7,43 @@
 namespace node {
 namespace http {
 
-class server::req_res_pack {
-public:
-	explicit req_res_pack(server* server) : req(socket, HTTP_REQUEST), res(socket), server(server) {
-	}
-
-	std::weak_ptr<req_res_pack> next;
-	node::net::socket socket;
-	node::http::incoming_message req;
-	node::http::server_response res;
-	server* server;
-};
-
 server::server() : net::server() {
 	this->on_connection([this]() {
-		auto pack = std::make_shared<req_res_pack>(this);
+		const auto socket = std::make_shared<net::socket>();
+		const auto req = std::make_shared<incoming_message>(socket, HTTP_REQUEST);
+		const auto res = std::make_shared<server_response>(socket);
 
-		if (!this->accept(pack->socket)) {
+		if (!this->accept(*socket.get())) {
 			return;
 		}
 
-		// enqueue pack at the head of the single-linked list of clients
-		{
-			auto currentHead = this->_clients_head.lock();
-
-			if (currentHead) {
-				currentHead->next = pack;
-			}
-		}
-
-		this->_clients_head = pack;
-
-		pack->socket.on_close([pack]() {
-			pack->req._close();
+		socket->on_close([req]() {
+			req->_close();
 		});
 
 		// callback (and thus the reference to pack) will be released if an error in socket.on_read() is returned (e.g. EOF)
-		pack->req.on_headers_complete([pack](bool upgrade, bool keep_alive) {
+		req->on_headers_complete([this, req, res](bool upgrade, bool keep_alive) {
 			using namespace node::literals;
 
-			pack->res._shutdown_on_end = !keep_alive;
+			res->_shutdown_on_end = !keep_alive;
 
 			// RFC 2616 - 14.23
-			if (!pack->req.has_header("host"_view)) {
-				pack->res.set_status_code(400);
-				pack->res.end();
+			if (!req->has_header("host"_view)) {
+				res->set_status_code(400);
+				res->end();
 				return;
 			}
 
-			if (!pack->server || !pack->server->on_request.emit(request(pack, &pack->req), response(pack, &pack->res))) {
-				pack->res.set_status_code(500);
-				pack->res.end();
+			if (!this->on_request.emit(req, res)) {
+				res->set_status_code(500);
+				res->end();
 				return;
 			}
 
 			if (upgrade) {
-				if (pack->req._is_websocket == 1) {
+				if (req->_is_websocket == 1) {
 					static const auto websocketMagic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"_view;
-					const auto key = pack->req.header("sec-websocket-key"_view);
+					const auto key = req->header("sec-websocket-key"_view);
 					uint8_t digest[SHA1_DIGEST_LENGTH];
 
 					node::mutable_buffer buffer;
@@ -78,40 +57,22 @@ server::server() : net::server() {
 
 					const auto acceptHash = node::util::base64::encode(node::buffer_view(digest, sizeof(digest)));
 
-					pack->res._shutdown_on_end = true;
-					pack->res.set_status_code(101);
-					pack->res.set_header("connection"_view,           "upgrade"_view);
-					pack->res.set_header("upgrade"_view,              "websocket"_view);
-					pack->res.set_header("sec-websocket-accept"_view, acceptHash);
-					pack->res.send_headers();
+					res->_shutdown_on_end = true;
+					res->set_status_code(101);
+					res->set_header("connection"_view,           "upgrade"_view);
+					res->set_header("upgrade"_view,              "websocket"_view);
+					res->set_header("sec-websocket-accept"_view, acceptHash);
+					res->send_headers();
 					return;
 				}
 
-				pack->res.set_status_code(501);
-				pack->res.end();
+				res->set_status_code(501);
+				res->end();
 			}
 		});
 
-		pack->socket.resume();
+		socket->resume();
 	});
-}
-
-void server::close() {
-	auto it = this->_clients_head;
-
-	while (true) {
-		auto pack = it.lock();
-
-		if (pack) {
-			pack->server = nullptr;
-			pack->socket.close();
-			it = pack->next;
-		} else {
-			break;
-		}
-	}
-
-	node::net::server::close();
 }
 
 } // namespace node

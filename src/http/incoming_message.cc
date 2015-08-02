@@ -15,7 +15,7 @@ static const node::buffer_view method_map[] = {
 namespace node {
 namespace http {
 
-incoming_message::incoming_message(net::socket& socket, http_parser_type type) : _socket(socket), _is_websocket(UINT8_MAX) {
+incoming_message::incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type) : _socket(socket), _is_websocket(UINT8_MAX) {
 	static const http_parser_settings http_req_parser_settings = {
 		nullptr,
 		incoming_message::parser_on_url,
@@ -35,7 +35,7 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 
 	this->_headers.max_load_factor(0.75);
 
-	socket.on_data([this](const node::buffer* bufs, size_t bufcnt) {
+	this->_socket->on_data([this](const node::buffer* bufs, size_t bufcnt) {
 		for (size_t i = 0; i < bufcnt; i++) {
 			const node::buffer* buf = bufs + i;
 
@@ -45,17 +45,17 @@ incoming_message::incoming_message(net::socket& socket, http_parser_type type) :
 			// TODO: handle upgrade
 			if (this->_parser.upgrade == 1 || nparsed != buf->size()) {
 				// prevent final http_parser_execute() in .on_end()?
-				this->_socket.end();
+				this->_socket->end();
 			}
 		}
 	});
 
-	socket.on_end([this]() {
+	this->_socket->on_end([this]() {
 		http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 	});
 }
 
-node::net::socket& incoming_message::socket() {
+std::shared_ptr<node::net::socket> incoming_message::socket() {
 	return this->_socket;
 }
 

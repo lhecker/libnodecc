@@ -116,7 +116,7 @@ private:
 		if (this->_state < state::url_parsed && this->_url) {
 			this->_state = state::url_parsed;
 
-			const int r =  http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
+			const int r = http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
 
 			if (r != 0) {
 				this->_state = state::error;
@@ -189,7 +189,6 @@ private:
 
 
 class incoming_message {
-	friend class client_request;
 	friend class server;
 
 	// for node::http::server/client_request
@@ -200,9 +199,9 @@ public:
 	node::event<void(const node::buffer& buffer)> on_data;
 	node::event<void()> on_close;
 
-	explicit incoming_message(node::net::socket& socket, http_parser_type type);
+	explicit incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type);
 
-	node::net::socket& socket();
+	std::shared_ptr<node::net::socket> socket();
 
 	const node::buffer& method() const;
 	node::http::url url;
@@ -216,6 +215,9 @@ public:
 
 	bool is_websocket_request();
 
+	// TODO: this is public so http::request() can close it
+	void _close();
+
 private:
 	static int parser_on_url(http_parser* parser, const char* at, size_t length);
 	static int parser_on_header_field(http_parser* parser, const char* at, size_t length);
@@ -226,9 +228,8 @@ private:
 
 	void _add_header_partials();
 	node::buffer _buffer(const char* at, size_t length);
-	void _close();
 
-	node::net::socket& _socket;
+	std::shared_ptr<node::net::socket> _socket;
 
 	std::unordered_map<node::hashed_buffer, node::mutable_buffer> _headers;
 

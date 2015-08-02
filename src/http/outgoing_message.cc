@@ -7,11 +7,12 @@
 namespace node {
 namespace http {
 
-outgoing_message::outgoing_message() : _headers_sent(false) {
+outgoing_message::outgoing_message(const std::shared_ptr<node::net::socket>& socket) : _socket(socket), _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 
-outgoing_message::~outgoing_message() {
+std::shared_ptr<node::net::socket> outgoing_message::socket() {
+	return this->_socket;
 }
 
 const node::buffer outgoing_message::header(node::hashed_buffer& key) {
@@ -135,7 +136,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 	} else {
 		// no need to copy the buffers if we pipe the bufs 1:1 to the socket
 		if (compiledBufcnt == bufcnt) {
-			this->socket_write(bufs, bufcnt);
+			this->_socket->write(bufs, bufcnt);
 			goto writeEnd;
 		}
 
@@ -200,7 +201,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 		}
 	}
 
-	this->socket_write(compiledBufs, compiledBufsPos);
+	this->_socket->write(compiledBufs, compiledBufsPos);
 
 
 writeEnd:
