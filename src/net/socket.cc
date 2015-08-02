@@ -96,7 +96,7 @@ bool socket::connect(const addrinfo& info) {
 	return true;
 }
 
-bool socket::connect(const std::string& address, uint16_t port) {
+bool socket::connect(const node::string& address, uint16_t port) {
 	dns::lookup([this](int err, const std::shared_ptr<addrinfo>& res) {
 		if (err) {
 			this->on_connect.emit(err);

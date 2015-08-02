@@ -7,7 +7,7 @@
 namespace node {
 namespace net {
 
-class server : public node::uv::stream<uv_tcp_t> {
+class server : public node::uv::handle<uv_tcp_t> {
 public:
 	node::event<void()> on_connection;
 

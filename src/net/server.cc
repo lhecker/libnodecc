@@ -4,7 +4,7 @@
 namespace node {
 namespace net {
 
-server::server() : uv::stream<uv_tcp_t>() {
+server::server() : uv::handle<uv_tcp_t>() {
 }
 
 bool server::init(node::loop& loop) {
@@ -16,7 +16,7 @@ bool server::listen(const sockaddr& addr, int backlog, bool dualstack) {
 		return false;
 	}
 
-	return 0 == uv_listen(*this, backlog, [](uv_stream_t* server, int status) {
+	return 0 == uv_listen(reinterpret_cast<uv_stream_t*>(&this->_handle), backlog, [](uv_stream_t* server, int status) {
 		if (status == 0) {
 			auto self = reinterpret_cast<node::net::server*>(server->data);
 			self->on_connection.emit();
@@ -37,7 +37,7 @@ bool server::listen6(uint16_t port, const std::string& ip, int backlog, bool dua
 }
 
 bool server::accept(socket& client) {
-	return client.init(*this) && 0 == uv_accept(*this, static_cast<uv_stream_t*>(client));
+	return client.init(*this) && 0 == uv_accept(reinterpret_cast<uv_stream_t*>(&this->_handle), static_cast<uv_stream_t*>(client));
 }
 
 uint16_t server::port() {

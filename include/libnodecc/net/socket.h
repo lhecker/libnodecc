@@ -18,7 +18,7 @@ public:
 
 	bool connect(const sockaddr& addr);
 	bool connect(const addrinfo& info);
-	bool connect(const std::string& address, uint16_t port);
+	bool connect(const node::string& address, uint16_t port);
 
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);
