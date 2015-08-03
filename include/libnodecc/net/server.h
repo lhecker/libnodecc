@@ -9,7 +9,7 @@ namespace net {
 
 class server : public node::uv::handle<uv_tcp_t> {
 public:
-	node::event<void()> on_connection;
+	node::callback<void()> connection_callback;
 
 public:
 	explicit server();

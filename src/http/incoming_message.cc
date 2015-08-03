@@ -35,7 +35,7 @@ incoming_message::incoming_message(const std::shared_ptr<node::net::socket>& soc
 
 	this->_headers.max_load_factor(0.75);
 
-	this->_socket->on_data([this](const node::buffer* bufs, size_t bufcnt) {
+	this->_socket->data_callback.connect([this](const node::buffer* bufs, size_t bufcnt) {
 		for (size_t i = 0; i < bufcnt; i++) {
 			const node::buffer* buf = bufs + i;
 
@@ -44,13 +44,13 @@ incoming_message::incoming_message(const std::shared_ptr<node::net::socket>& soc
 
 			// TODO: handle upgrade
 			if (this->_parser.upgrade == 1 || nparsed != buf->size()) {
-				// prevent final http_parser_execute() in .on_end()?
+				// prevent final http_parser_execute() in .end_callback.connect()?
 				this->_socket->end();
 			}
 		}
 	});
 
-	this->_socket->on_end([this]() {
+	this->_socket->end_callback.connect([this]() {
 		http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 	});
 }
@@ -155,7 +155,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 		self->_status_code = static_cast<uint16_t>(parser->status_code);
 	}
 
-	self->on_headers_complete.emit(parser->upgrade != 0, http_should_keep_alive(parser) != 0);
+	self->headers_complete_callback.emit(parser->upgrade != 0, http_should_keep_alive(parser) != 0);
 
 	return 0;
 }
@@ -163,8 +163,8 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	if (self->on_data) {
-		self->on_data.emit(self->_buffer(at, length));
+	if (self->data_callback) {
+		self->data_callback.emit(self->_buffer(at, length));
 	}
 
 	return 0;
@@ -176,7 +176,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	if (self->_is_websocket != 1) {
 		self->_generic_value.reset();
 		self->_headers.clear();
-		self->on_end.emit();
+		self->end_callback.emit();
 	}
 
 	return 0;
@@ -211,14 +211,14 @@ node::buffer incoming_message::_buffer(const char* at, size_t length) {
 	return this->_parser_buffer->slice(start, start + length);
 }
 
-void incoming_message::_close() {
-	this->on_close.emit();
-	this->on_data(nullptr);
-	this->on_close(nullptr);
-	this->on_end(nullptr);
+void incoming_message::_destroy() {
+	this->close_callback.emit();
+	this->data_callback.clear();
+	this->close_callback.clear();
+	this->end_callback.clear();
 
 	// delete this last since node::http::server uses this callback to store a strong reference to the req_res_pack
-	this->on_headers_complete(nullptr);
+	this->headers_complete_callback.clear();
 }
 
 } // namespace node

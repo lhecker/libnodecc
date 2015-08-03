@@ -1,7 +1,7 @@
 #ifndef nodecc_stream_h
 #define nodecc_stream_h
 
-#include "event.h"
+#include "callback.h"
 
 
 namespace node {
@@ -16,7 +16,7 @@ namespace detail {
 template<typename E, typename T>
 class base {
 public:
-	node::event<void(E err)> on_error;
+	node::callback<void(E err)> error_callback;
 };
 
 } // namespace detail
@@ -50,8 +50,8 @@ public:
 		this->resume();
 	}
 
-	node::event<void(const T chunks[], size_t chunkcnt)> on_data;
-	node::event<void()> on_end;
+	node::callback<void(const T chunks[], size_t chunkcnt)> data_callback;
+	node::callback<void()> end_callback;
 };
 
 template<typename E, typename T>
@@ -110,7 +110,7 @@ public:
 		return this->_was_flooded;
 	}
 
-	node::event<void()> on_drain;
+	node::callback<void()> drain_callback;
 
 protected:
 	inline void increase_watermark(size_t n) {
@@ -121,7 +121,7 @@ protected:
 		this->_wm = this->_wm > n ? this->_wm - n : 0;
 
 		if (this->_was_flooded && this->_wm <= this->_lwm) {
-			this->on_drain.emit();
+			this->drain_callback.emit();
 			this->_was_flooded = false;
 		}
 	}

@@ -1,8 +1,9 @@
 #ifndef nodecc_uv_handle_h
 #define nodecc_uv_handle_h
 
-#include "../event.h"
+#include "../callback.h"
 #include "../loop.h"
+#include "../signal.h"
 
 
 namespace node {
@@ -64,12 +65,12 @@ public:
 		return uv_is_active(*this) != 0;
 	}
 
-	void close() {
+	void destroy() {
 		if (this->_handle.loop && !this->is_closing()) {
 			uv_close(*this, [](uv_handle_t* handle) {
 				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
-				if (self && self->on_close) {
+				if (self) {
 					/*
 					 * If a close event is emitted it's std::function object must be reset,
 					 * since we need to ensure that potential smart pointers stored in the
@@ -80,19 +81,17 @@ public:
 					 * which would delete the std::function in that moment
 					 * as well and thus might crash the program.
 					 */
-					decltype(self->on_close) on_close;
-					self->on_close.swap(on_close);
-
-					on_close.emit();
+					self->close_signal.emit();
+					self->_destroy();
 				}
 			});
 		}
 	}
 
 	template<typename F>
-	void close(F&& f) {
-		this->on_close(std::forward<F>(f));
-		this->close();
+	void destroy(F&& f) {
+		this->on_destroy(std::forward<F>(f));
+		this->destroy();
 	}
 
 	void ref() {
@@ -104,21 +103,17 @@ public:
 	}
 
 
-	node::event<void()> on_close;
+	node::signal<void()> close_signal;
 
 protected:
+	virtual void _destroy() {
+		this->close_signal.clear();
+	}
+
 	T _handle;
 };
 
 } // namespace uv
-
-template<typename T, typename... Args>
-std::shared_ptr<T> make_shared(Args... args) {
-	auto p = std::make_shared<T>(std::forward<Args>(args)...);
-	p->on_close([p]() {});
-	return p;
-}
-
 } // namespace node
 
 template<typename T>

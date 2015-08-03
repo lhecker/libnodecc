@@ -1,16 +1,15 @@
-#ifndef nodecc_event_h
-#define nodecc_event_h
+#ifndef nodecc_callback_h
+#define nodecc_callback_h
 
 #include <functional>
 #include <mutex>
-#include <stdexcept>
-#include <utility>
+#include <type_traits>
 
 
 namespace node {
 
 template<typename T>
-struct event_optional : std::pair<T, bool> {
+struct callback_optional : std::pair<T, bool> {
 	using std::pair<T, bool>::pair;
 
 	constexpr operator bool() const noexcept {
@@ -50,24 +49,19 @@ struct event_optional : std::pair<T, bool> {
 
 
 template<typename T>
-class event;
+class callback;
 
 template<typename R, typename... Args>
-class event<R(Args...)> {
+class callback<R(Args...)> {
 public:
-	typedef std::function<R(Args...)> function_type;
+	typedef std::function<R(Args...)> callback_type;
 
 
-	constexpr event() {}
+	constexpr callback() {}
 
-	event(const event&) = delete;
-	event& operator=(const event&) = delete;
+	callback(const callback&) = delete;
+	callback& operator=(const callback&) = delete;
 
-
-	template<typename F>
-	void operator()(F&& f) {
-		this->_f = std::forward<F>(f);
-	}
 
 	constexpr operator bool() const noexcept {
 		return static_cast<bool>(this->_f);
@@ -77,12 +71,9 @@ public:
 		return !this->_f;
 	}
 
-	void clear() noexcept {
-		this->_f = nullptr;
-	}
-
-	void swap(event<R(Args...)>& other) noexcept {
-		std::swap(this->_f, other._f);
+	template<typename F>
+	void connect(F&& func) {
+		this->_f = std::forward<F>(func);
 	}
 
 	template<typename S = R, typename = typename std::enable_if<std::is_void<S>::value>::type>
@@ -96,62 +87,76 @@ public:
 	}
 
 	template<typename S = R, typename = typename std::enable_if<!std::is_void<S>::value>::type>
-	event_optional<S> emit(Args... args) {
+	callback_optional<S> emit(Args... args) {
 		if (this->empty()) {
-			return event_optional<S>();
+			return callback_optional<S>();
 		} else {
-			return event_optional<S>(this->_f(std::forward<Args>(args)...), true);
+			return callback_optional<S>(this->_f(std::forward<Args>(args)...), true);
 		}
 	}
 
+	void clear() noexcept {
+		this->_f = nullptr;
+	}
+
+	void swap(callback<R(Args...)>& other) noexcept {
+		std::swap(this->_f, other._f);
+	}
+
 protected:
-	function_type _f;
+	callback_type _f;
 };
 
 
 namespace detail {
 
 template<typename M, typename T>
-class locking_event;
+class locking_callback;
 
 template<typename M, typename R, typename... Args>
-class locking_event<M, R(Args...)> : public event<R(Args...)> {
+class locking_callback<M, R(Args...)> : public callback<R(Args...)> {
 public:
 	template<typename F>
-	void operator()(F&& f) {
+	void connect(F&& func) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		event<R(Args...)>::operator()(std::forward<F>(f));
+		callback<R(Args...)>::connect(std::forward<F>(func));
 	}
 
 	operator bool() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return event<R(Args...)>::operator bool();
+		return callback<R(Args...)>::operator bool();
 	}
 
 	bool empty() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return event<R(Args...)>::empty();
-	}
-
-	void clear() noexcept {
-		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		event<R(Args...)>::clear();
+		return callback<R(Args...)>::empty();
 	}
 
 	template<typename S = R, typename = typename std::enable_if<std::is_void<S>::value>::type>
 	bool emit(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return event<R(Args...)>::emit(std::forward<Args>(args)...);
+		return callback<R(Args...)>::emit(std::forward<Args>(args)...);
 	}
 
 	template<typename S = R, typename = typename std::enable_if<!std::is_void<S>::value>::type>
-	event_optional<S> emit(Args... args) {
+	callback_optional<S> emit(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return event<R(Args...)>::emit(std::forward<Args>(args)...);
+		return callback<R(Args...)>::emit(std::forward<Args>(args)...);
+	}
+
+	void clear() noexcept {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		callback<R(Args...)>::clear();
+	}
+
+	void swap(callback<R(Args...)>& other) noexcept {
+		std::lock_guard<typename std::remove_reference<M>::type> lock1(this->_m);
+		std::lock_guard<typename std::remove_reference<M>::type> lock2(other._m);
+		callback<R(Args...)>::swap(other);
 	}
 
 protected:
-	locking_event(M m) : _m(m) {}
+	locking_callback(M m) : _m(m) {}
 
 	M _m;
 };
@@ -160,22 +165,22 @@ protected:
 
 
 template<typename T>
-class threadsafe_event;
+class threadsafe_callback;
 
 template<typename R, typename... Args>
-class threadsafe_event<R(Args...)> : public detail::locking_event<std::mutex, R(Args...)> {
+class threadsafe_callback<R(Args...)> : public detail::locking_callback<std::mutex, R(Args...)> {
 };
 
 
 template<typename M, typename T>
-class locking_event;
+class locking_callback;
 
 template<typename M, typename R, typename... Args>
-class locking_event<M, R(Args...)> : public detail::locking_event<M&, R(Args...)> {
+class locking_callback<M, R(Args...)> : public detail::locking_callback<M&, R(Args...)> {
 public:
-	locking_event(M& m) : detail::locking_event<M&, R(Args...)>(m) {}
+	locking_callback(M& m) : detail::locking_callback<M&, R(Args...)>(m) {}
 };
 
 } // namespace node
 
-#endif // nodecc_event_h
+#endif // nodecc_callback_h

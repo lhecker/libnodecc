@@ -202,7 +202,7 @@ protected:
 	class control_base {
 	public:
 		explicit control_base(const void* base) : base(base), use_count(1) {}
-		virtual ~control_base() = default;
+		virtual ~control_base() {};
 
 		virtual void free() = 0;
 

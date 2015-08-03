@@ -9,7 +9,7 @@ namespace util {
 
 class timer : public node::uv::handle<uv_timer_t> {
 public:
-	node::event<void()> on_timeout;
+	node::callback<void()> timeout_callback;
 
 public:
 	explicit timer();
@@ -37,7 +37,12 @@ public:
 	bool again();
 
 	bool start(uint64_t timeout, uint64_t repeat);
-	bool start(uint64_t timeout, uint64_t repeat, decltype(on_timeout)::function_type cb);
+
+	template<typename T>
+	bool start(uint64_t timeout, uint64_t repeat, T cb) {
+		this->timeout_callback.connect(std::forward<T>(cb));
+		return this->start(timeout, repeat);
+	}
 
 	bool stop();
 };

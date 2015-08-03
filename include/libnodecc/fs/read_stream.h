@@ -29,8 +29,8 @@ public:
 				self->_is_reading = false;
 				self->_read();
 			} else {
-				self->on_error.emit(req->result);
-				self->on_end.emit();
+				self->error_callback.emit(req->result);
+				self->end_callback.emit();
 			}
 
 			uv_fs_req_cleanup(req);
@@ -47,36 +47,36 @@ public:
 		this->_flowing = false;
 	}
 
-	void close() {
+	void destroy() {
 		if (this->_req.loop) {
-			uv_fs_close(this->_req.loop, &this->_req, this->_file, [](uv_fs_t* req) {
+			uv_fs_destroy(this->_req.loop, &this->_req, this->_file, [](uv_fs_t* req) {
 				auto self = reinterpret_cast<read_stream*>(req->data);
 
 				if (self && self->on_close) {
 					// see uv::handle<>
-					decltype(self->on_close) on_close;
+					decltype(self->on_close) close_callback;
 					self->on_close.swap(on_close);
 
-					on_close.emit();
+					close_callback.emit();
 				}
 			});
 		}
 	}
 
 	template<typename F>
-	void close(F&& f) {
-		this->on_close(std::forward<F>(f));
-		this->close();
+	void destroy(F&& f) {
+		this->on_destroy(std::forward<F>(f));
+		this->destroy();
 	}
 
-	node::event<node::buffer()> on_close;
-	node::event<node::buffer()> on_alloc;
+	node::callback<node::buffer()> close_callback;
+	node::callback<node::buffer()> alloc_callback;
 
 private:
 	void _read() {
 		if (this->_flowing && !this->_is_reading) {
 			const size_t suggested_size = UINT16_MAX;
-			const auto r = this->on_alloc.emit();
+			const auto r = this->alloc_callback.emit();
 			uv_buf_t buf;
 
 			if (r) {
@@ -93,10 +93,10 @@ private:
 
 				if (req->result > 0 && self->on_data) {
 					const node::buffer buf = self->_alloc_buffer.slice(0, req->result);
-					self->on_data.emit(&buf, 1);
+					self->data_callback.emit(&buf, 1);
 				} else if (req->result < 0) {
-					self->on_error.emit(int(req->result));
-					self->on_end.emit();
+					self->error_callback.emit(int(req->result));
+					self->end_callback.emit();
 				}
 
 				self->_is_reading = false;
@@ -108,7 +108,7 @@ private:
 			if (r == 0) {
 				this->_is_reading = true;
 			} else {
-				this->on_error.emit(r);
+				this->error_callback.emit(r);
 			}
 		}
 	}

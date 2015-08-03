@@ -11,7 +11,7 @@ namespace fs {
 
 class event : public node::uv::handle<uv_fs_event_t> {
 public:
-	node::event<void(int err, int events, const std::string& str)> on_event;
+	node::callback<void(int err, int events, const std::string& str)> event_callback;
 
 public:
 	explicit event();

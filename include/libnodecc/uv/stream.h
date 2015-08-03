@@ -27,7 +27,7 @@ public:
 		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
-			const auto r = self->on_alloc.emit();
+			const auto r = self->alloc_callback.emit();
 
 			if (r) {
 				self->_alloc_buffer = r.value();
@@ -40,19 +40,19 @@ public:
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 
-			if (nread > 0 && self->on_data) {
+			if (nread > 0 && self->data_callback) {
 				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
-				self->on_data.emit(&buf, 1);
+				self->data_callback.emit(&buf, 1);
 			} else if (nread < 0) {
-				self->on_error.emit(int(nread));
-				self->on_end.emit();
+				self->error_callback.emit(int(nread));
+				self->end_callback.emit();
 
 				if (nread == UV_EOF) {
 					// the other side shut down it's side (FIN) --> gracefully shutdown
 					self->end();
 				} else {
 					// other error --> hard close
-					self->close();
+					self->destroy();
 				}
 			}
 
@@ -143,7 +143,7 @@ public:
 			uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 
 			if (status != 0) {
-				self->close();
+				self->destroy();
 			}
 
 			delete pack;
@@ -163,7 +163,7 @@ public:
 
 			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
 				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
-				self->close();
+				self->destroy();
 				delete req;
 			});
 
@@ -174,7 +174,7 @@ public:
 	}
 
 
-	node::event<node::buffer()> on_alloc;
+	node::callback<node::buffer()> alloc_callback;
 
 private:
 	node::buffer _alloc_buffer;

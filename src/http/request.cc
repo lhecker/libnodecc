@@ -65,21 +65,21 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	const auto socket = node::make_shared<node::net::socket>();
+	const auto socket = std::make_shared<node::net::socket>();
 	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
 	const auto res = std::make_shared<client::detail::response>(socket);
 
-	socket->on_close([res]() {
-		res->_close();
+	socket->close_signal.connect([res]() {
+		res->_destroy();
 	});
 
-	socket->on_connect([req, res, cb](int err) {
+	socket->connect_callback.connect([req, res, cb](int err) {
 		cb(err, req, res);
 
 		req->socket()->resume();
 
-		decltype(req->socket()->on_connect) on_connect;
-		req->socket()->on_connect.swap(on_connect);
+		decltype(req->socket()->connect_callback) connect_callback;
+		req->socket()->connect_callback.swap(connect_callback);
 	});
 
 	socket->init(loop);
@@ -91,17 +91,17 @@ void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, c
 	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
 	const auto res = std::make_shared<client::detail::response>(socket);
 
-	socket->on_close([res]() {
-		res->_close();
+	socket->close_signal.connect([res]() {
+		res->_destroy();
 	});
 
-	socket->on_connect([req, res, cb](int err) {
+	socket->connect_callback.connect([req, res, cb](int err) {
 		cb(err, req, res);
 
 		req->socket()->resume();
 
-		decltype(req->socket()->on_connect) on_connect;
-		req->socket()->on_connect.swap(on_connect);
+		decltype(req->socket()->connect_callback) connect_callback;
+		req->socket()->connect_callback.swap(connect_callback);
 	});
 
 	socket->init(loop);
@@ -110,32 +110,32 @@ void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, c
 
 /*
 request::request() : outgoing_message(_socket), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
-	this->_socket.on_connect([this](int err) {
+	this->_socket.connect_callback.connect([this](int err) {
 		if (err) {
-			this->on_error.emit();
-			this->on_error(nullptr);
-			this->on_connect(nullptr);
+			this->error_callback.emit();
+			this->error_callback.connect(nullptr);
+			this->connect_callback.connect(nullptr);
 		} else {
 			this->_incoming_message.url.set_url(node::buffer(this->_path.data(), this->_path.size(), node::weak));
 			this->_incoming_message._generic_value.reset(node::buffer(this->_method.data(), this->_method.size(), node::weak));
 			this->_socket.resume();
-			this->on_connect.emit(*this, this->_incoming_message);
+			this->connect_callback.emit(*this, this->_incoming_message);
 		}
 	});
 
-	this->_socket.on_close([this]() {
-		this->_incoming_message._close();
-		this->on_error(nullptr);
-		this->on_connect(nullptr);
+	this->_socket.close_callback.connect([this]() {
+		this->_incoming_message._destroy();
+		this->error_callback.connect(nullptr);
+		this->connect_callback.connect(nullptr);
 	});
 
-	this->_incoming_message.on_end([this]() {
+	this->_incoming_message.end_callback.connect([this]() {
 		this->_socket.end(); // TODO keep-alive
 	});
 }
 
-void request::close() {
-	this->_socket.close();
+void request::destroy() {
+	this->_socket.destroy();
 }
 
 void request::shutdown() {

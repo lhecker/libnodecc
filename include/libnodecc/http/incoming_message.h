@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "../buffer.h"
-#include "../event.h"
+#include "../callback.h"
 
 
 namespace node {
@@ -192,12 +192,12 @@ class incoming_message {
 	friend class server;
 
 	// for node::http::server/client_request
-	node::event<void()> on_end;
+	node::callback<void()> end_callback;
 
 public:
-	node::event<void(bool upgrade, bool keep_alive)> on_headers_complete;
-	node::event<void(const node::buffer& buffer)> on_data;
-	node::event<void()> on_close;
+	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
+	node::callback<void(const node::buffer& buffer)> data_callback;
+	node::callback<void()> close_callback;
 
 	explicit incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type);
 
@@ -216,7 +216,7 @@ public:
 	bool is_websocket_request();
 
 	// TODO: this is public so http::request() can close it
-	void _close();
+	void _destroy();
 
 private:
 	static int parser_on_url(http_parser* parser, const char* at, size_t length);

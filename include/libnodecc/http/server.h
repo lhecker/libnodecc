@@ -17,7 +17,7 @@ public:
 	typedef std::shared_ptr<node::http::incoming_message> request;
 	typedef std::shared_ptr<node::http::server_response> response;
 
-	node::event<void(const node::http::server::request& req, const node::http::server::response& res)> on_request;
+	node::callback<void(const node::http::server::request& req, const node::http::server::response& res)> request_callback;
 
 public:
 	explicit server();

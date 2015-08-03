@@ -5,7 +5,7 @@
 #include <mutex>
 #include <vector>
 
-#include "event.h"
+#include "callback.h"
 #include "uv/async.h"
 
 
@@ -20,7 +20,7 @@ public:
 	 * This callback will be called once for each notification,
 	 * that has been passed to the queue.
 	 */
-	node::event<void(const queue&)> on_notifications;
+	node::callback<void(const queue&)> notifications_callback;
 
 public:
 	explicit channel() : node::uv::async() {}
@@ -33,10 +33,15 @@ public:
 
 			{
 				std::lock_guard<std::mutex> lock(self->_mutex);
+
+				// reserve some space for the next channel round to reduce reallocations
+				const auto capacity = self->_q.capacity();
+				q.reserve(capacity + (capacity >> 1));
+
 				std::swap(q, self->_q);
 			}
 
-			self->on_notifications.emit(q);
+			self->notifications_callback.emit(q);
 		});
 
 		if (ok) {
@@ -83,9 +88,9 @@ public:
 	}
 
 	template<typename... Args>
-	void close(Args&&... args) {
-		this->on_notifications.clear();
-		node::uv::handle<uv_async_t>::close(std::forward<Args>(args)...);
+	void destroy(Args&&... args) {
+		this->notifications_callback.clear();
+		node::uv::handle<uv_async_t>::destroy(std::forward<Args>(args)...);
 	}
 
 private:

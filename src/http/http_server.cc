@@ -8,7 +8,7 @@ namespace node {
 namespace http {
 
 server::server() : net::server() {
-	this->on_connection([this]() {
+	this->connection_callback.connect([this]() {
 		const auto socket = std::make_shared<net::socket>();
 		const auto req = std::make_shared<incoming_message>(socket, HTTP_REQUEST);
 		const auto res = std::make_shared<server_response>(socket);
@@ -17,12 +17,12 @@ server::server() : net::server() {
 			return;
 		}
 
-		socket->on_close([req]() {
-			req->_close();
+		socket->close_signal.connect([req]() {
+			req->_destroy();
 		});
 
-		// callback (and thus the reference to pack) will be released if an error in socket.on_read() is returned (e.g. EOF)
-		req->on_headers_complete([this, req, res](bool upgrade, bool keep_alive) {
+		// callback (and thus the reference to pack) will be released if an error in socket.read_callback.connect() is returned (e.g. EOF)
+		req->headers_complete_callback.connect([this, req, res](bool upgrade, bool keep_alive) {
 			using namespace node::literals;
 
 			res->_shutdown_on_end = !keep_alive;
@@ -34,7 +34,7 @@ server::server() : net::server() {
 				return;
 			}
 
-			if (!this->on_request.emit(req, res)) {
+			if (!this->request_callback.emit(req, res)) {
 				res->set_status_code(500);
 				res->end();
 				return;

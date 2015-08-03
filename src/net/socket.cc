@@ -30,7 +30,7 @@ struct net_socket_connect {
 
 			if (status == 0) {
 				// connect successful ---> call callback with true
-				self->socket->on_connect.emit(status);
+				self->socket->connect_callback.emit(status);
 			} else {
 				// connect NOT successful but another address is available ---> call next connect
 				if (self->next()) {
@@ -38,8 +38,8 @@ struct net_socket_connect {
 					return;
 				} else {
 					// connect NOT successful and NO another address available ---> call callback with false
-					self->socket->on_connect.emit(status);
-					self->socket->on_connect(nullptr);
+					self->socket->connect_callback.emit(status);
+					self->socket->connect_callback.connect(nullptr);
 				}
 			}
 
@@ -52,8 +52,8 @@ struct net_socket_connect {
 				this->connect();
 			} else {
 				// connect NOT successful and NO another address available ---> call callback with false
-				this->socket->on_connect.emit(err);
-				this->socket->on_connect(nullptr);
+				this->socket->connect_callback.emit(err);
+				this->socket->connect_callback.connect(nullptr);
 				delete this;
 			}
 		}
@@ -81,10 +81,10 @@ bool socket::connect(const sockaddr& addr) {
 		auto self = reinterpret_cast<net::socket*>(req->data);
 		delete req;
 
-		self->on_connect.emit(status);
+		self->connect_callback.emit(status);
 
 		if (status) {
-			self->on_connect(nullptr);
+			self->connect_callback.connect(nullptr);
 		}
 	});
 }
@@ -99,8 +99,8 @@ bool socket::connect(const addrinfo& info) {
 bool socket::connect(const node::string& address, uint16_t port) {
 	dns::lookup([this](int err, const std::shared_ptr<addrinfo>& res) {
 		if (err) {
-			this->on_connect.emit(err);
-			this->on_connect(nullptr);
+			this->connect_callback.emit(err);
+			this->connect_callback.connect(nullptr);
 		} else {
 			net_socket_connect* data = new net_socket_connect(this, res);
 			data->connect();
