@@ -51,5 +51,11 @@ uint16_t server::port() {
 	}
 }
 
+void server::_destroy() {
+	this->connection_callback.clear();
+
+	node::uv::handle<uv_tcp_t>::_destroy();
+}
+
 } // namespace node
 } // namespace net

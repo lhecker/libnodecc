@@ -173,6 +173,13 @@ public:
 		}
 	}
 
+	void _destroy() override {
+		this->alloc_callback.clear();
+
+		node::uv::handle<T>::_destroy();
+		node::stream::duplex<int, node::buffer>::_destroy();
+	}
+
 
 	node::callback<node::buffer()> alloc_callback;
 

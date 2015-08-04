@@ -15,6 +15,146 @@ static const node::buffer_view method_map[] = {
 namespace node {
 namespace http {
 
+url::url() : _state(state::uninitialized) {}
+
+url::url(const node::buffer& url) : _url(url), _state(state::uninitialized) {
+	this->_parse_url();
+}
+
+void url::set_url(const node::buffer& url) noexcept {
+	this->_url = url;
+	this->_params.clear();
+	this->_state = state::uninitialized;
+}
+
+const node::buffer url::operator()() noexcept {
+	return this->_url;
+}
+
+const node::buffer url::schema() noexcept {
+	return this->_get(UF_SCHEMA);
+}
+
+const node::buffer url::host() noexcept {
+	return this->_get(UF_HOST);
+}
+
+const node::buffer url::port() noexcept {
+	return this->_get(UF_PORT);
+}
+
+const node::buffer url::path() noexcept {
+	return this->_get(UF_PATH);
+}
+
+const node::buffer url::query() noexcept {
+	return this->_get(UF_QUERY);
+}
+
+const node::buffer url::fragment() noexcept {
+	return this->_get(UF_FRAGMENT);
+}
+
+const node::buffer url::userinfo() noexcept {
+	return this->_get(UF_USERINFO);
+}
+
+uint16_t url::port_num() noexcept {
+	this->_parse_url();
+	return this->_parser.field_set & (1 << UF_PORT) ? this->_parser.port : 0;
+}
+
+bool url::has_param(const node::buffer& key) noexcept {
+	this->_parse_params();
+	return this->_params.find(key) != this->_params.cend();
+}
+
+const node::buffer& url::param(const node::buffer& key) noexcept {
+	this->_parse_params();
+
+	try {
+		return this->_params.at(key);
+	} catch (...) {
+		static const node::buffer empty;
+		return empty;
+	}
+}
+
+const url::params_type& url::params() noexcept {
+	this->_parse_params();
+	return this->_params;
+}
+
+bool url::_parse_url() {
+	if (this->_state < state::url_parsed && this->_url) {
+		this->_state = state::url_parsed;
+
+		const int r = http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
+
+		if (r != 0) {
+			this->_state = state::error;
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void url::_parse_params() {
+	if (this->_state < state::params_parsed && this->_parse_url()) {
+		this->_state = state::params_parsed;
+
+		const node::buffer& query = this->query();
+
+		if (query) {
+			uint8_t* data = query.data();
+			const size_t size = query.size();
+
+			size_t current_amp_pos = size_t(-1);
+			size_t current_eq_pos = 0;
+			size_t i = 0;
+			node::buffer field;
+
+			for (; i < size; i++) {
+				const auto ch = data[i];
+
+				if (ch == '&') {
+					if ((i - current_eq_pos) > 1 && field) {
+						this->_params.emplace(std::move(field), query.slice(current_eq_pos + 1, i));
+					}
+
+					current_amp_pos = i;
+					current_eq_pos = 0;
+				} else if (ch == '=' && current_eq_pos == 0) {
+					if ((i - current_amp_pos) > 1) {
+						field = query.slice(current_amp_pos + 1, i);
+					}
+
+					current_amp_pos = 0;
+					current_eq_pos = i;
+				}
+			}
+
+			// try to insert leftovers
+			if ((i - current_eq_pos) > 1 && field) {
+				this->_params.emplace(std::move(field), query.slice(current_eq_pos + 1, i));
+			}
+		}
+	}
+}
+
+node::buffer url::_get(uint_fast8_t type) noexcept {
+	this->_parse_url();
+
+	if (this->_parser.field_set & (1 << type)) {
+		const auto& u = this->_parser.field_data[type];
+		return this->_url.slice(u.off, u.off + u.len);
+	} else {
+		return node::buffer();
+	}
+}
+
+
 incoming_message::incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type) : _socket(socket), _is_websocket(UINT8_MAX) {
 	static const http_parser_settings http_req_parser_settings = {
 		nullptr,
@@ -55,7 +195,7 @@ incoming_message::incoming_message(const std::shared_ptr<node::net::socket>& soc
 	});
 }
 
-std::shared_ptr<node::net::socket> incoming_message::socket() {
+const std::shared_ptr<node::net::socket>& incoming_message::socket() {
 	return this->_socket;
 }
 
@@ -112,6 +252,14 @@ bool incoming_message::is_websocket_request() {
 	return this->_is_websocket == 1;
 }
 
+void incoming_message::resume() {
+	this->_socket->resume();
+}
+
+void incoming_message::pause() {
+	this->_socket->pause();
+}
+
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
@@ -164,7 +312,8 @@ int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->data_callback) {
-		self->data_callback.emit(self->_buffer(at, length));
+		const auto buf = self->_buffer(at, length);
+		self->data_callback.emit(&buf, 1);
 	}
 
 	return 0;
@@ -174,9 +323,9 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->_is_websocket != 1) {
+		self->end_callback.emit();
 		self->_generic_value.reset();
 		self->_headers.clear();
-		self->end_callback.emit();
 	}
 
 	return 0;
@@ -212,13 +361,14 @@ node::buffer incoming_message::_buffer(const char* at, size_t length) {
 }
 
 void incoming_message::_destroy() {
-	this->close_callback.emit();
-	this->data_callback.clear();
-	this->close_callback.clear();
-	this->end_callback.clear();
-
-	// delete this last since node::http::server uses this callback to store a strong reference to the req_res_pack
+	/*
+	 * headers_complete_callback is the only thing retaining req/res in http::server
+	 * --> delete it last ensuring that this is not accessed after this
+	 */
 	this->headers_complete_callback.clear();
+	this->_socket.reset();
+
+	node::stream::readable<int, node::buffer>::_destroy();
 }
 
 } // namespace node

@@ -37,6 +37,7 @@ typedef std::function<void(int err, const request& req, const response& res)> on
 
 } // namespace client
 
+
 void request(node::loop& loop, const node::buffer& method, const node::buffer& url, client::on_connect_t cb);
 void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, client::on_connect_t cb);
 

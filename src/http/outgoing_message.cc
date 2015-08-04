@@ -11,7 +11,7 @@ outgoing_message::outgoing_message(const std::shared_ptr<node::net::socket>& soc
 	this->_headers.max_load_factor(0.75);
 }
 
-std::shared_ptr<node::net::socket> outgoing_message::socket() {
+const std::shared_ptr<node::net::socket>& outgoing_message::socket() {
 	return this->_socket;
 }
 
@@ -213,6 +213,12 @@ writeEnd:
 	if (end) {
 		this->_headers_sent = false;
 	}
+}
+
+void outgoing_message::_destroy() {
+	this->_socket.reset();
+
+	node::stream::writable<int, node::buffer>::_destroy();
 }
 
 } // namespace node

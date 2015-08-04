@@ -71,27 +71,11 @@ public:
 				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
 
 				if (self) {
-					/*
-					 * If a close event is emitted it's std::function object must be reset,
-					 * since we need to ensure that potential smart pointers stored in the
-					 * capture group of a lambda function are deleted as well.
-					 *
-					 * Furthermore the std::function should be moved onto our stack beforehand,
-					 * since the uv::handle might get deleted/freed manually in the callback,
-					 * which would delete the std::function in that moment
-					 * as well and thus might crash the program.
-					 */
-					self->close_signal.emit();
 					self->_destroy();
+					self->close_signal.emit_and_clear();
 				}
 			});
 		}
-	}
-
-	template<typename F>
-	void destroy(F&& f) {
-		this->on_destroy(std::forward<F>(f));
-		this->destroy();
 	}
 
 	void ref() {
@@ -107,7 +91,6 @@ public:
 
 protected:
 	virtual void _destroy() {
-		this->close_signal.clear();
 	}
 
 	T _handle;

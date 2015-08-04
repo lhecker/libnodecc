@@ -118,5 +118,11 @@ bool socket::nodelay(bool enable) {
 	return 0 == uv_tcp_nodelay(*this, enable ? 1 : 0);
 }
 
+void socket::_destroy() {
+	this->connect_callback.clear();
+
+	node::uv::stream<uv_tcp_t>::_destroy();
+}
+
 } // namespace node
 } // namespace net

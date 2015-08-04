@@ -9,9 +9,6 @@ namespace net {
 
 class server : public node::uv::handle<uv_tcp_t> {
 public:
-	node::callback<void()> connection_callback;
-
-public:
 	explicit server();
 
 	bool init(node::loop& loop);
@@ -23,6 +20,10 @@ public:
 	bool accept(node::net::socket& client);
 
 	uint16_t port();
+
+	void _destroy() override;
+
+	node::callback<void()> connection_callback;
 };
 
 } // namespace net

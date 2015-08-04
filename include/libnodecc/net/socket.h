@@ -8,8 +8,7 @@ namespace node {
 namespace net {
 
 class socket : public node::uv::stream<uv_tcp_t> {
-public:
-	node::callback<void(int err)> connect_callback;
+	friend struct net_socket_connect;
 
 public:
 	explicit socket();
@@ -23,8 +22,9 @@ public:
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);
 
-private:
-	friend struct net_socket_connect;
+	void _destroy() override;
+
+	node::callback<void(int err)> connect_callback;
 };
 
 } // namespace net

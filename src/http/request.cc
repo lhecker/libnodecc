@@ -36,11 +36,34 @@ void request::compile_headers(node::mutable_buffer& buf) {
 }
 
 
-response::response(const std::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
+response::response(node::loop& loop, const std::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
 }
 
 } // namespace detail
 } // namespace client
+
+
+static std::shared_ptr<node::net::socket> _request(const node::buffer& host, const node::buffer& method, const node::buffer& path) {
+	const auto socket = std::make_shared<node::net::socket>();
+	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
+	const auto res = std::make_shared<client::detail::response>(socket);
+
+	socket->close_signal.tracked_connect(req, std::bind(&client::detail::request::_destroy, req.get()));
+	socket->close_signal.tracked_connect(req, std::bind(&client::detail::response::_destroy, req.get()));
+
+	socket->connect_callback.connect([req, res, cb](int err) {
+		cb(err, req, res);
+
+		req->socket()->resume();
+
+		decltype(req->socket()->connect_callback) connect_callback;
+		req->socket()->connect_callback.swap(connect_callback);
+	});
+
+	socket->init(loop);
+
+	return socket;
+}
 
 
 void request(node::loop& loop, const node::buffer& method, const node::buffer& url, client::on_connect_t cb) {
@@ -65,83 +88,14 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	const auto socket = std::make_shared<node::net::socket>();
-	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
-	const auto res = std::make_shared<client::detail::response>(socket);
-
-	socket->close_signal.connect([res]() {
-		res->_destroy();
-	});
-
-	socket->connect_callback.connect([req, res, cb](int err) {
-		cb(err, req, res);
-
-		req->socket()->resume();
-
-		decltype(req->socket()->connect_callback) connect_callback;
-		req->socket()->connect_callback.swap(connect_callback);
-	});
-
-	socket->init(loop);
+	const auto socket = _request(host, method, path);
 	socket->connect(host, parser.port ? parser.port : 80);
 }
 
 void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, client::on_connect_t cb) {
-	const auto socket = std::make_shared<node::net::socket>();
-	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
-	const auto res = std::make_shared<client::detail::response>(socket);
-
-	socket->close_signal.connect([res]() {
-		res->_destroy();
-	});
-
-	socket->connect_callback.connect([req, res, cb](int err) {
-		cb(err, req, res);
-
-		req->socket()->resume();
-
-		decltype(req->socket()->connect_callback) connect_callback;
-		req->socket()->connect_callback.swap(connect_callback);
-	});
-
-	socket->init(loop);
+	const auto socket = _request(host, method, path);
 	socket->connect(addr);
 }
-
-/*
-request::request() : outgoing_message(_socket), _incoming_message(_socket, HTTP_RESPONSE), _method("GET"), _path("/") {
-	this->_socket.connect_callback.connect([this](int err) {
-		if (err) {
-			this->error_callback.emit();
-			this->error_callback.connect(nullptr);
-			this->connect_callback.connect(nullptr);
-		} else {
-			this->_incoming_message.url.set_url(node::buffer(this->_path.data(), this->_path.size(), node::weak));
-			this->_incoming_message._generic_value.reset(node::buffer(this->_method.data(), this->_method.size(), node::weak));
-			this->_socket.resume();
-			this->connect_callback.emit(*this, this->_incoming_message);
-		}
-	});
-
-	this->_socket.close_callback.connect([this]() {
-		this->_incoming_message._destroy();
-		this->error_callback.connect(nullptr);
-		this->connect_callback.connect(nullptr);
-	});
-
-	this->_incoming_message.end_callback.connect([this]() {
-		this->_socket.end(); // TODO keep-alive
-	});
-}
-
-void request::destroy() {
-	this->_socket.destroy();
-}
-
-void request::shutdown() {
-	this->_socket.end();
-}
-*/
 
 } // namespace node
 } // namespace http

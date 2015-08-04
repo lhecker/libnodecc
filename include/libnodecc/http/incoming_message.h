@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "../buffer.h"
-#include "../callback.h"
+#include "../stream.h"
 
 
 namespace node {
@@ -33,75 +33,26 @@ public:
 	typedef std::unordered_map<node::hashed_buffer, node::buffer> params_type;
 
 
-	explicit url() : _state(state::uninitialized) {}
+	explicit url();
 
-	explicit url(const node::buffer& url) : _url(url), _state(state::uninitialized) {
-		this->_parse_url();
-	}
+	explicit url(const node::buffer& url);
 
-	void set_url(const node::buffer& url) noexcept {
-		this->_url = url;
-		this->_params.clear();
-		this->_state = state::uninitialized;
-	}
+	void set_url(const node::buffer& url) noexcept;
 
-	const node::buffer operator()() noexcept {
-		return this->_url;
-	}
+	const node::buffer operator()() noexcept;
+	const node::buffer schema() noexcept;
+	const node::buffer host() noexcept;
+	const node::buffer port() noexcept;
+	const node::buffer path() noexcept;
+	const node::buffer query() noexcept;
+	const node::buffer fragment() noexcept;
+	const node::buffer userinfo() noexcept;
 
-	const node::buffer schema() noexcept {
-		return this->_get(UF_SCHEMA);
-	}
+	uint16_t port_num() noexcept;
 
-	const node::buffer host() noexcept {
-		return this->_get(UF_HOST);
-	}
-
-	const node::buffer port() noexcept {
-		return this->_get(UF_PORT);
-	}
-
-	const node::buffer path() noexcept {
-		return this->_get(UF_PATH);
-	}
-
-	const node::buffer query() noexcept {
-		return this->_get(UF_QUERY);
-	}
-
-	const node::buffer fragment() noexcept {
-		return this->_get(UF_FRAGMENT);
-	}
-
-	const node::buffer userinfo() noexcept {
-		return this->_get(UF_USERINFO);
-	}
-
-	uint16_t port_num() noexcept {
-		this->_parse_url();
-		return this->_parser.field_set & (1 << UF_PORT) ? this->_parser.port : 0;
-	}
-
-	bool has_param(const node::buffer& key) noexcept {
-		this->_parse_params();
-		return this->_params.find(key) != this->_params.cend();
-	}
-
-	const node::buffer& param(const node::buffer& key) noexcept {
-		this->_parse_params();
-
-		try {
-			return this->_params.at(key);
-		} catch (...) {
-			static const node::buffer empty;
-			return empty;
-		}
-	}
-
-	const params_type& params() noexcept {
-		this->_parse_params();
-		return this->_params;
-	}
+	bool has_param(const node::buffer& key) noexcept;
+	const node::buffer& param(const node::buffer& key) noexcept;
+	const params_type& params() noexcept;
 
 private:
 	enum state : uint8_t {
@@ -111,75 +62,9 @@ private:
 		error,
 	};
 
-
-	bool _parse_url() {
-		if (this->_state < state::url_parsed && this->_url) {
-			this->_state = state::url_parsed;
-
-			const int r = http_parser_parse_url(this->_url.data<char>(), this->_url.size(), false, &this->_parser);
-
-			if (r != 0) {
-				this->_state = state::error;
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	void _parse_params() {
-		if (this->_state < state::params_parsed && this->_parse_url()) {
-			this->_state = state::params_parsed;
-
-			const node::buffer& query = this->query();
-
-			if (query) {
-				uint8_t* data = query.data();
-				const size_t size = query.size();
-
-				size_t current_amp_pos = size_t(-1);
-				size_t current_eq_pos = 0;
-				size_t i = 0;
-				node::buffer field;
-
-				for (; i < size; i++) {
-					const auto ch = data[i];
-
-					if (ch == '&') {
-						if ((i - current_eq_pos) > 1 && field) {
-							this->_params.emplace(std::move(field), query.slice(current_eq_pos + 1, i));
-						}
-
-						current_amp_pos = i;
-						current_eq_pos = 0;
-					} else if (ch == '=' && current_eq_pos == 0) {
-						if ((i - current_amp_pos) > 1) {
-							field = query.slice(current_amp_pos + 1, i);
-						}
-
-						current_amp_pos = 0;
-						current_eq_pos = i;
-					}
-				}
-
-				// try to insert leftovers
-				if ((i - current_eq_pos) > 1 && field) {
-					this->_params.emplace(std::move(field), query.slice(current_eq_pos + 1, i));
-				}
-			}
-		}
-	}
-
-	node::buffer _get(uint_fast8_t type) noexcept {
-		this->_parse_url();
-
-		if (this->_parser.field_set & (1 << type)) {
-			const auto& u = this->_parser.field_data[type];
-			return this->_url.slice(u.off, u.off + u.len);
-		} else {
-			return node::buffer();
-		}
-	}
+	bool _parse_url();
+	void _parse_params();
+	node::buffer _get(uint_fast8_t type) noexcept;
 
 	params_type _params;
 	node::buffer _url;
@@ -188,20 +73,15 @@ private:
 };
 
 
-class incoming_message {
+class incoming_message : public node::stream::readable<int, node::buffer> {
 	friend class server;
-
-	// for node::http::server/client_request
-	node::callback<void()> end_callback;
 
 public:
 	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
-	node::callback<void(const node::buffer& buffer)> data_callback;
-	node::callback<void()> close_callback;
 
 	explicit incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type);
 
-	std::shared_ptr<node::net::socket> socket();
+	const std::shared_ptr<node::net::socket>& socket();
 
 	const node::buffer& method() const;
 	node::http::url url;
@@ -215,7 +95,10 @@ public:
 
 	bool is_websocket_request();
 
-	// TODO: this is public so http::request() can close it
+	void resume() override;
+	void pause() override;
+
+protected:
 	void _destroy();
 
 private:
@@ -228,6 +111,7 @@ private:
 
 	void _add_header_partials();
 	node::buffer _buffer(const char* at, size_t length);
+
 
 	std::shared_ptr<node::net::socket> _socket;
 
