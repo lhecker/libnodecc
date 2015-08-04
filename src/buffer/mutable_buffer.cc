@@ -172,6 +172,16 @@ void mutable_buffer::clear() noexcept {
 	this->_size = 0;
 }
 
+mutable_buffer mutable_buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
+	const uint8_t* previous_data = this->data();
+	const std::size_t previous_capacity = this->capacity();
+
+	mutable_buffer buf(buffer::slice(start, end));
+	buf._capacity = previous_capacity - std::size_t(this->data() - previous_data);
+
+	return buf;
+}
+
 void* mutable_buffer::_expand_size(std::size_t size) {
 	const std::size_t prev_size = this->size();
 
