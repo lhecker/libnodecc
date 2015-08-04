@@ -15,7 +15,7 @@ struct signal_element_base {
 	constexpr signal_element_base() : next(nullptr) {}
 	virtual ~signal_element_base() {};
 
-	virtual bool operator()(Args... args) = 0;
+	virtual bool emit(Args... args) = 0;
 
 	signal_element_base* next;
 };
@@ -32,7 +32,7 @@ class signal<R(Args...)> {
 	static_assert(std::is_void<R>::value, "node::signal requires the return value to be void");
 
 public:
-	typedef detail::signal_element_base<Args...>* iterator;
+	typedef detail::signal_element_base<Args...> list_type;
 
 
 	constexpr signal() {}
@@ -55,10 +55,10 @@ public:
 
 	template<typename F>
 	void connect(F&& func) {
-		struct signal_element : detail::signal_element_base<Args...> {
-			signal_element(F&& func) : detail::signal_element_base<Args...>(), func(std::forward<F>(func)) {}
+		struct signal_element : list_type {
+			signal_element(F&& func) : list_type(), func(std::forward<F>(func)) {}
 
-			bool operator()(Args... args) override {
+			bool emit(Args... args) override {
 				this->func(std::forward<Args>(args)...);
 				return false;
 			}
@@ -71,10 +71,11 @@ public:
 
 	template<typename S, typename F>
 	void tracked_connect(S&& tracked_object, F&& func) {
-		struct signal_element : detail::signal_element_base<Args...> {
-			signal_element(S&& tracked_object, F&& func) : detail::signal_element_base<Args...>(), tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
+		struct signal_element : list_type {
+			signal_element(S&& tracked_object, F&& func) : list_type(), tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
 
-			bool operator()(Args... args) override {
+			bool emit(Args... args) override {
+				// lock() to ensure that the object is not deleted during the func() call
 				const auto locked_object = this->tracked_object.lock();
 
 				if (locked_object) {
@@ -85,7 +86,7 @@ public:
 				}
 			}
 
-			std::weak_ptr<S> tracked_object;
+			std::weak_ptr<typename std::remove_reference<S>::type::element_type> tracked_object;
 			F func;
 		};
 
@@ -93,30 +94,47 @@ public:
 	}
 
 	bool emit(Args... args) {
-		if (this->empty()) {
-			return false;
-		} else {
-			iterator prev = nullptr;
-			iterator ptr = this->_head;
+		list_type* prev = nullptr;
+		list_type* ptr = this->_head;
 
-			while (ptr) {
-				const bool remove = ptr->operator()(std::forward<Args>(args)...);
+		while (ptr) {
+			list_type* next = ptr->next;
+			const bool remove = ptr->emit(std::forward<Args>(args)...);
 
-				if (remove) {
-					this->_remove(prev, ptr);
-				}
-
-				prev = ptr;
-				ptr = ptr->next;
+			if (remove) {
+				this->_remove(prev, ptr);
 			}
 
-			return true;
+			prev = ptr;
+			ptr = next;
 		}
+
+		return prev != nullptr;
 	}
 
-	void remove(iterator iter) {
-		iterator prev = nullptr;
-		iterator ptr = this->_head;
+	bool emit_and_clear(Args... args) {
+		list_type* ptr = this->_head;
+		bool ret = ptr != nullptr;
+
+		// see clear() as to why we need to set it to null
+		this->_head = nullptr;
+		this->_tail = nullptr;
+
+		while (ptr) {
+			list_type* tmp = ptr;
+			ptr = ptr->next;
+
+			tmp->emit(std::forward<Args>(args)...);
+
+			delete tmp;
+		}
+
+		return ret;
+	}
+
+	void remove(list_type* iter) {
+		list_type* prev = nullptr;
+		list_type* ptr = this->_head;
 
 		while (ptr) {
 			if (iter == ptr) {
@@ -129,16 +147,23 @@ public:
 	}
 
 	void clear() {
-		iterator ptr = this->_head;
+		const list_type* ptr = this->_head;
+
+		/*
+		 * If this signal is wrapped in a class managed by a shared_ptr,
+		 * which is only held by a callable object held by this signal,
+		 * calling clear() will lead to this destructor getting called,
+		 * which in turn calls clear() again.
+		 * ---> We need to make sure that clear() is doing nothing there.
+		 */
+		this->_head = nullptr;
+		this->_tail = nullptr;
 
 		while (ptr) {
-			const iterator tmp = ptr;
+			const list_type* tmp = ptr;
 			ptr = ptr->next;
 			delete tmp;
 		}
-
-		this->_head = nullptr;
-		this->_tail = nullptr;
 	}
 
 	void swap(signal<R(Args...)>& other) noexcept {
@@ -147,7 +172,7 @@ public:
 	}
 
 protected:
-	void _append(iterator ptr) {
+	void _append(list_type* ptr) {
 		if (this->_tail) {
 			this->_tail->next = ptr;
 		} else {
@@ -157,7 +182,27 @@ protected:
 		this->_tail = ptr;
 	}
 
-	void _remove(iterator prev, iterator ptr) {
+	bool _emit(bool clear, list_type* ptr, Args... args) {
+		list_type* prev = nullptr;
+
+		while (ptr) {
+			list_type* next = ptr->next;
+			const bool remove = ptr->emit(std::forward<Args>(args)...);
+
+			if (clear) {
+				delete ptr;
+			} else if (remove) {
+				this->_remove(prev, ptr);
+			}
+
+			prev = ptr;
+			ptr = next;
+		}
+
+		return prev != nullptr;
+	}
+
+	void _remove(list_type* prev, list_type* ptr) {
 		const auto next = ptr->next;
 
 		if (prev) {
@@ -178,8 +223,8 @@ protected:
 		delete ptr;
 	}
 
-	iterator _head;
-	iterator _tail;
+	list_type* _head;
+	list_type* _tail;
 };
 
 
@@ -218,7 +263,12 @@ public:
 		signal<R(Args...)>::emit(std::forward<Args>(args)...);
 	}
 
-	void remove(typename signal<R(Args...)>::iterator iter) {
+	bool emit_and_clear(Args... args) {
+		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
+		signal<R(Args...)>::emit(std::forward<Args>(args)...);
+	}
+
+	void remove(typename signal<R(Args...)>::list_type* iter) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
 		signal<R(Args...)>::remove(iter);
 	}
