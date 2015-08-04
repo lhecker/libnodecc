@@ -103,8 +103,7 @@ public:
 	}
 
 	inline bool end() {
-		this->_end(nullptr, 0);
-		return this->_was_flooded;
+		return this->end(nullptr, 0);
 	}
 
 	inline bool end(const T& chunk) {

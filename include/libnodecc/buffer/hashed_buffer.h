@@ -14,7 +14,7 @@ public:
 
 	hashed_buffer(const buffer& other) : buffer(other), _hash(0) {}
 
-	hashed_buffer(const literal_string& other) noexcept : buffer(other, node::weak), _hash(other._hash) {}
+	hashed_buffer(const literal_string& other) noexcept : buffer(other, buffer_flags::weak), _hash(other._hash) {}
 
 	hashed_buffer& operator=(const buffer_view& other);
 	hashed_buffer& operator=(const buffer& other);

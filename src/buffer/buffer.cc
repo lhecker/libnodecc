@@ -26,7 +26,7 @@ buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other), _p(other._
 }
 
 buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept : buffer_view(data, size), _p(nullptr) {
-	if (flags == node::copy) {
+	if (flags == buffer_flags::copy) {
 		this->copy(*this);
 	}
 }
@@ -89,9 +89,10 @@ void buffer::reset(std::size_t size) {
 void buffer::reset(const buffer_view& other, buffer_flags flags) {
 	this->_release();
 
-	buffer_view(other.data(), other.size());
+	this->_data = other.data();
+	this->_size = other.size();
 
-	if (flags == node::copy) {
+	if (flags == buffer_flags::copy) {
 		this->copy(*this);
 	}
 }

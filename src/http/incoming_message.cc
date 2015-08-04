@@ -297,7 +297,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 
 		self->url.set_url(self->_generic_value);
 
-		self->_generic_value.reset(method_map[parser->method], node::weak);
+		self->_generic_value.reset(method_map[parser->method], node::buffer_flags::weak);
 	} else {
 		// HTTP_RESPONSE
 		self->_status_code = static_cast<uint16_t>(parser->status_code);

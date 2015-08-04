@@ -71,12 +71,11 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 						 * If an overflow happens break this loop and
 						 * send the data using the chunked transfer encoding.
 						 */
-						std::numeric_limits<decltype(contentLength)>::max();
-						if (size > 0 - contentLength) {
+						if (size > std::numeric_limits<decltype(contentLength)>::max() - contentLength) {
 							break;
 						}
 
-						contentLength += bufs[i].size();
+						contentLength += size;
 					}
 
 					if (i == bufcnt) {
@@ -87,10 +86,12 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 						node::mutable_buffer buf;
 						buf.append_number(contentLength, 10);
 
-						this->set_header("content-length"_view, buf);
-						this->_is_chunked = false;
+						if (buf) {
+							this->set_header("content-length"_view, buf);
+							this->_is_chunked = false;
 
-						goto contentLengthSuccessfullySet;
+							goto contentLengthSuccessfullySet;
+						}
 					}
 				}
 
@@ -106,14 +107,14 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 	contentLengthSuccessfullySet:
 
 		/*
-		 * If it this write call will also send the headers and
-		 * uses chunked encoding we can append the first
-		 * chunk length field directly to it.
+		 * If this connection uses chunked encoding and
+		 * this method call will also send the headers out,
+		 * we will append the chunk length directly to the headers.
 		 *
 		 * If it isn't chunked we must use a seperate buffer for the header.
 		 */
 		if (!this->_is_chunked) {
-			compiledBufcnt = 1;
+			compiledBufcnt++;
 		}
 	}
 
@@ -161,9 +162,8 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 		this->compile_headers(buf);
 
 		/*
-		 * If it this write call will also send the headers and
-		 * uses chunked encoding we can append the first
-		 * chunk length field directly to it.
+		 * If it this write call uses chunked encoding and will also send the
+		 * headers out we can append the first chunk length field directly to it.
 		 *
 		 * If it isn't chunked we must use a seperate buffer for the header.
 		 */
@@ -192,9 +192,8 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 			buf.reset();
 		}
 
-		static const node::buffer normalChunk("\r\n", node::weak);
-		static const node::buffer endChunk("\r\n0\r\n\r\n", node::weak);
-		compiledBufs[compiledBufsPos++] = end ? endChunk : normalChunk;
+		using namespace node::literals;
+		compiledBufs[compiledBufsPos++].reset(end ? "\r\n0\r\n\r\n"_buffer_view : "\r\n"_buffer_view, node::buffer_flags::weak);
 	} else {
 		for (size_t i = 0; i < bufcnt; i++) {
 			compiledBufs[compiledBufsPos++] = bufs[i];

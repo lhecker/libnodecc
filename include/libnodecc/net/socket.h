@@ -12,7 +12,7 @@ class socket : public node::uv::stream<uv_tcp_t> {
 
 public:
 	explicit socket();
-	
+
 	bool init(node::loop& loop);
 
 	bool connect(const sockaddr& addr);

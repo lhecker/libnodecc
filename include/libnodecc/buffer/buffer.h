@@ -10,7 +10,7 @@
 
 namespace node {
 
-enum buffer_flags {
+enum class buffer_flags {
 	weak = 0,
 	copy = 1,
 };
@@ -53,8 +53,8 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param flags node::weak or node::copy
 	 */
-	explicit buffer(const void* data, std::size_t size, buffer_flags flags = node::copy) noexcept;
-	explicit buffer(const buffer_view& other, buffer_flags flags = node::copy) noexcept : buffer(other.data(), other.size(), flags) {};
+	explicit buffer(const void* data, std::size_t size, buffer_flags flags = buffer_flags::copy) noexcept;
+	explicit buffer(const buffer_view& other, buffer_flags flags = buffer_flags::copy) noexcept : buffer(other.data(), other.size(), flags) {};
 
 
 	/**
@@ -148,9 +148,9 @@ public:
 	 */
 	void reset(size_t size);
 
-	void reset(const buffer_view& other, buffer_flags flags = node::copy);
+	void reset(const buffer_view& other, buffer_flags flags = buffer_flags::copy);
 
-	inline void reset(const void* data, std::size_t size, buffer_flags flags = node::copy) {
+	inline void reset(const void* data, std::size_t size, buffer_flags flags = buffer_flags::copy) {
 		this->reset(node::buffer_view(data, size), flags);
 	}
 

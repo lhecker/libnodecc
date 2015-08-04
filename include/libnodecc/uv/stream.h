@@ -156,7 +156,9 @@ public:
 
 	void _end(const node::buffer bufs[], size_t bufcnt) override {
 		if (!this->is_closing()) {
-			this->_write(bufs, bufcnt);
+			if (bufcnt) {
+				this->_write(bufs, bufcnt);
+			}
 
 			uv_shutdown_t* req = new uv_shutdown_t;
 			req->data = this;
