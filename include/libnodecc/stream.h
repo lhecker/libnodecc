@@ -10,12 +10,76 @@ namespace stream {
 template <typename E, typename T>
 class writable;
 
+template <typename E, typename T>
+class readable;
 
+} // namespace stream
+
+
+template<typename E, typename T>
+static void pipe(stream::readable<E, T>& from, stream::writable<E, T>& to, bool end = true) {
+	from.data_callback.connect([&from, &to](const T chunks[], size_t chunkcnt) {
+		if (to.write(chunks, chunkcnt)) {
+			from.pause();
+		}
+	});
+
+	from.error_callback.connect([&to](E err) {
+		to.error_callback.emit(err);
+	});
+
+	to.drain_callback.connect([&from]() {
+		from.resume();
+	});
+
+	if (end) {
+		from.end_callback.connect([&to]() {
+			to.end();
+		});
+	}
+
+	if (!to.is_flooded()) {
+		from.resume();
+	}
+}
+
+template<typename X, typename Y, typename = typename std::enable_if<std::is_same<typename X::exception_type, typename Y::exception_type>::value && std::is_same<typename X::chunk_type, typename Y::chunk_type>::value>::type>
+static void pipe(const std::shared_ptr<X>& from, const std::shared_ptr<Y>& to, bool end = true) {
+	from->data_callback.connect([from, to](const typename X::chunk_type chunks[], size_t chunkcnt) {
+		if (to->write(chunks, chunkcnt)) {
+			from->pause();
+		}
+	});
+
+	from->error_callback.connect([to](typename X::exception_type err) {
+		to->error_callback.emit(err);
+	});
+
+	to->drain_callback.connect([from]() {
+		from->resume();
+	});
+
+	if (end) {
+		from->end_callback.connect([to]() {
+			to->end();
+		});
+	}
+
+	if (!to->is_flooded()) {
+		from->resume();
+	}
+}
+
+
+namespace stream {
 namespace detail {
 
 template<typename E, typename T>
 class base {
 public:
+	typedef E exception_type;
+	typedef T chunk_type;
+
 	node::callback<void(E err)> error_callback;
 };
 
@@ -30,24 +94,9 @@ public:
 	virtual void resume() = 0;
 	virtual void pause() = 0;
 
-	void pipe(node::stream::writable<E, T>& target, bool end = true) {
-		this->data_callback.connect([this, &target](const T chunks[], size_t chunkcnt) {
-			if (target.write(chunks, chunkcnt)) {
-				this->pause();
-			}
-		});
-
-		target.drain_callback.connect([this]() {
-			this->resume();
-		});
-
-		if (end) {
-			this->end_callback.connect([&target]() {
-				target.end();
-			});
-		}
-
-		this->resume();
+	template<typename To>
+	void pipe(const writable<E, T>& to, bool end = true) {
+		node::pipe(this, to, end);
 	}
 
 	void _destroy() {
@@ -90,6 +139,10 @@ public:
 
 	inline void set_lowwatermark(size_t lwm) {
 		this->_lwm = lwm;
+	}
+
+	inline bool is_flooded() const {
+		return this->_was_flooded;
 	}
 
 	inline bool write(const T& chunk) {

@@ -27,6 +27,12 @@ bool outgoing_message::headers_sent() const {
 	return this->_headers_sent;
 }
 
+void outgoing_message::destroy() {
+	if (this->_socket) {
+		this->_socket->destroy();
+	}
+}
+
 void outgoing_message::_write(const node::buffer chunks[], size_t chunkcnt) {
 	this->http_write(chunks, chunkcnt, false);
 }
@@ -36,6 +42,10 @@ void outgoing_message::_end(const node::buffer chunks[], size_t chunkcnt) {
 }
 
 void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool end) {
+	if (!this->_socket) {
+		return;
+	}
+
 	size_t compiledBufcnt = 0;
 	size_t compiledBufsPos = 0;
 	node::buffer* compiledBufs = nullptr;

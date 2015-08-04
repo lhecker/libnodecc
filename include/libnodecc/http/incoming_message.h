@@ -98,6 +98,8 @@ public:
 	void resume() override;
 	void pause() override;
 
+	void destroy();
+
 protected:
 	void _destroy();
 

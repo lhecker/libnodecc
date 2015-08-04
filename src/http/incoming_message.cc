@@ -253,11 +253,21 @@ bool incoming_message::is_websocket_request() {
 }
 
 void incoming_message::resume() {
-	this->_socket->resume();
+	if (this->_socket) {
+		this->_socket->resume();
+	}
 }
 
 void incoming_message::pause() {
-	this->_socket->pause();
+	if (this->_socket) {
+		this->_socket->pause();
+	}
+}
+
+void incoming_message::destroy() {
+	if (this->_socket) {
+		this->_socket->destroy();
+	}
 }
 
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {

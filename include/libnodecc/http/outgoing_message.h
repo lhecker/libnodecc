@@ -19,7 +19,7 @@ class socket;
 namespace node {
 namespace http {
 
-class outgoing_message : public node::stream::writable<int, node::buffer>, public std::enable_shared_from_this<outgoing_message> {
+class outgoing_message : public node::stream::writable<int, node::buffer> {
 public:
 	explicit outgoing_message(const std::shared_ptr<node::net::socket>& socket);
 
@@ -41,6 +41,8 @@ public:
 	inline void send_headers() {
 		this->write(nullptr, 0);
 	}
+
+	void destroy();
 
 protected:
 	void http_write(const node::buffer bufs[], size_t bufcnt, bool end);

@@ -107,7 +107,7 @@ server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 		}
 
 		const auto& _is_destroyed = this->_is_destroyed;
-		socket->close_signal.connect([this, socket, _is_destroyed, it]() {
+		socket->destroy_signal.connect([this, socket, _is_destroyed, it]() {
 			if (!*_is_destroyed) {
 				this->_clients.erase(it);
 			}
@@ -116,8 +116,8 @@ server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 		const auto req = std::make_shared<server_request>(socket, HTTP_REQUEST);
 		const auto res = std::make_shared<server_response>(socket);
 
-		socket->close_signal.tracked_connect(req, std::bind(&server::server_request::_destroy, req.get()));
-		socket->close_signal.tracked_connect(res, std::bind(&server::server_response::_destroy,  res.get()));
+		socket->destroy_signal.tracked_connect(req, std::bind(&server::server_request::_destroy, req.get()));
+		socket->destroy_signal.tracked_connect(res, std::bind(&server::server_response::_destroy,  res.get()));
 
 		req->headers_complete_callback.connect([this, req, res](bool upgrade, bool keep_alive) {
 			using namespace node::literals;

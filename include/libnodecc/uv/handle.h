@@ -72,10 +72,16 @@ public:
 
 				if (self) {
 					self->_destroy();
-					self->close_signal.emit_and_clear();
+					self->destroy_signal.emit_and_clear();
 				}
 			});
 		}
+	}
+
+	template<typename F>
+	void destroy(F&& func) {
+		this->destroy_signal.connect(func);
+		this->destroy();
 	}
 
 	void ref() {
@@ -87,7 +93,7 @@ public:
 	}
 
 
-	node::signal<void()> close_signal;
+	node::signal<void()> destroy_signal;
 
 protected:
 	virtual void _destroy() {

@@ -45,8 +45,10 @@ static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
 	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
 	const auto res = std::make_shared<client::detail::response>(socket);
 
-	socket->close_signal.tracked_connect(req, std::bind(&client::detail::request::_destroy, req.get()));
-	socket->close_signal.tracked_connect(req, std::bind(&client::detail::response::_destroy, res.get()));
+	socket->destroy_signal.connect([socket]() {});
+
+	socket->destroy_signal.tracked_connect(req, std::bind(&client::detail::request::_destroy, req.get()));
+	socket->destroy_signal.tracked_connect(req, std::bind(&client::detail::response::_destroy, res.get()));
 
 	socket->connect_callback.connect([req, res, cb](int err) {
 		cb(err, req, res);
