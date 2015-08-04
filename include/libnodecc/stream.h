@@ -31,23 +31,30 @@ public:
 	virtual void pause() = 0;
 
 	void pipe(node::stream::writable<E, T>& target, bool end = true) {
-		this->on_data([this, &target](const T chunks[], size_t chunkcnt) {
+		this->data_callback.connect([this, &target](const T chunks[], size_t chunkcnt) {
 			if (target.write(chunks, chunkcnt)) {
 				this->pause();
 			}
 		});
 
-		target.on_drain([this]() {
+		target.drain_callback.connect([this]() {
 			this->resume();
 		});
 
 		if (end) {
-			this->on_end([&target]() {
+			this->end_callback.connect([&target]() {
 				target.end();
 			});
 		}
 
 		this->resume();
+	}
+
+	void _destroy() {
+		this->error_callback.clear();
+
+		this->data_callback.clear();
+		this->end_callback.clear();
 	}
 
 	node::callback<void(const T chunks[], size_t chunkcnt)> data_callback;
@@ -126,6 +133,12 @@ protected:
 		}
 	}
 
+	void _destroy() {
+		this->error_callback.clear();
+
+		this->drain_callback.clear();
+	}
+
 	virtual void _write(const T chunks[], size_t chunkcnt) = 0;
 	virtual void _end(const T chunks[], size_t chunkcnt) = 0;
 
@@ -138,6 +151,15 @@ private:
 
 template<typename E, typename T>
 class duplex : public readable<E, T>, public writable<E, T> {
+protected:
+	void _destroy() {
+		this->error_callback.clear();
+
+		this->data_callback.clear();
+		this->end_callback.clear();
+
+		this->drain_callback.clear();
+	}
 };
 
 } // namespace stream
