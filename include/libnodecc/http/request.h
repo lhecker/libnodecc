@@ -10,9 +10,27 @@
 namespace node {
 namespace http {
 namespace client {
+
+namespace detail {
+class request;
+class response;
+}
+
+typedef std::shared_ptr<detail::request> request;
+typedef std::shared_ptr<detail::response> response;
+typedef std::function<void(int err, const request& req, const response& res)> on_connect_t;
+
+
 namespace detail {
 
+#define NODE_HTTP_REQUEST_GENERATOR_SIGNATURE \
+	std::shared_ptr<node::net::socket> _generate(node::loop& loop, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
+
+static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
+
 class request : public node::http::outgoing_message {
+	friend NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
+
 public:
 	explicit request(const std::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path);
 
@@ -25,21 +43,18 @@ private:
 };
 
 class response : public node::http::incoming_message {
+	friend NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
+
 public:
 	explicit response(const std::shared_ptr<node::net::socket>& socket);
 };
 
 } // namespace detail
-
-typedef std::shared_ptr<detail::request> request;
-typedef std::shared_ptr<detail::response> response;
-typedef std::function<void(int err, const request& req, const response& res)> on_connect_t;
-
 } // namespace client
 
 
-void request(node::loop& loop, const node::buffer& method, const node::buffer& url, client::on_connect_t cb);
-void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, client::on_connect_t cb);
+void request(node::loop& loop, const node::buffer& method, const node::buffer& url, const client::on_connect_t& cb);
+void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb);
 
 } // namespace http
 } // namespace node

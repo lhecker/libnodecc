@@ -36,20 +36,17 @@ void request::compile_headers(node::mutable_buffer& buf) {
 }
 
 
-response::response(node::loop& loop, const std::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
+response::response(const std::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
 }
 
-} // namespace detail
-} // namespace client
 
-
-static std::shared_ptr<node::net::socket> _request(const node::buffer& host, const node::buffer& method, const node::buffer& path) {
+static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
 	const auto socket = std::make_shared<node::net::socket>();
 	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
 	const auto res = std::make_shared<client::detail::response>(socket);
 
 	socket->close_signal.tracked_connect(req, std::bind(&client::detail::request::_destroy, req.get()));
-	socket->close_signal.tracked_connect(req, std::bind(&client::detail::response::_destroy, req.get()));
+	socket->close_signal.tracked_connect(req, std::bind(&client::detail::response::_destroy, res.get()));
 
 	socket->connect_callback.connect([req, res, cb](int err) {
 		cb(err, req, res);
@@ -65,8 +62,11 @@ static std::shared_ptr<node::net::socket> _request(const node::buffer& host, con
 	return socket;
 }
 
+} // namespace detail
+} // namespace client
 
-void request(node::loop& loop, const node::buffer& method, const node::buffer& url, client::on_connect_t cb) {
+
+void request(node::loop& loop, const node::buffer& method, const node::buffer& url, const client::on_connect_t& cb) {
 	http_parser_url parser;
 	const int r = http_parser_parse_url(url.data<char>(), url.size(), false, &parser);
 
@@ -88,12 +88,12 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	const auto socket = _request(host, method, path);
+	const auto socket = _generate(loop, host, method, path, cb);
 	socket->connect(host, parser.port ? parser.port : 80);
 }
 
-void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, client::on_connect_t cb) {
-	const auto socket = _request(host, method, path);
+void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb) {
+	const auto socket = _generate(loop, host, method, path, cb);
 	socket->connect(addr);
 }
 
