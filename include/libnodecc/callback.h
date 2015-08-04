@@ -96,7 +96,22 @@ public:
 	}
 
 	void clear() noexcept {
-		this->_f = nullptr;
+		/*
+		 * We could write "this->_f = nullptr", BUT:
+		 * We don't know how std::function<T>::operator=(nullptr_t) is implemented!
+		 * ---> It might very well set it's internal function pointer
+		 *      to null AFTER deleting the function object.
+		 * ---> If an instance of this class is only held by a shared_ptr,
+		 *      which in turn is only held by the above function object,
+		 *      deleting the function object means that the shared_ptr
+		 *      deletes it's managed instance (this) and thus
+		 *      tries to destroy the above std::function recursively
+		 *      (and thus errorneously accesses a instance property).
+		 * ---> Crash.
+		 * ---> Swap it out beforehand.
+		 */
+		callback_type cb;
+		std::swap(this->_f, cb);
 	}
 
 	void swap(callback<R(Args...)>& other) noexcept {
