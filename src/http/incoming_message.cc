@@ -371,12 +371,10 @@ node::buffer incoming_message::_buffer(const char* at, size_t length) {
 }
 
 void incoming_message::_destroy() {
-	/*
-	 * headers_complete_callback is the only thing retaining req/res in http::server
-	 * --> delete it last ensuring that this is not accessed after this
-	 */
-	this->headers_complete_callback.clear();
 	this->_socket.reset();
+
+	this->headers_complete_callback.clear();
+	this->destroy_signal.emit_and_clear();
 
 	node::stream::readable<int, node::buffer>::_destroy();
 }

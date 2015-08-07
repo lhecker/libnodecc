@@ -3,39 +3,58 @@
 
 #include "buffer.h"
 
-
-#define NODE_TO_STRING_MAP(XX)     \
-	XX(int,                "%d")   \
-	XX(long,               "%ld")  \
-	XX(long long,          "%lld") \
-	XX(unsigned,           "%u")   \
-	XX(unsigned long,      "%lu")  \
-	XX(unsigned long long, "%llu") \
-	XX(float,              "%f")   \
-	XX(double,             "%f")   \
-	XX(long double,        "%Lf")  \
+#include <cassert>
 
 
 namespace node {
 
 class string : public buffer {
+	template<typename Value, std::size_t Size>
+	friend string to_string_impl(const char format[], Value v);
+
 public:
+	/*
+	 * TODO: store a reference to control_base in the deleter
+	 * ---> Create "control_base_ptr" which wraps a control_base and calls retain()/release().
+	 *      node::buffer should simply inherit (multiple inheritance) from it.
+	 */
+	struct c_str_deleter {
+		void operator()(char* str) const noexcept {}
+	};
+
+
 	using buffer::buffer;
 
 	string() : buffer() {}
 
+	string(std::size_t size);
 	string(const node::literal_string& other);
 	string(const node::buffer_view& other);
 
-	char* c_str() const noexcept {
-		return this->data<char>();
-	}
+	using buffer::reset;
+	void reset(std::size_t size);
+
+	string copy(std::size_t size) const;
+
+	std::unique_ptr<char, c_str_deleter> c_str() const noexcept;
+
+private:
+	void _copy(string& target, std::size_t size = 0) const;
+	void _reset_unsafe(std::size_t size);
 };
 
 
-#define XX(_type_, _format_) string to_string(_type_ value);
-NODE_TO_STRING_MAP(XX)
-#undef XX
+string to_string(int val);
+string to_string(long int val);
+string to_string(long long int val);
+
+string to_string(unsigned int val);
+string to_string(unsigned long int val);
+string to_string(unsigned long long int val);
+
+string to_string(float val);
+string to_string(double val);
+string to_string(long double val);
 
 } // namespace node
 

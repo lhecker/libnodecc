@@ -77,7 +77,7 @@ public:
 	 *
 	 * @param size The size of the buffer in bytes.
 	 */
-	explicit buffer(std::size_t size) noexcept;
+	explicit buffer(std::size_t size);
 
 	/**
 	 * Creates a buffer referring the specified memory area.
@@ -179,7 +179,7 @@ public:
 	 *
 	 * @param size If zero (the default), the new size will be equal to the old one.
 	 */
-	buffer copy(std::size_t size = 0) const noexcept;
+	buffer copy(std::size_t size = 0) const;
 
 	/**
 	 * Returns a new buffer, pointing to a section of this one.
@@ -237,8 +237,8 @@ protected:
 	 */
 	void _copy(buffer& target, std::size_t size = 0) const;
 
+	void _reset_unsafe(std::size_t size);
 	void _reset_zero() noexcept;
-	void _reset_unsafe(std::size_t size) noexcept;
 
 	/**
 	 * Retains this buffer, incrementing it's reference count by one,

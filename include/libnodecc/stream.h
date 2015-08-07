@@ -2,6 +2,7 @@
 #define nodecc_stream_h
 
 #include "callback.h"
+#include "signal.h"
 
 
 namespace node {
@@ -19,6 +20,8 @@ class readable;
 template<typename E, typename T>
 static void pipe(stream::readable<E, T>& from, stream::writable<E, T>& to, bool end = true) {
 	from.data_callback.connect([&from, &to](const T chunks[], size_t chunkcnt) {
+		printf("data_callback\n");
+
 		if (to.write(chunks, chunkcnt)) {
 			from.pause();
 		}
@@ -29,11 +32,15 @@ static void pipe(stream::readable<E, T>& from, stream::writable<E, T>& to, bool 
 	});
 
 	to.drain_callback.connect([&from]() {
+		printf("drain_callback\n");
+
 		from.resume();
 	});
 
 	if (end) {
 		from.end_callback.connect([&to]() {
+			printf("end_callback\n");
+
 			to.end();
 		});
 	}
@@ -46,6 +53,8 @@ static void pipe(stream::readable<E, T>& from, stream::writable<E, T>& to, bool 
 template<typename X, typename Y, typename = typename std::enable_if<std::is_same<typename X::exception_type, typename Y::exception_type>::value && std::is_same<typename X::chunk_type, typename Y::chunk_type>::value>::type>
 static void pipe(const std::shared_ptr<X>& from, const std::shared_ptr<Y>& to, bool end = true) {
 	from->data_callback.connect([from, to](const typename X::chunk_type chunks[], size_t chunkcnt) {
+		printf("data_callback\n");
+
 		if (to->write(chunks, chunkcnt)) {
 			from->pause();
 		}
@@ -56,11 +65,15 @@ static void pipe(const std::shared_ptr<X>& from, const std::shared_ptr<Y>& to, b
 	});
 
 	to->drain_callback.connect([from]() {
+		printf("drain_callback\n");
+
 		from->resume();
 	});
 
 	if (end) {
 		from->end_callback.connect([to]() {
+			printf("end_callback\n");
+
 			to->end();
 		});
 	}
@@ -77,6 +90,10 @@ namespace detail {
 template<typename E, typename T>
 class base {
 public:
+	virtual ~base() {
+		printf("~base\n");
+	}
+
 	typedef E exception_type;
 	typedef T chunk_type;
 
@@ -100,6 +117,8 @@ public:
 	}
 
 	void _destroy() {
+		printf("_destroy readable\n");
+
 		this->error_callback.clear();
 
 		this->data_callback.clear();
@@ -186,6 +205,8 @@ protected:
 	}
 
 	void _destroy() {
+		printf("_destroy writable\n");
+
 		this->error_callback.clear();
 
 		this->drain_callback.clear();
@@ -205,6 +226,8 @@ template<typename E, typename T>
 class duplex : public readable<E, T>, public writable<E, T> {
 protected:
 	void _destroy() {
+		printf("_destroy duplex\n");
+
 		this->error_callback.clear();
 
 		this->data_callback.clear();

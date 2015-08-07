@@ -13,6 +13,10 @@ class socket : public node::uv::stream<uv_tcp_t> {
 public:
 	explicit socket();
 
+	~socket() {
+		printf("~socket\n");
+	}
+
 	bool init(node::loop& loop);
 
 	bool connect(const sockaddr& addr);

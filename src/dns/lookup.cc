@@ -61,7 +61,7 @@ void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, const 
 		}
 
 		packed_req->cb(status, ptr);
-	}, domain.c_str(), service.empty() ? nullptr : service.c_str(), hints);
+	}, domain.c_str().get(), service.empty() ? nullptr : service.c_str().get(), hints);
 }
 
 } } // namespace node::dns

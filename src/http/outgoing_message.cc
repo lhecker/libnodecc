@@ -227,6 +227,8 @@ writeEnd:
 void outgoing_message::_destroy() {
 	this->_socket.reset();
 
+	this->destroy_signal.emit_and_clear();
+
 	node::stream::writable<int, node::buffer>::_destroy();
 }
 

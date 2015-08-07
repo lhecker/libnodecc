@@ -77,8 +77,6 @@ class incoming_message : public node::stream::readable<int, node::buffer> {
 	friend class server;
 
 public:
-	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
-
 	explicit incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type);
 
 	const std::shared_ptr<node::net::socket>& socket();
@@ -99,6 +97,9 @@ public:
 	void pause() override;
 
 	void destroy();
+
+	node::signal<void()> destroy_signal;
+	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
 
 protected:
 	void _destroy();

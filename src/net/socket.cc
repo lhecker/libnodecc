@@ -25,7 +25,7 @@ struct net_socket_connect {
 	void connect() {
 		sockaddr* addr = this->current_ai->ai_addr;
 
-		int err = uv_tcp_connect(&this->req, *this->socket, addr, [](uv_connect_t* req, int status) {
+		int err = !addr ? EINVAL : uv_tcp_connect(&this->req, *this->socket, addr, [](uv_connect_t* req, int status) {
 			auto self = reinterpret_cast<net_socket_connect*>(req->data);
 
 			if (status == 0) {

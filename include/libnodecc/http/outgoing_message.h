@@ -44,6 +44,8 @@ public:
 
 	void destroy();
 
+	node::signal<void()> destroy_signal;
+
 protected:
 	void http_write(const node::buffer bufs[], size_t bufcnt, bool end);
 

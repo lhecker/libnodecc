@@ -20,7 +20,9 @@ public:
 		this->_handle.data = this;
 	}
 
-	virtual ~handle() {}
+	virtual ~handle() {
+		printf("~handle\n");
+	}
 
 	handle(const handle&) = delete;
 	handle& operator=(const handle&) = delete;

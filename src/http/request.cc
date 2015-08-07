@@ -94,7 +94,7 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 	socket->connect(host, parser.port ? parser.port : 80);
 }
 
-void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb) {
+void request(node::loop& loop, const sockaddr& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb) {
 	const auto socket = _generate(loop, host, method, path, cb);
 	socket->connect(addr);
 }

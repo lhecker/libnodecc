@@ -9,7 +9,7 @@ typedef void(*free_signature)(void*);
 
 namespace node {
 
-buffer::buffer(std::size_t size) noexcept : buffer() {
+buffer::buffer(std::size_t size) : buffer() {
 	this->_reset_unsafe(size);
 }
 
@@ -97,7 +97,7 @@ void buffer::reset(const buffer_view& other, buffer_flags flags) {
 	}
 }
 
-buffer buffer::copy(std::size_t size) const noexcept {
+buffer buffer::copy(std::size_t size) const {
 	buffer buf;
 	this->_copy(buf, size);
 	return buf;
@@ -169,13 +169,7 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 	}
 }
 
-void buffer::_reset_zero() noexcept {
-	this->_data = nullptr;
-	this->_size = 0;
-	this->_p = nullptr;
-}
-
-void buffer::_reset_unsafe(std::size_t size) noexcept {
+void buffer::_reset_unsafe(std::size_t size) {
 	if (size > 0) {
 		constexpr const std::size_t control_size = (sizeof(control<free_signature>) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
 		uint8_t* base = (uint8_t*)malloc(control_size + size);
@@ -187,6 +181,12 @@ void buffer::_reset_unsafe(std::size_t size) noexcept {
 			this->_size = size;
 		}
 	}
+}
+
+void buffer::_reset_zero() noexcept {
+	this->_data = nullptr;
+	this->_size = 0;
+	this->_p = nullptr;
 }
 
 /*

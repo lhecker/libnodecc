@@ -35,7 +35,7 @@ public:
 	typedef detail::signal_element_base<Args...> list_type;
 
 
-	constexpr signal() {}
+	constexpr signal() : _head(nullptr), _tail(nullptr) {}
 
 	signal(const signal&) = delete;
 	signal& operator=(const signal&) = delete;

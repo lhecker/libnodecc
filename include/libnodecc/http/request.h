@@ -34,6 +34,10 @@ class request : public node::http::outgoing_message {
 public:
 	explicit request(const std::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path);
 
+	~request() {
+		printf("~request\n");
+	}
+
 private:
 	void compile_headers(node::mutable_buffer& buf) override;
 
@@ -47,6 +51,10 @@ class response : public node::http::incoming_message {
 
 public:
 	explicit response(const std::shared_ptr<node::net::socket>& socket);
+
+	~response() {
+		printf("~response\n");
+	}
 };
 
 } // namespace detail
@@ -54,7 +62,7 @@ public:
 
 
 void request(node::loop& loop, const node::buffer& method, const node::buffer& url, const client::on_connect_t& cb);
-void request(node::loop& loop, const addrinfo& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb);
+void request(node::loop& loop, const sockaddr& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb);
 
 } // namespace http
 } // namespace node

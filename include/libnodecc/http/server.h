@@ -18,6 +18,10 @@ public:
 
 	public:
 		using incoming_message::incoming_message;
+
+		~server_request() {
+			printf("~server_request\n");
+		}
 	};
 
 	class server_response : public node::http::outgoing_message {
@@ -25,6 +29,10 @@ public:
 
 	public:
 		explicit server_response(const std::shared_ptr<node::net::socket>& socket);
+
+		~server_response() {
+			printf("~server_response\n");
+		}
 
 		uint16_t status_code() const;
 		void set_status_code(uint16_t code);
