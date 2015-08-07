@@ -38,7 +38,7 @@ public:
 protected:
 	constexpr hashed_buffer_view(const void* data, std::size_t size, std::size_t hash) : buffer_view(data, size), _hash(hash) {}
 
-	std::size_t _hash;
+	mutable std::size_t _hash;
 }; // class hashed_buffer_view
 
 } // namespace node

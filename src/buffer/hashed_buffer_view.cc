@@ -25,7 +25,7 @@ std::size_t hashed_buffer_view::hash() const noexcept {
 			hash = 1;
 		}
 
-		const_cast<hashed_buffer_view*>(this)->_hash = hash;
+		this->_hash = hash;
 	}
 
 	return hash;
