@@ -9,34 +9,25 @@ buffer_view& buffer_view::operator=(const buffer_view& other) {
 	return *this;
 }
 
-bool buffer_view::equals(const buffer_view& other) const noexcept {
-	return this->data() && other.data()
-	    && this->size() == other.size()
-	    && memcmp(this->data(), other.data(), this->size()) == 0;
+buffer_view buffer_view::view(std::size_t beg, std::size_t end) const noexcept {
+	const std::size_t cbeg = std::min(beg, this->size());
+	const std::size_t cend = std::min(end, this->size());
+	return buffer_view(this->data() ? this->data() + cbeg : nullptr, cend > cbeg ? cend - cbeg : 0);
 }
 
-int buffer_view::compare(const buffer_view& other, std::size_t pos1, std::size_t size1) const noexcept {
-	const void* data2 = other.data<void>();
-	const std::size_t size2 = other.size();
-	int r = 0;
-
-	if (size1 > this->size()) {
-		size1 = this->size();
-	}
-
-	if (pos1 < size1 && data2) {
-		r = memcmp(this->data<uint8_t>() + pos1, data2, std::min(size1, size2));
-	}
-
-	if (r == 0) {
-		r = size1 < size2 ? -1 : size1 > size2 ? 1 : 0;
-	}
-
-	return r;
+bool buffer_view::equals(const buffer_view& other) const noexcept {
+	return this->size() == other.size()
+	    && (
+	           this->data() == other.data()
+	        || (
+	               this->data() && other.data()
+	            && memcmp(this->data(), other.data(), this->size()) == 0
+	        )
+	    );
 }
 
 std::size_t buffer_view::index_of(const char ch) const noexcept {
-	if (this->data() && this->size()) {
+	if (this->data()) {
 		const uint8_t* pos = static_cast<uint8_t*>(memchr(this->data(), ch, this->size()));
 
 		if (pos) {
@@ -59,6 +50,18 @@ std::size_t buffer_view::index_of(const buffer_view& other) const noexcept {
 	} else {
 		return npos;
 	}
+}
+
+std::unique_ptr<char> buffer_view::c_str() const noexcept {
+	char* str = nullptr;
+
+	if (this->size()) {
+		str = new char[this->size() + 1];
+		memcpy(str, this->data(), this->size());
+		str[this->size()] = '\0';
+	}
+
+	return std::unique_ptr<char>(str);
 }
 
 

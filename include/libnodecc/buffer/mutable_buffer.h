@@ -77,7 +77,7 @@ public:
 
 	void clear() noexcept;
 
-	mutable_buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = PTRDIFF_MAX) const noexcept;
+	mutable_buffer slice(std::size_t start = 0, std::size_t end = PTRDIFF_MAX) const noexcept;
 
 	template<typename... Args>
 	void reset(Args&&... args) noexcept {

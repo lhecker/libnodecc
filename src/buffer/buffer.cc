@@ -103,39 +103,16 @@ buffer buffer::copy(std::size_t size) const {
 	return buf;
 }
 
-buffer buffer::slice(std::ptrdiff_t start, std::ptrdiff_t end) const noexcept {
+buffer buffer::slice(std::size_t beg, std::size_t end) const noexcept {
 	buffer buf;
 
-#if PTRDIFF_MAX > SIZE_T_MAX
-# define PTRDIFF_GREATER_SIZE(ptrdiff, size) ((ptrdiff) > std::ptrdiff_t(size))
-#else
-# define PTRDIFF_GREATER_SIZE(ptrdiff, size) (std::size_t(ptrdiff) > (size))
-#endif
+	if (this->_data) {
+		const std::size_t cbeg = std::min(beg, this->size());
+		const std::size_t cend = std::min(end, this->size());
 
-	if (this->_data && PTRDIFF_GREATER_SIZE(PTRDIFF_MAX, this->_size)) {
-		if (start < 0) {
-			start += this->_size;
-
-			if (start < 0) {
-				start = 0;
-			}
-		} else if (PTRDIFF_GREATER_SIZE(start, this->_size)) {
-			start = this->_size;
-		}
-
-		if (end < 0) {
-			end += this->_size;
-
-			if (end < 0) {
-				end = 0;
-			}
-		} else if (PTRDIFF_GREATER_SIZE(end, this->_size)) {
-			end = this->_size;
-		}
-
-		if (end > start) {
-			buf._data = this->data() + start;
-			buf._size = end - start;
+		if (cend > cbeg) {
+			buf._data = this->data() + cbeg;
+			buf._size = cend - cbeg;
 			buf._p = this->_p;
 			buf._retain();
 		}

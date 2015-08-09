@@ -3,30 +3,26 @@
 
 #include "buffer.h"
 
+#include "_hashed_trait.h"
+
 
 namespace node {
 
-class hashed_buffer : public buffer {
+class hashed_buffer : public buffer, public detail::hashed_trait<hashed_buffer> {
 public:
-	hashed_buffer() : buffer(), _hash(0) {}
-	hashed_buffer(const hashed_buffer& other) : buffer(other), _hash(other._hash) {}
-	hashed_buffer(const void* data, std::size_t size) : buffer(data, size), _hash(0) {}
+	hashed_buffer() : buffer(), hashed_type(0) {}
+	hashed_buffer(const hashed_buffer& other) : buffer(other), hashed_type(other.const_hash()) {}
+	hashed_buffer(const void* data, std::size_t size) : buffer(data, size), hashed_type(0) {}
 
-	hashed_buffer(const buffer& other) : buffer(other), _hash(0) {}
+	hashed_buffer(const buffer& other) : buffer(other), hashed_type(0) {}
 
-	hashed_buffer(const literal_string& other) noexcept : buffer(other, buffer_flags::weak), _hash(other._hash) {}
+	hashed_buffer(const literal_string& other) noexcept : buffer(other, buffer_flags::weak), hashed_type(other.const_hash()) {}
 
 	hashed_buffer& operator=(const buffer_view& other);
 	hashed_buffer& operator=(const buffer& other);
 	hashed_buffer& operator=(const hashed_buffer_view& other);
 
-
-	std::size_t hash() const noexcept;
-
-	bool equals(const hashed_buffer_view& other) const noexcept;
-
-protected:
-	std::size_t _hash;
+	using hashed_type::equals;
 };
 
 } // namespace node

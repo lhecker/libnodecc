@@ -67,7 +67,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 			 * ---> Try to set the content-length.
 			 */
 			if (p != this->_headers.end()) {
-				this->_is_chunked = p->second.compare("chunked"_view) == 0;
+				this->_is_chunked = p->second.equals("chunked"_view);
 			} else {
 				if (end) {
 					size_t contentLength = 0;

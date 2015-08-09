@@ -196,7 +196,7 @@ public:
 	 * @param start The new buffer is offset by the index start.
 	 * @param end   The new buffer is cropped to the index end.
 	 */
-	buffer slice(std::ptrdiff_t start = 0, std::ptrdiff_t end = PTRDIFF_MAX) const noexcept;
+	buffer slice(std::size_t beg = 0, std::size_t end = npos) const noexcept;
 
 protected:
 	class control_base {

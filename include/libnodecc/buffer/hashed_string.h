@@ -3,28 +3,24 @@
 
 #include "string.h"
 
+#include "_hashed_trait.h"
+
 
 namespace node {
 
-class hashed_string : public string {
+class hashed_string : public string, public detail::hashed_trait<hashed_string> {
 	friend class literal_string;
 
 public:
-	hashed_string() : string(), _hash(0) {}
-	hashed_string(const hashed_string& other) : string(other), _hash(other._hash) {}
+	hashed_string() : string(), hashed_type(0) {}
+	hashed_string(const hashed_string& other) : string(other), hashed_type(other.const_hash()) {}
 
-	hashed_string(const string& other) : string(other), _hash(0) {}
+	hashed_string(const string& other) : string(other), hashed_type(0) {}
 
 	hashed_string& operator=(const string& other);
 	hashed_string& operator=(const hashed_string& other);
 
-
-	std::size_t hash() const noexcept;
-
-	bool equals(const hashed_string& other) const noexcept;
-
-protected:
-	std::size_t _hash;
+	using hashed_type::equals;
 };
 
 } // namespace node

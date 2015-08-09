@@ -33,7 +33,7 @@ public:
 
 	constexpr buffer_view() : _data(nullptr), _size(0) {}
 	constexpr buffer_view(const buffer_view& other) : _data(other._data), _size(other._size) {}
-	constexpr buffer_view(const void* data, std::size_t size) : _data(const_cast<void*>(data)), _size(size) {}
+	constexpr buffer_view(const void* data, std::size_t size) : _data(size ? const_cast<void*>(data) : nullptr), _size(data ? size : 0) {}
 
 
 	template<typename CharT>
@@ -90,29 +90,18 @@ public:
 	}
 
 
-	bool equals(const buffer_view& other) const noexcept;
+	buffer_view view(std::size_t beg = 0, std::size_t end = npos) const noexcept;
 
-	int compare(const buffer_view& other, std::size_t pos1 = 0, std::size_t size1 = npos) const noexcept;
+	bool equals(const buffer_view& other) const noexcept;
 
 	std::size_t index_of(const char ch) const noexcept;
 	std::size_t index_of(const buffer_view& other) const noexcept;
 
+	std::unique_ptr<char> c_str() const noexcept;
 
 	template<typename CharT = char, typename Traits = std::char_traits<CharT>, typename Allocator = std::allocator<CharT>>
 	std::basic_string<CharT, Traits, Allocator> to_string() const {
-		return std::basic_string<CharT, Traits, Allocator>(reinterpret_cast<CharT*>(this->_data), this->_size);
-	}
-
-	std::unique_ptr<char> c_str() const noexcept {
-		char* str = nullptr;
-
-		if (this->size()) {
-			str = new char[this->size() + 1];
-			memcpy(str, this->data(), this->size());
-			str[this->size()] = '\0';
-		}
-
-		return std::unique_ptr<char>(str);
+		return std::basic_string<CharT, Traits, Allocator>(this->data<CharT*>(), this->size());
 	}
 
 protected:
