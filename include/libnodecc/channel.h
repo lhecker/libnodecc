@@ -93,6 +93,9 @@ public:
 		node::uv::handle<uv_async_t>::destroy(std::forward<Args>(args)...);
 	}
 
+protected:
+	~channel() override = default;
+
 private:
 	std::vector<T> _q;
 	std::mutex _mutex;

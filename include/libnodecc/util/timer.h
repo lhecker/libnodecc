@@ -45,6 +45,9 @@ public:
 	}
 
 	bool stop();
+
+protected:
+	~timer() override = default;
 };
 
 } // namespace util

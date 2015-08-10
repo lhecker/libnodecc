@@ -210,7 +210,7 @@ protected:
 		void release();
 
 		const void* base;
-		std::atomic<uintptr_t> use_count;
+		std::atomic<unsigned int> use_count;
 	};
 
 	template<typename D>

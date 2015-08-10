@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "../buffer.h"
+#include "../net/socket.h"
 #include "../stream.h"
 
 
@@ -77,9 +78,9 @@ class incoming_message : public node::stream::readable<int, node::buffer> {
 	friend class server;
 
 public:
-	explicit incoming_message(const std::shared_ptr<node::net::socket>& socket, http_parser_type type);
+	explicit incoming_message(const node::shared_object<node::net::socket>& socket, http_parser_type type);
 
-	const std::shared_ptr<node::net::socket>& socket();
+	const node::shared_object<node::net::socket>& socket();
 
 	const node::buffer& method() const;
 	node::http::url url;
@@ -116,7 +117,7 @@ private:
 	node::buffer _buffer(const char* at, size_t length);
 
 
-	std::shared_ptr<node::net::socket> _socket;
+	node::shared_object<node::net::socket> _socket;
 
 	std::unordered_map<node::hashed_buffer, node::mutable_buffer> _headers;
 

@@ -2,6 +2,7 @@
 #define nodecc_buffer_buffer_view_h
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -69,7 +70,7 @@ public:
 
 
 	template<typename T = uint8_t>
-	T* data() const noexcept {
+	constexpr T* data() const noexcept {
 		return static_cast<T*>(this->_data);
 	}
 

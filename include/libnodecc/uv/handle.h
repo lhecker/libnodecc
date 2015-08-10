@@ -1,31 +1,23 @@
 #ifndef nodecc_uv_handle_h
 #define nodecc_uv_handle_h
 
-#include "../callback.h"
 #include "../loop.h"
-#include "../signal.h"
+#include "../object.h"
 
 
 namespace node {
 namespace uv {
 
 template<typename T>
-class handle {
+class handle : public object {
 public:
 	typedef handle handle_type;
 
 
-	explicit handle() {
+	explicit handle() : object() {
 		this->_handle.loop = nullptr;
 		this->_handle.data = this;
 	}
-
-	virtual ~handle() {
-		printf("~handle\n");
-	}
-
-	handle(const handle&) = delete;
-	handle& operator=(const handle&) = delete;
 
 
 	operator node::loop&() { return *static_cast<node::loop*>(this->_handle.loop->data); }
@@ -67,23 +59,15 @@ public:
 		return uv_is_active(*this) != 0;
 	}
 
-	void destroy() {
+	void _destroy() override {
 		if (this->_handle.loop && !this->is_closing()) {
+			this->retain();
+
 			uv_close(*this, [](uv_handle_t* handle) {
 				auto self = reinterpret_cast<uv::handle<T>*>(handle->data);
-
-				if (self) {
-					self->_destroy();
-					self->destroy_signal.emit_and_clear();
-				}
+				self->release();
 			});
 		}
-	}
-
-	template<typename F>
-	void destroy(F&& func) {
-		this->destroy_signal.connect(func);
-		this->destroy();
 	}
 
 	void ref() {
@@ -94,12 +78,8 @@ public:
 		uv_unref(*this);
 	}
 
-
-	node::signal<void()> destroy_signal;
-
 protected:
-	virtual void _destroy() {
-	}
+	~handle() override = default;
 
 	T _handle;
 };

@@ -34,7 +34,7 @@ static node::http::http_date_buffer date_buffer;
 namespace node {
 namespace http {
 
-server::server_response::server_response(const std::shared_ptr<node::net::socket>& socket) : outgoing_message(socket), _status_code(200), _shutdown_on_end(true) {
+server::server_response::server_response(const node::shared_object<node::net::socket>& socket) : outgoing_message(socket), _status_code(200), _shutdown_on_end(true) {
 }
 
 uint16_t server::server_response::status_code() const {
@@ -97,7 +97,7 @@ void server::server_response::_end(const node::buffer chunks[], size_t chunkcnt)
 
 server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 	this->connection_callback.connect([this]() {
-		const auto socket = std::make_shared<net::socket>();
+		const auto socket = node::make_shared<net::socket>();
 		this->_clients.emplace_front(socket);
 
 		const auto it = this->_clients.cbegin();

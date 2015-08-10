@@ -44,14 +44,13 @@ public:
 				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
 				self->data_callback.emit(&buf, 1);
 			} else if (nread < 0) {
-				self->error_callback.emit(int(nread));
-				self->end_callback.emit();
-
 				if (nread == UV_EOF) {
 					// the other side shut down it's side (FIN) --> gracefully shutdown
+					self->end_callback.emit();
 					self->end();
 				} else {
 					// other error --> hard close
+					self->error_callback.emit(int(nread));
 					self->destroy();
 				}
 			}
@@ -147,9 +146,13 @@ public:
 			}
 
 			delete pack;
+
+			self->release();
 		});
 
-		if (ret != 0) {
+		if (ret == 0) {
+			this->retain();
+		} else {
 			delete pack;
 		}
 	}
@@ -165,11 +168,15 @@ public:
 
 			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
 				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
-				self->destroy();
+
 				delete req;
+
+				self->release();
 			});
 
-			if (ret != 0) {
+			if (ret == 0) {
+				this->retain();
+			} else {
 				delete req;
 			}
 		}
@@ -184,6 +191,9 @@ public:
 
 
 	node::callback<node::buffer()> alloc_callback;
+
+protected:
+	~stream() override = default;
 
 private:
 	node::buffer _alloc_buffer;

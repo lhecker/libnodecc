@@ -1,5 +1,7 @@
 #include "libnodecc/buffer.h"
 
+#include <algorithm>
+
 
 namespace node {
 

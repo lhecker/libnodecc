@@ -15,7 +15,7 @@ struct signal_element_base {
 	constexpr signal_element_base() : next(nullptr) {}
 	virtual ~signal_element_base() {};
 
-	virtual bool emit(Args... args) = 0;
+	virtual bool emit(Args&&... args) = 0;
 
 	signal_element_base* next;
 };
@@ -58,7 +58,7 @@ public:
 		struct signal_element : list_type {
 			signal_element(F&& func) : list_type(), func(std::forward<F>(func)) {}
 
-			bool emit(Args... args) override {
+			bool emit(Args&&... args) override {
 				this->func(std::forward<Args>(args)...);
 				return false;
 			}
@@ -74,7 +74,7 @@ public:
 		struct signal_element : list_type {
 			signal_element(S&& tracked_object, F&& func) : list_type(), tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
 
-			bool emit(Args... args) override {
+			bool emit(Args&&... args) override {
 				// lock() to ensure that the object is not deleted during the func() call
 				const auto locked_object = this->tracked_object.lock();
 
@@ -180,26 +180,6 @@ protected:
 		}
 
 		this->_tail = ptr;
-	}
-
-	bool _emit(bool clear, list_type* ptr, Args... args) {
-		list_type* prev = nullptr;
-
-		while (ptr) {
-			list_type* next = ptr->next;
-			const bool remove = ptr->emit(std::forward<Args>(args)...);
-
-			if (clear) {
-				delete ptr;
-			} else if (remove) {
-				this->_remove(prev, ptr);
-			}
-
-			prev = ptr;
-			ptr = next;
-		}
-
-		return prev != nullptr;
 	}
 
 	void _remove(list_type* prev, list_type* ptr) {

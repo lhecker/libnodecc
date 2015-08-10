@@ -28,7 +28,7 @@ public:
 		friend class server;
 
 	public:
-		explicit server_response(const std::shared_ptr<node::net::socket>& socket);
+		explicit server_response(const node::shared_object<node::net::socket>& socket);
 
 		~server_response() {
 			printf("~server_response\n");
@@ -57,9 +57,12 @@ public:
 
 	node::callback<void(const server::request& req, const server::response& res)> request_callback;
 
+protected:
+	~server() override = default;
+
 private:
 	std::shared_ptr<bool> _is_destroyed;
-	std::list<std::shared_ptr<net::socket>> _clients;
+	std::list<node::shared_object<net::socket>> _clients;
 };
 
 } // namespace http

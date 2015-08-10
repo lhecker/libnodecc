@@ -10,7 +10,7 @@ namespace http {
 namespace client {
 namespace detail {
 
-request::request(const std::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path) : outgoing_message(socket), _host(host), _method(method), _path(path) {
+request::request(const node::shared_object<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path) : outgoing_message(socket), _host(host), _method(method), _path(path) {
 }
 
 void request::compile_headers(node::mutable_buffer& buf) {
@@ -36,12 +36,12 @@ void request::compile_headers(node::mutable_buffer& buf) {
 }
 
 
-response::response(const std::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
+response::response(const node::shared_object<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
 }
 
 
 static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
-	const auto socket = std::make_shared<node::net::socket>();
+	const auto socket = node::make_shared<node::net::socket>();
 	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
 	const auto res = std::make_shared<client::detail::response>(socket);
 

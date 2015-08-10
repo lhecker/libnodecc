@@ -18,6 +18,9 @@ public:
 
 	bool init(node::loop& loop, uv_async_cb cb);
 	bool send();
+
+protected:
+	~async() override = default;
 };
 
 } // namespace uv

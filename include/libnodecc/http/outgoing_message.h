@@ -5,15 +5,8 @@
 #include <unordered_map>
 
 #include "../buffer.h"
+#include "../net/socket.h"
 #include "../stream.h"
-
-
-namespace node {
-
-namespace net {
-class socket;
-}
-}
 
 
 namespace node {
@@ -21,9 +14,9 @@ namespace http {
 
 class outgoing_message : public node::stream::writable<int, node::buffer> {
 public:
-	explicit outgoing_message(const std::shared_ptr<node::net::socket>& socket);
+	explicit outgoing_message(const node::shared_object<node::net::socket>& socket);
 
-	const std::shared_ptr<node::net::socket>& socket();
+	const node::shared_object<node::net::socket>& socket();
 
 	const node::buffer header(node::hashed_buffer& key);
 
@@ -58,7 +51,7 @@ protected:
 
 	// needs to be directly accessed by certain subclasses
 	std::unordered_map<node::hashed_buffer, node::buffer> _headers;
-	std::shared_ptr<node::net::socket> _socket;
+	node::shared_object<node::net::socket> _socket;
 	bool _headers_sent;
 	bool _is_chunked;
 };

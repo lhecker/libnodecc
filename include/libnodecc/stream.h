@@ -90,10 +90,6 @@ namespace detail {
 template<typename E, typename T>
 class base {
 public:
-	virtual ~base() {
-		printf("~base\n");
-	}
-
 	typedef E exception_type;
 	typedef T chunk_type;
 

@@ -24,7 +24,7 @@ typedef std::function<void(int err, const request& req, const response& res)> on
 namespace detail {
 
 #define NODE_HTTP_REQUEST_GENERATOR_SIGNATURE \
-	std::shared_ptr<node::net::socket> _generate(node::loop& loop, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
+	node::shared_object<node::net::socket> _generate(node::loop& loop, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
 
 static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 
@@ -32,7 +32,7 @@ class request : public node::http::outgoing_message {
 	friend NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 
 public:
-	explicit request(const std::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path);
+	explicit request(const node::shared_object<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path);
 
 	~request() {
 		printf("~request\n");
@@ -50,7 +50,7 @@ class response : public node::http::incoming_message {
 	friend NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 
 public:
-	explicit response(const std::shared_ptr<node::net::socket>& socket);
+	explicit response(const node::shared_object<node::net::socket>& socket);
 
 	~response() {
 		printf("~response\n");

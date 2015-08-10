@@ -13,10 +13,6 @@ class socket : public node::uv::stream<uv_tcp_t> {
 public:
 	explicit socket();
 
-	~socket() {
-		printf("~socket\n");
-	}
-
 	bool init(node::loop& loop);
 
 	bool connect(const sockaddr& addr);
@@ -29,6 +25,9 @@ public:
 	void _destroy() override;
 
 	node::callback<void(int err)> connect_callback;
+
+protected:
+	~socket() override = default;
 };
 
 } // namespace net

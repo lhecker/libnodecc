@@ -7,11 +7,11 @@
 namespace node {
 namespace http {
 
-outgoing_message::outgoing_message(const std::shared_ptr<node::net::socket>& socket) : _socket(socket), _headers_sent(false) {
+outgoing_message::outgoing_message(const node::shared_object<node::net::socket>& socket) : _socket(socket), _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 
-const std::shared_ptr<node::net::socket>& outgoing_message::socket() {
+const node::shared_object<node::net::socket>& outgoing_message::socket() {
 	return this->_socket;
 }
 

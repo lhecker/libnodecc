@@ -24,6 +24,9 @@ public:
 	void _destroy() override;
 
 	node::callback<void()> connection_callback;
+
+protected:
+	~server() override = default;
 };
 
 } // namespace net
