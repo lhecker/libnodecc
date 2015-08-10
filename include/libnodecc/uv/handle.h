@@ -14,7 +14,7 @@ public:
 	typedef handle handle_type;
 
 
-	explicit handle() : intrusive_ptr() {
+	explicit handle() {
 		this->_handle.loop = nullptr;
 		this->_handle.data = this;
 	}

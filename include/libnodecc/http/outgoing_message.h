@@ -13,6 +13,8 @@ namespace node {
 namespace http {
 
 class outgoing_message : public node::stream::writable<int, node::buffer> {
+	friend class server;
+
 public:
 	explicit outgoing_message(const node::shared_ptr<node::net::socket>& socket);
 

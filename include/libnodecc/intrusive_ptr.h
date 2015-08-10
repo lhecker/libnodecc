@@ -24,10 +24,10 @@ class intrusive_ptr {
 	friend class shared_ptr;
 
 private:
-	intrusive_ptr* _responsible_object = nullptr;
-	unsigned int   _use_count          = 1;
-	bool           _is_destroyed       = false;
-	bool           _is_shared          = false;
+	intrusive_ptr* _responsible_object;
+	unsigned int   _use_count;
+	bool           _is_destroyed;
+	bool           _is_shared;
 
 public:
 	struct Destructor {
@@ -36,6 +36,7 @@ public:
 		}
 	};
 
+	constexpr intrusive_ptr() : _responsible_object(nullptr), _use_count(1), _is_destroyed(false), _is_shared(false) {}
 
 	intrusive_ptr(intrusive_ptr&&) = delete;
 
@@ -185,7 +186,7 @@ public:
 	}
 
 	explicit operator bool() const noexcept {
-		return this->_ptr;
+		return this->_ptr != nullptr;
 	}
 
 	decltype(_ptr->use_count()) use_count() const {
