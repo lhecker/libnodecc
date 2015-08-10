@@ -78,9 +78,9 @@ class incoming_message : public node::stream::readable<int, node::buffer> {
 	friend class server;
 
 public:
-	explicit incoming_message(const node::shared_object<node::net::socket>& socket, http_parser_type type);
+	explicit incoming_message(const node::shared_ptr<node::net::socket>& socket, http_parser_type type);
 
-	const node::shared_object<node::net::socket>& socket();
+	const node::shared_ptr<node::net::socket>& socket();
 
 	const node::buffer& method() const;
 	node::http::url url;
@@ -117,7 +117,7 @@ private:
 	node::buffer _buffer(const char* at, size_t length);
 
 
-	node::shared_object<node::net::socket> _socket;
+	node::shared_ptr<node::net::socket> _socket;
 
 	std::unordered_map<node::hashed_buffer, node::mutable_buffer> _headers;
 

@@ -18,21 +18,13 @@ public:
 
 	public:
 		using incoming_message::incoming_message;
-
-		~server_request() {
-			printf("~server_request\n");
-		}
 	};
 
 	class server_response : public node::http::outgoing_message {
 		friend class server;
 
 	public:
-		explicit server_response(const node::shared_object<node::net::socket>& socket);
-
-		~server_response() {
-			printf("~server_response\n");
-		}
+		explicit server_response(const node::shared_ptr<node::net::socket>& socket);
 
 		uint16_t status_code() const;
 		void set_status_code(uint16_t code);
@@ -62,7 +54,7 @@ protected:
 
 private:
 	std::shared_ptr<bool> _is_destroyed;
-	std::list<node::shared_object<net::socket>> _clients;
+	std::list<node::shared_ptr<net::socket>> _clients;
 };
 
 } // namespace http

@@ -1,20 +1,20 @@
 #ifndef nodecc_uv_handle_h
 #define nodecc_uv_handle_h
 
+#include "../intrusive_ptr.h"
 #include "../loop.h"
-#include "../object.h"
 
 
 namespace node {
 namespace uv {
 
 template<typename T>
-class handle : public object {
+class handle : public intrusive_ptr {
 public:
 	typedef handle handle_type;
 
 
-	explicit handle() : object() {
+	explicit handle() : intrusive_ptr() {
 		this->_handle.loop = nullptr;
 		this->_handle.data = this;
 	}

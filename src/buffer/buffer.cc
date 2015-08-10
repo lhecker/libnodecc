@@ -4,9 +4,6 @@
 #include <cstdlib>
 
 
-typedef void(*free_signature)(void*);
-
-
 namespace node {
 
 buffer::buffer(std::size_t size) : buffer() {
@@ -128,7 +125,7 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 		size = this->_size;
 	}
 
-	constexpr const std::size_t control_size = (sizeof(control<free_signature>) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
+	constexpr const std::size_t control_size = (sizeof(default_control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
 	uint8_t* base = (uint8_t*)malloc(control_size + size);
 	uint8_t* data = base + control_size;
 
@@ -140,7 +137,7 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 	target._release();
 
 	if (base) {
-		target._p = new(base) control<free_signature>(base, free);
+		target._p = new(base) default_control(base);
 		target._data = data;
 		target._size = size;
 	}
@@ -148,12 +145,12 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 
 void buffer::_reset_unsafe(std::size_t size) {
 	if (size > 0) {
-		constexpr const std::size_t control_size = (sizeof(control<free_signature>) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
+		constexpr const std::size_t control_size = (sizeof(default_control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
 		uint8_t* base = (uint8_t*)malloc(control_size + size);
 		uint8_t* data = base + control_size;
 
 		if (base) {
-			this->_p = new(base) control<free_signature>(base, free);
+			this->_p = new(base) default_control(base);
 			this->_data = data;
 			this->_size = size;
 		}
@@ -205,15 +202,13 @@ void buffer::control_base::release() {
 		std::atomic_thread_fence(std::memory_order_acquire);
 
 		const void* base = this->base;
+		const bool is_default_control_type = base == this;
 
-		this->free();
-
-		/*
-		 * Remember the Special Mode:
-		 *  If (base == this) then control and base
-		 *  have been allocated using a single malloc().
-		 */
-		if (base != this) {
+		if (is_default_control_type) {
+			this->~control_base();
+			std::free(const_cast<void*>(base));
+		} else {
+			this->free();
 			delete this;
 		}
 	}

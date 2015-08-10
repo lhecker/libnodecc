@@ -10,7 +10,7 @@ namespace http {
 namespace client {
 namespace detail {
 
-request::request(const node::shared_object<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path) : outgoing_message(socket), _host(host), _method(method), _path(path) {
+request::request(const node::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path) : outgoing_message(socket), _host(host), _method(method), _path(path) {
 }
 
 void request::compile_headers(node::mutable_buffer& buf) {
@@ -36,7 +36,7 @@ void request::compile_headers(node::mutable_buffer& buf) {
 }
 
 
-response::response(const node::shared_object<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
+response::response(const node::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
 }
 
 

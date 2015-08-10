@@ -46,7 +46,8 @@ public:
 		    && (
 		           lhs->data() == rhs->data()
 		        || (
-		               lhs->data() && rhs->data()
+		               lhs->data() != nullptr
+		            && rhs->data() != nullptr
 		            && lhs->hash() == rhs->hash()
 		            && memcmp(lhs->data(), rhs->data(), lhs->size()) == 0
 		        )

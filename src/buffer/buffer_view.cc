@@ -22,7 +22,8 @@ bool buffer_view::equals(const buffer_view& other) const noexcept {
 	    && (
 	           this->data() == other.data()
 	        || (
-	               this->data() && other.data()
+	               this->data() != nullptr
+	            && other.data() != nullptr
 	            && memcmp(this->data(), other.data(), this->size()) == 0
 	        )
 	    );

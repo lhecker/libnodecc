@@ -34,7 +34,7 @@ static node::http::http_date_buffer date_buffer;
 namespace node {
 namespace http {
 
-server::server_response::server_response(const node::shared_object<node::net::socket>& socket) : outgoing_message(socket), _status_code(200), _shutdown_on_end(true) {
+server::server_response::server_response(const node::shared_ptr<node::net::socket>& socket) : outgoing_message(socket), _status_code(200), _shutdown_on_end(true) {
 }
 
 uint16_t server::server_response::status_code() const {

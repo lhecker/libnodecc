@@ -19,39 +19,45 @@ namespace node {
  *
  * @attention Subclasses SHOULD make their destructor protected to enforce the usage of destroy() etc.
  */
-class object {
+class intrusive_ptr {
 	template<typename T>
-	friend class shared_object;
+	friend class shared_ptr;
 
 private:
-	object*      _responsible_object;
-	unsigned int _use_count    = 1;
-	bool         _is_destroyed = false;
+	intrusive_ptr* _responsible_object;
+	unsigned int   _use_count          = 1;
+	bool           _is_destroyed       = false;
+	bool           _is_shared          = false;
 
 public:
 	struct Destructor {
-		void operator()(object* o) {
+		void operator()(intrusive_ptr* o) {
 			o->destroy();
 		}
 	};
 
 
-	explicit object() : _responsible_object(nullptr) {}
+	explicit intrusive_ptr() : _responsible_object(nullptr) {}
 
-	explicit object(object* other) : _responsible_object(other) {
+	explicit intrusive_ptr(intrusive_ptr* other) : _responsible_object(other) {
 		this->_responsible_object->retain();
 	}
 
-	object(object&&) = delete;
+	intrusive_ptr(intrusive_ptr&&) = delete;
 
 	decltype(_use_count) use_count() const {
 		return this->_use_count;
 	}
 
 	void destroy() {
-		this->_is_destroyed = true;
-		this->_destroy();
-		this->release();
+		if (!this->_is_destroyed) {
+			this->_is_destroyed = true;
+			this->_destroy();
+
+			if (!this->_is_shared) {
+				this->release();
+			}
+		}
 	}
 
 	template<typename F>
@@ -63,12 +69,9 @@ public:
 	node::signal<void()> destroy_signal;
 
 protected:
-	//virtual ~object() = default;
-	virtual ~object() {
-		printf("%s", typeid(this).name());
-	}
+	virtual ~intrusive_ptr() = default;
 
-	void set_responsible_object(object* parent) {
+	void set_responsible_object(intrusive_ptr* parent) {
 		assert(parent);
 
 		std::swap(this->_responsible_object, parent);
@@ -120,50 +123,58 @@ protected:
 
 
 template<typename T>
-class object_wrapper : public T {
+class intrusive_ptr_wrapper : public T {
 public:
 	typedef T element_type;
 
 	template<typename... Args>
-	object_wrapper(object* o, Args&&... args) : element_type(std::forward<Args>(args)...) {
+	intrusive_ptr_wrapper(intrusive_ptr* o, Args&&... args) : element_type(std::forward<Args>(args)...) {
 		this->set_responsible_object(o);
 	}
 };
 
 
 template<typename T>
-class shared_object {
+class shared_ptr {
 	template<typename S, typename... Args>
-	friend shared_object<S> make_shared(Args&&... args);
+	friend shared_ptr<S> make_shared(Args&&... args);
 
 public:
 	typedef T element_type;
 
+private:
+	element_type* _ptr;
+public:
 
-	explicit shared_object(element_type* o) : _ptr(o) {
-		// there is no need for a retain() here since it's guaranteed that o will have a use_count of exactly 1
-	}
+	constexpr shared_ptr() : _ptr(nullptr) {}
 
-	shared_object(const shared_object<element_type>& other) : _ptr(other._ptr) {
+	shared_ptr(const shared_ptr<element_type>& other) : _ptr(other._ptr) {
 		this->_ptr->retain();
 	}
 
-	shared_object(shared_object<element_type>&& other) {
+	shared_ptr(shared_ptr<element_type>&& other) {
 		this->_ptr = other._ptr;
 		other._ptr = nullptr;
 	}
 
-	shared_object<element_type>& operator=(const shared_object<element_type>& other) {
+	shared_ptr<element_type>& operator=(const shared_ptr<element_type>& other) {
 		this->_ptr = other._ptr;
 		this->_ptr->retain();
+		return *this;
 	}
 
-	shared_object<element_type>& operator=(shared_object<element_type>&& other) {
+	shared_ptr<element_type>& operator=(shared_ptr<element_type>&& other) {
 		this->_ptr = other._ptr;
 		other._ptr = nullptr;
+		return *this;
 	}
 
-	~shared_object() {
+	shared_ptr<element_type>& operator=(std::nullptr_t) {
+		this->reset();
+		return *this;
+	}
+
+	~shared_ptr() {
 		if (this->_ptr) {
 			this->_ptr->release();
 		}
@@ -185,8 +196,8 @@ public:
 		return this->_ptr;
 	}
 
-	decltype(object::_use_count) use_count() const {
-		return this->_ptr ? this->_ptr->_use_count : 0;
+	decltype(_ptr->use_count()) use_count() const {
+		return this->_ptr ? this->_ptr->use_count() : 0;
 	}
 
 	void reset() {
@@ -198,16 +209,19 @@ public:
 	}
 
 private:
-	element_type* _ptr;
+	explicit shared_ptr(element_type* o) : _ptr(o) {
+		this->_ptr->_is_shared = true;
+		// there is no need for a retain() here since it's guaranteed that o will have a use_count of exactly 1
+	}
 };
 
 
 
 
 template<typename S, typename... Args>
-shared_object<S> make_shared(Args&&... args) {
+shared_ptr<S> make_shared(Args&&... args) {
 	S* o = new S(std::forward<Args>(args)...);
-	return shared_object<S>(o);
+	return shared_ptr<S>(o);
 }
 
 } // namespace node

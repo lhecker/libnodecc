@@ -231,6 +231,13 @@ protected:
 		D _deleter;
 	};
 
+	class default_control : public control_base {
+	public:
+		using control_base::control_base;
+
+		void free() override {}
+	};
+
 
 	/**
 	 * Creates a copy of this buffer in target, while optionally resizing it.

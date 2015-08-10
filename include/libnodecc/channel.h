@@ -12,7 +12,7 @@
 namespace node {
 
 template<typename T>
-class channel : private node::uv::async {
+class channel : public node::uv::async {
 public:
 	typedef std::vector<T> queue;
 
