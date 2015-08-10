@@ -24,7 +24,7 @@ class intrusive_ptr {
 	friend class shared_ptr;
 
 private:
-	intrusive_ptr* _responsible_object;
+	intrusive_ptr* _responsible_object = nullptr;
 	unsigned int   _use_count          = 1;
 	bool           _is_destroyed       = false;
 	bool           _is_shared          = false;
@@ -36,12 +36,6 @@ public:
 		}
 	};
 
-
-	explicit intrusive_ptr() : _responsible_object(nullptr) {}
-
-	explicit intrusive_ptr(intrusive_ptr* other) : _responsible_object(other) {
-		this->_responsible_object->retain();
-	}
 
 	intrusive_ptr(intrusive_ptr&&) = delete;
 
@@ -89,19 +83,13 @@ protected:
 			abort();
 		}
 
-		this->_use_count++;
+		++this->_use_count;
 	}
 
 	void release() {
 		assert(this->_use_count > 0);
 
-		this->_use_count--;
-
-		if (this->_use_count == 0) {
-			if (this->_responsible_object) {
-				return this->_responsible_object->release();
-			}
-
+		if (--this->_use_count == 0) {
 			if (!this->_is_destroyed) {
 				this->_is_destroyed = true;
 				this->_destroy();
@@ -112,7 +100,11 @@ protected:
 				}
 			}
 
-			delete this;
+			if (this->_responsible_object) {
+				this->_responsible_object->release();
+			} else {
+				delete this;
+			}
 		}
 	}
 

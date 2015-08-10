@@ -68,6 +68,8 @@ public:
 				self->release();
 			});
 		}
+
+		intrusive_ptr::_destroy();
 	}
 
 	void ref() {
