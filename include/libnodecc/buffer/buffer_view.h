@@ -93,6 +93,11 @@ public:
 
 	buffer_view view(std::size_t beg = 0, std::size_t end = npos) const noexcept;
 
+	inline buffer_view slice(std::size_t beg = 0, std::size_t end = npos) const noexcept {
+		return this->view(beg, end);
+	}
+
+
 	bool equals(const buffer_view& other) const noexcept;
 
 	std::size_t index_of(const char ch) const noexcept;
