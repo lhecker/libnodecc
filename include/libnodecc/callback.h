@@ -72,7 +72,7 @@ public:
 	}
 
 	template<typename F>
-	void connect(F&& func) {
+	void connect(F func) {
 		this->_f = std::forward<F>(func);
 	}
 

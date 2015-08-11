@@ -8,16 +8,70 @@
 
 namespace node {
 
+struct signal_tag {};
+
+
 namespace detail {
 
 template<typename... Args>
-struct signal_element_base {
-	constexpr signal_element_base() : next(nullptr) {}
-	virtual ~signal_element_base() {};
+struct connection_base {
+	constexpr connection_base() : next(nullptr) {}
+	virtual ~connection_base() = default;
 
 	virtual bool emit(Args&&... args) = 0;
 
-	signal_element_base* next;
+	connection_base* next;
+};
+
+template<typename... Args>
+struct tagged_connection_base : connection_base<Args...> {
+	constexpr tagged_connection_base(const signal_tag& tag) : connection_base<Args...>(), tag(tag) {}
+
+	const signal_tag& tag;
+};
+
+template<typename F, typename... Args>
+struct basic_connection : connection_base<Args...> {
+	basic_connection(F&& func) : connection_base<Args...>(), func(std::forward<F>(func)) {}
+
+	bool emit(Args&&... args) override {
+		this->func(std::forward<Args>(args)...);
+		return false;
+	}
+
+	F func;
+};
+
+template<typename F, typename... Args>
+struct tagged_connection : tagged_connection_base<Args...> {
+	tagged_connection(F&& func) : tagged_connection_base<Args...>(), func(std::forward<F>(func)) {}
+
+	bool emit(Args&&... args) override {
+		this->func(std::forward<Args>(args)...);
+		return false;
+	}
+
+	F func;
+};
+
+template<typename S, typename F, typename... Args>
+struct tracked_connection : connection_base<Args...> {
+	tracked_connection(S&& tracked_object, F&& func) : connection_base<Args...>(), tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
+
+	bool emit(Args&&... args) override {
+		// lock() to ensure that the object is not deleted during the func() call
+		const auto locked_object = this->tracked_object.lock();
+
+		if (locked_object) {
+			func(std::forward<Args>(args)...);
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+	std::weak_ptr<typename std::remove_reference<S>::type::element_type> tracked_object;
+	F func;
 };
 
 }
@@ -32,8 +86,7 @@ class signal<R(Args...)> {
 	static_assert(std::is_void<R>::value, "node::signal requires the return value to be void");
 
 public:
-	typedef detail::signal_element_base<Args...> list_type;
-
+	typedef detail::connection_base<Args...> connection_type;
 
 	constexpr signal() : _head(nullptr), _tail(nullptr) {}
 
@@ -46,59 +99,40 @@ public:
 
 
 	constexpr operator bool() const noexcept {
-		return this->_head;
+		return this->_head != nullptr;
 	}
 
 	constexpr bool empty() const noexcept {
-		return !this->_head;
+		return this->_head == nullptr;
 	}
 
 	template<typename F>
-	void connect(F&& func) {
-		struct signal_element : list_type {
-			signal_element(F&& func) : list_type(), func(std::forward<F>(func)) {}
+	void* connect(F func) {
+		auto entry = new detail::basic_connection<F, Args...>(std::forward<F>(func));
+		this->_append(entry);
+		return entry;
+	}
 
-			bool emit(Args&&... args) override {
-				this->func(std::forward<Args>(args)...);
-				return false;
-			}
-
-			F func;
-		};
-
-		this->_append(new signal_element(std::forward<F>(func)));
+	template<typename F>
+	void* tagged_connect(const signal_tag& tag, F func) {
+		auto entry = new detail::tagged_connection<F, Args...>(tag, std::forward<F>(func));
+		this->_append(entry);
+		return entry;
 	}
 
 	template<typename S, typename F>
-	void tracked_connect(S&& tracked_object, F&& func) {
-		struct signal_element : list_type {
-			signal_element(S&& tracked_object, F&& func) : list_type(), tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
-
-			bool emit(Args&&... args) override {
-				// lock() to ensure that the object is not deleted during the func() call
-				const auto locked_object = this->tracked_object.lock();
-
-				if (locked_object) {
-					func(std::forward<Args>(args)...);
-					return false;
-				} else {
-					return true;
-				}
-			}
-
-			std::weak_ptr<typename std::remove_reference<S>::type::element_type> tracked_object;
-			F func;
-		};
-
-		this->_append(new signal_element(std::forward<S>(tracked_object), std::forward<F>(func)));
+	void* tracked_connect(S tracked_object, F func) {
+		auto entry = new detail::tracked_connection<S, F, Args...>(std::forward<S>(tracked_object), std::forward<F>(func));
+		this->_append(entry);
+		return entry;
 	}
 
 	bool emit(Args... args) {
-		list_type* prev = nullptr;
-		list_type* ptr = this->_head;
+		connection_type* prev = nullptr;
+		connection_type* ptr = this->_head;
 
 		while (ptr) {
-			list_type* next = ptr->next;
+			connection_type* next = ptr->next;
 			const bool remove = ptr->emit(std::forward<Args>(args)...);
 
 			if (remove) {
@@ -113,7 +147,7 @@ public:
 	}
 
 	bool emit_and_clear(Args... args) {
-		list_type* ptr = this->_head;
+		connection_type* ptr = this->_head;
 		bool ret = ptr != nullptr;
 
 		// see clear() as to why we need to set it to null
@@ -121,7 +155,7 @@ public:
 		this->_tail = nullptr;
 
 		while (ptr) {
-			list_type* tmp = ptr;
+			connection_type* tmp = ptr;
 			ptr = ptr->next;
 
 			tmp->emit(std::forward<Args>(args)...);
@@ -132,12 +166,32 @@ public:
 		return ret;
 	}
 
-	void remove(list_type* iter) {
-		list_type* prev = nullptr;
-		list_type* ptr = this->_head;
+	void disconnect(const void* iter) {
+		if (iter) {
+			auto citer = static_cast<const connection_type*>(iter);
+
+			connection_type* prev = nullptr;
+			connection_type* ptr = this->_head;
+
+			while (ptr) {
+				if (citer == ptr) {
+					this->_remove(prev, ptr);
+				}
+
+				prev = ptr;
+				ptr = ptr->next;
+			}
+		}
+	}
+
+	void disconnect(const signal_tag& tag) {
+		connection_type* prev = nullptr;
+		connection_type* ptr = this->_head;
 
 		while (ptr) {
-			if (iter == ptr) {
+			const auto* cptr = dynamic_cast<detail::tagged_connection_base<Args...>*>(ptr);
+
+			if (cptr && cptr->tag == tag) {
 				this->_remove(prev, ptr);
 			}
 
@@ -147,7 +201,7 @@ public:
 	}
 
 	void clear() {
-		const list_type* ptr = this->_head;
+		const connection_type* ptr = this->_head;
 
 		/*
 		 * If this signal is wrapped in a class managed by a shared_ptr,
@@ -160,7 +214,7 @@ public:
 		this->_tail = nullptr;
 
 		while (ptr) {
-			const list_type* tmp = ptr;
+			const connection_type* tmp = ptr;
 			ptr = ptr->next;
 			delete tmp;
 		}
@@ -172,7 +226,7 @@ public:
 	}
 
 protected:
-	void _append(list_type* ptr) {
+	void _append(connection_type* ptr) {
 		if (this->_tail) {
 			this->_tail->next = ptr;
 		} else {
@@ -182,7 +236,7 @@ protected:
 		this->_tail = ptr;
 	}
 
-	void _remove(list_type* prev, list_type* ptr) {
+	void _remove(connection_type* prev, connection_type* ptr) {
 		const auto next = ptr->next;
 
 		if (prev) {
@@ -203,8 +257,8 @@ protected:
 		delete ptr;
 	}
 
-	list_type* _head;
-	list_type* _tail;
+	connection_type* _head;
+	connection_type* _tail;
 };
 
 
@@ -248,7 +302,7 @@ public:
 		signal<R(Args...)>::emit(std::forward<Args>(args)...);
 	}
 
-	void remove(typename signal<R(Args...)>::list_type* iter) {
+	void remove(typename signal<R(Args...)>::connection_type* iter) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
 		signal<R(Args...)>::remove(iter);
 	}
