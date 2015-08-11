@@ -135,17 +135,13 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 	if (bufcnt > 0) {
 		compiledBufcnt += this->_is_chunked ? (2 * bufcnt + 1) : bufcnt;
 	} else if (end) {
-		/*
-		 * TODO: add better stateful behaviour:
-		 * preventing undefined behaviour on multiple calls to .end()
-		 */
 		compiledBufcnt++;
 	}
 
 	if (compiledBufcnt == 0) {
 		goto writeEnd;
 	} else {
-		// no need to copy the buffers if we pipe the bufs 1:1 to the socket
+		// no need to copy the buffers if we can pipe the bufs 1:1 to the socket
 		if (compiledBufcnt == bufcnt) {
 			this->_socket->write(bufs, bufcnt);
 			goto writeEnd;
@@ -203,7 +199,11 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 		}
 
 		using namespace node::literals;
-		compiledBufs[compiledBufsPos++].reset(end ? "\r\n0\r\n\r\n"_buffer_view : "\r\n"_buffer_view, node::buffer_flags::weak);
+		static const auto end_chunk = "\r\n0\r\n\r\n"_buffer_view;
+		static const auto end_chunk_0 = end_chunk.slice(2);
+		static const auto end_chunk_rn = end_chunk.slice(0, 2);
+
+		compiledBufs[compiledBufsPos++].reset(end ? (bufcnt > 0 ? end_chunk : end_chunk_0) : end_chunk_rn, node::buffer_flags::weak);
 	} else {
 		for (size_t i = 0; i < bufcnt; i++) {
 			compiledBufs[compiledBufsPos++] = bufs[i];
@@ -213,11 +213,11 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 	this->_socket->write(compiledBufs, compiledBufsPos);
 
 
-writeEnd:
-
 	for (size_t i = 0; i < compiledBufsPos; i++) {
 		compiledBufs[i].~buffer();
 	}
+
+writeEnd:
 
 	if (end) {
 		this->_headers_sent = false;
