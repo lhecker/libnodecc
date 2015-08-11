@@ -38,12 +38,12 @@ public:
 	}
 
 
-	void resume() override {
+	void _resume() override {
 		this->_flowing = true;
 		this->_read();
 	}
 
-	void pause() override {
+	void _pause() override {
 		this->_flowing = false;
 	}
 

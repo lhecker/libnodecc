@@ -10,6 +10,9 @@
 
 namespace node {
 
+template<typename T>
+class shared_ptr;
+
 /*
  * Reference counting base class for libnodecc.
  *
@@ -24,24 +27,28 @@ class intrusive_ptr {
 	friend class shared_ptr;
 
 private:
-	intrusive_ptr* _responsible_object;
-	unsigned int   _use_count;
-	bool           _is_destroyed;
-	bool           _is_shared;
+	intrusive_ptr* _responsible_object = nullptr;
+	unsigned int   _use_count          = 1;
+	bool           _is_destroyed       = false;
+	bool           _is_shared          = false;
 
 public:
-	struct Destructor {
+	struct destructor {
 		void operator()(intrusive_ptr* o) {
 			o->destroy();
 		}
 	};
 
-	constexpr intrusive_ptr() : _responsible_object(nullptr), _use_count(1), _is_destroyed(false), _is_shared(false) {}
-
+	intrusive_ptr() = default;
 	intrusive_ptr(intrusive_ptr&&) = delete;
 
-	decltype(_use_count) use_count() const {
+	decltype(_use_count) use_count() const noexcept {
 		return this->_use_count;
+	}
+
+	template<typename S>
+	shared_ptr<S> shared_from_this() {
+		return shared_ptr<S>(static_cast<S*>(this));
 	}
 
 	void destroy() {

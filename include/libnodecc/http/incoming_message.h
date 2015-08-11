@@ -74,7 +74,7 @@ private:
 };
 
 
-class incoming_message : public node::stream::readable<int, node::buffer> {
+class incoming_message : public node::stream::readable<incoming_message, int, node::buffer> {
 	friend class server;
 
 public:
@@ -94,15 +94,14 @@ public:
 
 	bool is_websocket_request();
 
-	void resume() override;
-	void pause() override;
-
 	void destroy();
 
 	node::signal<void()> destroy_signal;
 	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
 
 protected:
+	void _resume() override;
+	void _pause() override;
 	void _destroy();
 
 private:

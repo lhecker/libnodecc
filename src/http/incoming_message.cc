@@ -190,7 +190,7 @@ incoming_message::incoming_message(const node::shared_ptr<node::net::socket>& so
 		}
 	});
 
-	this->_socket->end_callback.connect([this]() {
+	this->_socket->end_signal.connect([this]() {
 		http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 	});
 }
@@ -252,13 +252,13 @@ bool incoming_message::is_websocket_request() {
 	return this->_is_websocket == 1;
 }
 
-void incoming_message::resume() {
+void incoming_message::_resume() {
 	if (this->_socket) {
 		this->_socket->resume();
 	}
 }
 
-void incoming_message::pause() {
+void incoming_message::_pause() {
 	if (this->_socket) {
 		this->_socket->pause();
 	}
@@ -333,7 +333,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->_is_websocket != 1) {
-		self->end_callback.emit();
+		self->end_signal.emit();
 		self->_generic_value.reset();
 		self->_headers.clear();
 	}
@@ -376,7 +376,7 @@ void incoming_message::_destroy() {
 	this->headers_complete_callback.clear();
 	this->destroy_signal.emit_and_clear();
 
-	node::stream::readable<int, node::buffer>::_destroy();
+	node::stream::readable<incoming_message, int, node::buffer>::_destroy();
 }
 
 } // namespace node

@@ -229,7 +229,7 @@ void outgoing_message::_destroy() {
 
 	this->destroy_signal.emit_and_clear();
 
-	node::stream::writable<int, node::buffer>::_destroy();
+	node::stream::writable<outgoing_message, int, node::buffer>::_destroy();
 }
 
 } // namespace node

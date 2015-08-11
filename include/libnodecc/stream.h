@@ -1,120 +1,108 @@
 #ifndef nodecc_stream_h
 #define nodecc_stream_h
 
+#include <array>
+
 #include "callback.h"
 #include "signal.h"
 
 
 namespace node {
 namespace stream {
-
-template <typename E, typename T>
-class writable;
-
-template <typename E, typename T>
-class readable;
-
-} // namespace stream
-
-
-template<typename E, typename T>
-static void pipe(stream::readable<E, T>& from, stream::writable<E, T>& to, bool end = true) {
-	from.data_callback.connect([&from, &to](const T chunks[], size_t chunkcnt) {
-		if (to.write(chunks, chunkcnt)) {
-			from.pause();
-		}
-	});
-
-	from.error_callback.connect([&to](E err) {
-		to.error_callback.emit(err);
-	});
-
-	to.drain_callback.connect([&from]() {
-		from.resume();
-	});
-
-	if (end) {
-		from.end_callback.connect([&to]() {
-			to.end();
-		});
-	}
-
-	if (!to.is_flooded()) {
-		from.resume();
-	}
-}
-
-template<typename X, typename Y, typename = typename std::enable_if<std::is_same<typename X::exception_type, typename Y::exception_type>::value && std::is_same<typename X::chunk_type, typename Y::chunk_type>::value>::type>
-static void pipe(const std::shared_ptr<X>& from, const std::shared_ptr<Y>& to, bool end = true) {
-	from->data_callback.connect([from, to](const typename X::chunk_type chunks[], size_t chunkcnt) {
-		if (to->write(chunks, chunkcnt)) {
-			from->pause();
-		}
-	});
-
-	from->error_callback.connect([to](typename X::exception_type err) {
-		to->error_callback.emit(err);
-	});
-
-	to->drain_callback.connect([from]() {
-		from->resume();
-	});
-
-	if (end) {
-		from->end_callback.connect([to]() {
-			to->end();
-		});
-	}
-
-	if (!to->is_flooded()) {
-		from->resume();
-	}
-}
-
-
-namespace stream {
 namespace detail {
 
-template<typename E, typename T>
+template<typename ErrorT, typename ChunkT>
 class base {
 public:
-	typedef E exception_type;
-	typedef T chunk_type;
+	typedef ErrorT error_type;
+	typedef ChunkT chunk_type;
 
-	node::callback<void(E err)> error_callback;
+	node::signal<void(ErrorT err)> error_signal;
+
+protected:
+	void _destroy() {
+		this->error_signal.clear();
+	}
 };
 
-} // namespace detail
 
-
-template<typename E, typename T>
-class readable : public virtual detail::base<E, T> {
+template<typename BaseT, typename ErrorT, typename ChunkT>
+class readable {
 public:
-	friend class writable<E, T>;
+	void resume() {
+		if (!this->_is_flowing) {
+			this->_resume();
+			this->_is_flowing = true;
+		}
+	}
 
-	virtual void resume() = 0;
-	virtual void pause() = 0;
+	void pause() {
+		if (this->_is_flowing) {
+			this->_pause();
+			this->_is_flowing = false;
+		}
+	}
 
 	template<typename To>
-	void pipe(const writable<E, T>& to, bool end = true) {
-		node::pipe(this, to, end);
+	To& pipe(To& to, bool end = true) {
+		auto from = static_cast<BaseT*>(this)->template shared_from_this<BaseT>();
+		std::array<void*, 3> from_iters;
+
+		from_iters[0] = from->data_signal.connect([from, to](const ChunkT chunks[], size_t chunkcnt) {
+			if (!to->write(chunks, chunkcnt)) {
+				from->pause();
+			}
+		});
+
+		from_iters[1] = from->error_signal.connect([to](typename To::error_type err) {
+			to->error_signal.emit(err);
+		});
+
+		to->drain_signal.connect([from]() {
+			from->resume();
+		});
+
+		if (to->is_regular_level()) {
+			from->resume();
+		}
+
+		if (end) {
+			from_iters[2] = from->end_signal.connect([to]() {
+				to->end();
+			});
+		} else {
+			from_iters[2] = nullptr;
+		}
+
+		to->destroy_signal.connect([from, from_iters]() {
+			from->data_signal.disconnect(from_iters[0]);
+			from->error_signal.disconnect(from_iters[1]);
+			from->end_signal.disconnect(from_iters[2]);
+		});
+
+		return to;
 	}
 
+	node::signal<void(const ChunkT chunks[], size_t chunkcnt)> data_callback;
+	node::signal<void()> end_signal;
+
+protected:
 	void _destroy() {
-		this->error_callback.clear();
-
 		this->data_callback.clear();
-		this->end_callback.clear();
+		this->end_signal.clear();
 	}
 
-	node::callback<void(const T chunks[], size_t chunkcnt)> data_callback;
-	node::callback<void()> end_callback;
+	virtual void _resume() = 0;
+	virtual void _pause() = 0;
+
+private:
+	bool _is_flowing = false;
 };
 
-template<typename E, typename T>
-class writable : public virtual detail::base<E, T> {
+template<typename BaseT, typename ErrorT, typename ChunkT>
+class writable {
 public:
-	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0), _was_flooded(false) {}
+	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0), _is_regular_level(true), _is_running(true) {}
 
 	/*
 	* TODO: add callbacks to write() and writev()
@@ -123,7 +111,7 @@ public:
 	*   void cb() { writer.write(buffer, cb); }
 	*   cb();
 	* which might lead to infinite recursion, if the write() function calls the cb synchronously.
-	* (This is for instance the case for node::stream<T> which uses the synchronous uv_try_write.)
+	* (This is for instance the case for node::stream<ChunkT> which uses the synchronous uv_try_write.)
 	*/
 
 	inline size_t highwatermark() const {
@@ -142,35 +130,43 @@ public:
 		this->_lwm = lwm;
 	}
 
-	inline bool is_flooded() const {
-		return this->_was_flooded;
+	inline bool is_regular_level() const {
+		return this->_is_regular_level;
 	}
 
-	inline bool write(const T& chunk) {
+	inline bool is_flooded() const {
+		return !this->_is_regular_level;
+	}
+
+	inline bool write(const ChunkT& chunk) {
 		return this->write(&chunk, 1);
 	}
 
-	bool write(const T chunks[], size_t chunkcnt) {
+	bool write(const ChunkT chunks[], size_t chunkcnt) {
 		this->_write(chunks, chunkcnt);
-		this->_was_flooded = this->_wm >= this->_hwm;
-		return this->_was_flooded;
+		this->_is_regular_level = this->_wm < this->_hwm;
+		return this->_is_regular_level;
 	}
 
 	inline bool end() {
 		return this->end(nullptr, 0);
 	}
 
-	inline bool end(const T& chunk) {
+	inline bool end(const ChunkT& chunk) {
 		return this->end(&chunk, 1);
 	}
 
-	bool end(const T chunks[], size_t chunkcnt) {
-		this->_end(chunks, chunkcnt);
-		this->_was_flooded = this->_wm >= this->_hwm;
-		return this->_was_flooded;
+	bool end(const ChunkT chunks[], size_t chunkcnt) {
+		if (this->_is_running) {
+			this->_end(chunks, chunkcnt);
+			this->_is_running = false;
+			this->_is_regular_level = this->_wm < this->_hwm;
+		}
+
+		return this->_is_regular_level;
 	}
 
-	node::callback<void()> drain_callback;
+	node::signal<void()> drain_signal;
 
 protected:
 	inline void increase_watermark(size_t n) {
@@ -180,38 +176,57 @@ protected:
 	void decrease_watermark(size_t n) {
 		this->_wm = this->_wm > n ? this->_wm - n : 0;
 
-		if (this->_was_flooded && this->_wm <= this->_lwm) {
-			this->drain_callback.emit();
-			this->_was_flooded = false;
+		if (!this->_is_regular_level && this->_wm <= this->_lwm) {
+			this->_is_regular_level = true;
+			this->drain_signal.emit();
 		}
 	}
 
 	void _destroy() {
-		this->error_callback.clear();
-
-		this->drain_callback.clear();
+		this->drain_signal.clear();
 	}
 
-	virtual void _write(const T chunks[], size_t chunkcnt) = 0;
-	virtual void _end(const T chunks[], size_t chunkcnt) = 0;
+	virtual void _write(const ChunkT chunks[], size_t chunkcnt) = 0;
+	virtual void _end(const ChunkT chunks[], size_t chunkcnt) = 0;
 
 private:
 	size_t _hwm;
 	size_t _lwm;
 	size_t _wm;
-	bool _was_flooded;
+	bool _is_regular_level;
+	bool _is_running;
 };
 
-template<typename E, typename T>
-class duplex : public readable<E, T>, public writable<E, T> {
+} // namespace detail
+
+
+template<typename BaseT, typename ErrorT, typename ChunkT>
+class readable : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT> {
 protected:
 	void _destroy() {
-		this->error_callback.clear();
+		detail::base<ErrorT, ChunkT>::_destroy();
+		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
+	}
+};
 
-		this->data_callback.clear();
-		this->end_callback.clear();
 
-		this->drain_callback.clear();
+template<typename BaseT, typename ErrorT, typename ChunkT>
+class writable : public detail::base<ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
+protected:
+	void _destroy() {
+		detail::base<ErrorT, ChunkT>::_destroy();
+		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
+	}
+};
+
+
+template<typename BaseT, typename ErrorT, typename ChunkT>
+class duplex : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
+protected:
+	void _destroy() {
+		detail::base<ErrorT, ChunkT>::_destroy();
+		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
+		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 };
 

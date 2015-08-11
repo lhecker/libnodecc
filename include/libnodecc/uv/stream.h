@@ -14,7 +14,7 @@ namespace node {
 namespace uv {
 
 template<typename T>
-class stream : public node::uv::handle<T>, public node::stream::duplex<int, node::buffer> {
+class stream : public node::uv::handle<T>, public node::stream::duplex<stream<T>, int, node::buffer> {
 public:
 	explicit stream() : node::uv::handle<T>() {
 	}
@@ -23,7 +23,12 @@ public:
 		return reinterpret_cast<uv_stream_t*>(&this->_handle);
 	}
 
-	void resume() override {
+	node::callback<node::buffer()> alloc_callback;
+
+protected:
+	~stream() override = default;
+
+	void _resume() override {
 		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
@@ -46,11 +51,11 @@ public:
 			} else if (nread < 0) {
 				if (nread == UV_EOF) {
 					// the other side shut down it's side (FIN) --> gracefully shutdown
-					self->end_callback.emit();
+					self->end_signal.emit();
 					self->end();
 				} else {
 					// other error --> hard close
-					self->error_callback.emit(int(nread));
+					self->error_signal.emit(int(nread));
 					self->destroy();
 				}
 			}
@@ -59,7 +64,7 @@ public:
 		});
 	}
 
-	void pause() override {
+	void _pause() override {
 		uv_read_stop(*this);
 	}
 
@@ -185,15 +190,9 @@ public:
 	void _destroy() override {
 		this->alloc_callback.clear();
 
+		node::stream::duplex<stream<T>, int, node::buffer>::_destroy();
 		node::uv::handle<T>::_destroy();
-		node::stream::duplex<int, node::buffer>::_destroy();
 	}
-
-
-	node::callback<node::buffer()> alloc_callback;
-
-protected:
-	~stream() override = default;
 
 private:
 	node::buffer _alloc_buffer;
