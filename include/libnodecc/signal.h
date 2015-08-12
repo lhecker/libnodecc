@@ -20,19 +20,19 @@ struct connection_base {
 
 	virtual bool emit(Args&&... args) = 0;
 
-	connection_base* next;
+	connection_base* next = nullptr;
 };
 
 template<typename... Args>
 struct tagged_connection_base : connection_base<Args...> {
-	constexpr tagged_connection_base(const signal_tag& tag) : connection_base<Args...>(), tag(tag) {}
+	constexpr tagged_connection_base(const signal_tag& tag) : tag(tag) {}
 
 	const signal_tag& tag;
 };
 
 template<typename F, typename... Args>
 struct basic_connection : connection_base<Args...> {
-	basic_connection(F&& func) : connection_base<Args...>(), func(std::forward<F>(func)) {}
+	basic_connection(F&& func) : func(std::forward<F>(func)) {}
 
 	bool emit(Args&&... args) override {
 		this->func(std::forward<Args>(args)...);
@@ -44,7 +44,7 @@ struct basic_connection : connection_base<Args...> {
 
 template<typename F, typename... Args>
 struct tagged_connection : tagged_connection_base<Args...> {
-	tagged_connection(F&& func) : tagged_connection_base<Args...>(), func(std::forward<F>(func)) {}
+	tagged_connection(const signal_tag& tag, F&& func) : tagged_connection_base<Args...>(tag), func(std::forward<F>(func)) {}
 
 	bool emit(Args&&... args) override {
 		this->func(std::forward<Args>(args)...);
@@ -56,7 +56,7 @@ struct tagged_connection : tagged_connection_base<Args...> {
 
 template<typename S, typename F, typename... Args>
 struct tracked_connection : connection_base<Args...> {
-	tracked_connection(S&& tracked_object, F&& func) : connection_base<Args...>(), tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
+	tracked_connection(S&& tracked_object, F&& func) : tracked_object(std::forward<S>(tracked_object)), func(std::forward<F>(func)) {}
 
 	bool emit(Args&&... args) override {
 		// lock() to ensure that the object is not deleted during the func() call
@@ -272,50 +272,50 @@ class locking_signal<M, R(Args...)> : public signal<R(Args...)> {
 public:
 	operator bool() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::operator bool();
+		signal::operator bool();
 	}
 
 	bool empty() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::empty();
+		signal::empty();
 	}
 
 	template<typename F>
 	void connect(F&& func) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::connect(std::forward<F>(func));
+		signal::connect(std::forward<F>(func));
 	}
 
 	template<typename S, typename F>
 	void tracked_connect(S&& tracked_object, F&& func) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::tracked_connect(std::forward<S>(tracked_object), std::forward<F>(func));
+		signal::tracked_connect(std::forward<S>(tracked_object), std::forward<F>(func));
 	}
 
 	bool emit(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::emit(std::forward<Args>(args)...);
+		signal::emit(std::forward<Args>(args)...);
 	}
 
 	bool emit_and_clear(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::emit(std::forward<Args>(args)...);
+		signal::emit(std::forward<Args>(args)...);
 	}
 
 	void remove(typename signal<R(Args...)>::connection_type* iter) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::remove(iter);
+		signal::remove(iter);
 	}
 
 	void clear() {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal<R(Args...)>::clear();
+		signal::clear();
 	}
 
 	void swap(signal<R(Args...)>& other) noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock1(this->_m);
 		std::lock_guard<typename std::remove_reference<M>::type> lock2(other._m);
-		signal<R(Args...)>::swap(other);
+		signal::swap(other);
 	}
 
 

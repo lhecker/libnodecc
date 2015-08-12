@@ -30,16 +30,16 @@ template<typename BaseT, typename ErrorT, typename ChunkT>
 class readable {
 public:
 	void resume() {
-		if (!this->_is_flowing) {
+		if (!this->_is_consuming) {
 			this->_resume();
-			this->_is_flowing = true;
+			this->_is_consuming = true;
 		}
 	}
 
 	void pause() {
-		if (this->_is_flowing) {
+		if (this->_is_consuming) {
 			this->_pause();
-			this->_is_flowing = false;
+			this->_is_consuming = false;
 		}
 	}
 
@@ -87,6 +87,29 @@ public:
 	node::signal<void()> end_signal;
 
 protected:
+	bool is_consuming() const noexcept {
+		return this->_is_consuming;
+	}
+
+	bool has_ended() const noexcept {
+		return this->_has_ended;
+	}
+
+	/*
+	 * API for readable implementors below
+	 */
+	void _set_reading_ended() {
+		if (!this->_has_ended) {
+			this->_has_ended = true;
+			this->end_signal.emit_and_clear();
+		}
+	}
+
+	void _reset() {
+		this->_is_consuming = false;
+		this->_has_ended = false;
+	}
+
 	void _destroy() {
 		this->data_callback.clear();
 		this->end_signal.clear();
@@ -96,13 +119,14 @@ protected:
 	virtual void _pause() = 0;
 
 private:
-	bool _is_flowing = false;
+	bool _is_consuming = false;
+	bool _has_ended = false;
 };
 
 template<typename BaseT, typename ErrorT, typename ChunkT>
 class writable {
 public:
-	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0), _is_regular_level(true), _is_running(true) {}
+	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0) {}
 
 	/*
 	* TODO: add callbacks to write() and writev()
@@ -143,8 +167,13 @@ public:
 	}
 
 	bool write(const ChunkT chunks[], size_t chunkcnt) {
+		if (!this->_is_writable) {
+			throw std::logic_error("write after end");
+		}
+
 		this->_write(chunks, chunkcnt);
 		this->_is_regular_level = this->_wm < this->_hwm;
+
 		return this->_is_regular_level;
 	}
 
@@ -157,10 +186,10 @@ public:
 	}
 
 	bool end(const ChunkT chunks[], size_t chunkcnt) {
-		if (this->_is_running) {
+		if (this->_is_writable) {
 			this->_end(chunks, chunkcnt);
-			this->_is_running = false;
 			this->_is_regular_level = this->_wm < this->_hwm;
+			this->_is_writable = false;
 		}
 
 		return this->_is_regular_level;
@@ -169,17 +198,39 @@ public:
 	node::signal<void()> drain_signal;
 
 protected:
-	inline void increase_watermark(size_t n) {
-		this->_hwm += n;
+	bool is_writable() const noexcept {
+		return this->_is_writable;
 	}
 
-	void decrease_watermark(size_t n) {
+	bool has_ended() const noexcept {
+		return this->_has_ended;
+	}
+
+	/*
+	 * API for readable implementors below
+	 */
+	void _increase_watermark(size_t n) {
+		this->_wm += n;
+	}
+
+	void _decrease_watermark(size_t n) {
 		this->_wm = this->_wm > n ? this->_wm - n : 0;
 
 		if (!this->_is_regular_level && this->_wm <= this->_lwm) {
 			this->_is_regular_level = true;
 			this->drain_signal.emit();
 		}
+	}
+
+	void _set_writing_ended() {
+		this->_is_writable = false;
+		this->_has_ended = true;
+	}
+
+	void _reset() {
+		this->_is_regular_level = true;
+		this->_is_writable = true;
+		this->_has_ended = false;
 	}
 
 	void _destroy() {
@@ -193,8 +244,9 @@ private:
 	size_t _hwm;
 	size_t _lwm;
 	size_t _wm;
-	bool _is_regular_level;
-	bool _is_running;
+	bool _is_regular_level = true;
+	bool _is_writable = true;
+	bool _has_ended = false;
 };
 
 } // namespace detail
@@ -204,7 +256,7 @@ template<typename BaseT, typename ErrorT, typename ChunkT>
 class readable : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT> {
 protected:
 	void _destroy() {
-		detail::base<ErrorT, ChunkT>::_destroy();
+		base::_destroy();
 		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 };
@@ -214,7 +266,7 @@ template<typename BaseT, typename ErrorT, typename ChunkT>
 class writable : public detail::base<ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
 protected:
 	void _destroy() {
-		detail::base<ErrorT, ChunkT>::_destroy();
+		base::_destroy();
 		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 };
@@ -223,10 +275,23 @@ protected:
 template<typename BaseT, typename ErrorT, typename ChunkT>
 class duplex : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
 protected:
+	bool readable_has_ended() const noexcept {
+		return readable::has_ended();
+	}
+
+	bool writable_has_ended() const noexcept {
+		return writable::has_ended();
+	}
+
+	void _reset() {
+		readable::_destroy();
+		writable::_destroy();
+	}
+
 	void _destroy() {
-		detail::base<ErrorT, ChunkT>::_destroy();
-		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
-		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
+		base::_destroy();
+		readable::_destroy();
+		writable::_destroy();
 	}
 };
 

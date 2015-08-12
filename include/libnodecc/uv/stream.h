@@ -50,9 +50,14 @@ protected:
 				self->data_callback.emit(&buf, 1);
 			} else if (nread < 0) {
 				if (nread == UV_EOF) {
-					// the other side shut down it's side (FIN) --> gracefully shutdown
-					self->end_signal.emit();
-					self->end();
+					// the other side shut down it's side (FIN)
+					self->_set_reading_ended();
+
+					if (self->writable_has_ended()) {
+						self->destroy();
+					} else {
+						self->end();
+					}
 				} else {
 					// other error --> hard close
 					self->error_signal.emit(int(nread));
@@ -126,13 +131,13 @@ protected:
 
 		struct packed_req {
 			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, size_t total) : ref_list(bufs, bufcnt), total(total) {
-				stream.increase_watermark(this->total);
+				stream._increase_watermark(this->total);
 				this->req.data = &stream;
 			}
 
 			~packed_req() {
 				uv::stream<T>* stream = reinterpret_cast<uv::stream<T>*>(this->req.data);
-				stream->decrease_watermark(this->total);
+				stream->_decrease_watermark(this->total);
 			}
 
 			uv_write_t req;
@@ -146,11 +151,11 @@ protected:
 			packed_req* pack = reinterpret_cast<packed_req*>(req);
 			uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 
+			delete pack;
+
 			if (status != 0) {
 				self->destroy();
 			}
-
-			delete pack;
 
 			self->release();
 		});
@@ -176,6 +181,12 @@ protected:
 
 				delete req;
 
+				self->_set_writing_ended();
+
+				if (status != 0 || self->readable_has_ended()) {
+					self->destroy();
+				}
+
 				self->release();
 			});
 
@@ -190,8 +201,8 @@ protected:
 	void _destroy() override {
 		this->alloc_callback.clear();
 
-		node::stream::duplex<stream<T>, int, node::buffer>::_destroy();
-		node::uv::handle<T>::_destroy();
+		duplex::_destroy();
+		handle::_destroy();
 	}
 
 private:

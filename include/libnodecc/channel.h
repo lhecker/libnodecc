@@ -90,7 +90,7 @@ public:
 	template<typename... Args>
 	void destroy(Args&&... args) {
 		this->notifications_callback.clear();
-		node::uv::handle<uv_async_t>::destroy(std::forward<Args>(args)...);
+		node::uv::async::destroy(std::forward<Args>(args)...);
 	}
 
 protected:

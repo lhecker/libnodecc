@@ -42,21 +42,23 @@ response::response(const node::shared_ptr<node::net::socket>& socket) : incoming
 
 static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
 	const auto socket = node::make_shared<node::net::socket>();
-	const auto req = std::make_shared<client::detail::request>(socket, host, method, path);
-	const auto res = std::make_shared<client::detail::response>(socket);
+	const auto req = node::make_shared<detail::request>(socket, host, method, path);
+	const auto res = node::make_shared<detail::response>(socket);
 
-	socket->destroy_signal.connect([socket]() {});
-
-	socket->destroy_signal.tracked_connect(req, std::bind(&client::detail::request::_destroy, req.get()));
-	socket->destroy_signal.tracked_connect(req, std::bind(&client::detail::response::_destroy, res.get()));
+	socket->destroy_signal.connect([req, res]() {
+		req->_destroy();
+		res->_destroy();
+	});
 
 	socket->connect_callback.connect([req, res, cb](int err) {
 		cb(err, req, res);
 
-		req->socket()->resume();
+		if (err == 0) {
+			// start reading for incoming_message
+			req->socket()->resume();
+		}
 
-		decltype(req->socket()->connect_callback) connect_callback;
-		req->socket()->connect_callback.swap(connect_callback);
+		req->socket()->connect_callback.clear();
 	});
 
 	socket->init(loop);

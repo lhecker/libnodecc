@@ -71,7 +71,9 @@ public:
 	node::signal<void()> destroy_signal;
 
 protected:
-	virtual ~intrusive_ptr() = default;
+	virtual ~intrusive_ptr() {
+		printf("%s\n", typeid(this).name());
+	}
 
 	void set_responsible_object(intrusive_ptr* parent) {
 		assert(parent);
@@ -149,7 +151,9 @@ public:
 	constexpr shared_ptr() : _ptr(nullptr) {}
 
 	shared_ptr(const shared_ptr<element_type>& other) : _ptr(other._ptr) {
-		this->_ptr->retain();
+		if (this->_ptr) {
+			this->_ptr->retain();
+		}
 	}
 
 	shared_ptr(shared_ptr<element_type>&& other) {
@@ -159,7 +163,11 @@ public:
 
 	shared_ptr<element_type>& operator=(const shared_ptr<element_type>& other) {
 		this->_ptr = other._ptr;
-		this->_ptr->retain();
+
+		if (this->_ptr) {
+			this->_ptr->release();
+		}
+
 		return *this;
 	}
 

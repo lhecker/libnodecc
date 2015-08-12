@@ -85,6 +85,12 @@ const url::params_type& url::params() noexcept {
 	return this->_params;
 }
 
+void url::clear() {
+	this->_params.clear();
+	this->_url.reset();
+	this->_state = state::uninitialized;
+}
+
 bool url::_parse_url() {
 	if (this->_state < state::url_parsed && this->_url) {
 		this->_state = state::url_parsed;
@@ -336,6 +342,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 		self->end_signal.emit();
 		self->_generic_value.reset();
 		self->_headers.clear();
+		self->url.clear();
 	}
 
 	return 0;
@@ -374,9 +381,9 @@ void incoming_message::_destroy() {
 	this->_socket.reset();
 
 	this->headers_complete_callback.clear();
-	this->destroy_signal.emit_and_clear();
 
 	node::stream::readable<incoming_message, int, node::buffer>::_destroy();
+	node::intrusive_ptr::_destroy();
 }
 
 } // namespace node

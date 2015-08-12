@@ -40,8 +40,8 @@ public:
 	};
 
 
-	typedef std::shared_ptr<server_request> request;
-	typedef std::shared_ptr<server_response> response;
+	typedef node::shared_ptr<server_request> request;
+	typedef node::shared_ptr<server_response> response;
 
 	explicit server();
 

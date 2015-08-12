@@ -55,6 +55,8 @@ public:
 	const node::buffer& param(const node::buffer& key) noexcept;
 	const params_type& params() noexcept;
 
+	void clear();
+
 private:
 	enum state : uint8_t {
 		uninitialized = 0,
@@ -74,7 +76,7 @@ private:
 };
 
 
-class incoming_message : public node::stream::readable<incoming_message, int, node::buffer> {
+class incoming_message : public node::intrusive_ptr, public node::stream::readable<incoming_message, int, node::buffer> {
 	friend class server;
 
 public:

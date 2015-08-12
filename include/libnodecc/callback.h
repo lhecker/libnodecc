@@ -134,40 +134,40 @@ public:
 	template<typename F>
 	void connect(F&& func) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		callback<R(Args...)>::connect(std::forward<F>(func));
+		callback::connect(std::forward<F>(func));
 	}
 
 	operator bool() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return callback<R(Args...)>::operator bool();
+		return callback::operator bool();
 	}
 
 	bool empty() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return callback<R(Args...)>::empty();
+		return callback::empty();
 	}
 
 	template<typename S = R, typename = typename std::enable_if<std::is_void<S>::value>::type>
 	bool emit(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return callback<R(Args...)>::emit(std::forward<Args>(args)...);
+		return callback::emit(std::forward<Args>(args)...);
 	}
 
 	template<typename S = R, typename = typename std::enable_if<!std::is_void<S>::value>::type>
 	callback_optional<S> emit(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		return callback<R(Args...)>::emit(std::forward<Args>(args)...);
+		return callback::emit(std::forward<Args>(args)...);
 	}
 
 	void clear() noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		callback<R(Args...)>::clear();
+		callback::clear();
 	}
 
 	void swap(callback<R(Args...)>& other) noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock1(this->_m);
 		std::lock_guard<typename std::remove_reference<M>::type> lock2(other._m);
-		callback<R(Args...)>::swap(other);
+		callback::swap(other);
 	}
 
 protected:
@@ -193,7 +193,7 @@ class locking_callback;
 template<typename M, typename R, typename... Args>
 class locking_callback<M, R(Args...)> : public detail::locking_callback<M&, R(Args...)> {
 public:
-	locking_callback(M& m) : detail::locking_callback<M&, R(Args...)>(m) {}
+	locking_callback(M& m) : detail::locking_callback(m) {}
 };
 
 } // namespace node

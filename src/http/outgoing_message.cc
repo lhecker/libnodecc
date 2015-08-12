@@ -39,6 +39,8 @@ void outgoing_message::_write(const node::buffer chunks[], size_t chunkcnt) {
 
 void outgoing_message::_end(const node::buffer chunks[], size_t chunkcnt) {
 	this->http_write(chunks, chunkcnt, true);
+	this->_headers.clear();
+	this->_socket.reset();
 }
 
 void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool end) {
@@ -227,9 +229,8 @@ writeEnd:
 void outgoing_message::_destroy() {
 	this->_socket.reset();
 
-	this->destroy_signal.emit_and_clear();
-
 	node::stream::writable<outgoing_message, int, node::buffer>::_destroy();
+	node::intrusive_ptr::_destroy();
 }
 
 } // namespace node

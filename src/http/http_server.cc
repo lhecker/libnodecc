@@ -84,14 +84,17 @@ void server::server_response::compile_headers(node::mutable_buffer& buf) {
 }
 
 void server::server_response::_end(const node::buffer chunks[], size_t chunkcnt) {
+	auto socket = this->socket();
+
 	outgoing_message::_end(chunks, chunkcnt);
 
-	if (this->_shutdown_on_end) {
-		this->socket()->end();
+	if (this->_shutdown_on_end && socket) {
+		socket->end();
 	}
 
 	// reset fields for the next response in a keepalive connection
-	this->set_status_code(200);
+	this->_status_code = 200;
+	this->_shutdown_on_end = true;
 }
 
 
@@ -106,23 +109,29 @@ server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 			return;
 		}
 
+		const auto req = node::make_shared<server_request>(socket, HTTP_REQUEST);
+		const auto res = node::make_shared<server_response>(socket);
+
 		const auto& _is_destroyed = this->_is_destroyed;
-		socket->destroy_signal.connect([this, socket, _is_destroyed, it]() {
+		socket->destroy_signal.connect([this, _is_destroyed, it, req, res]() {
+			req->_destroy();
+			res->_destroy();
+
 			if (!*_is_destroyed) {
 				this->_clients.erase(it);
 			}
 		});
 
-		const auto req = std::make_shared<server_request>(socket, HTTP_REQUEST);
-		const auto res = std::make_shared<server_response>(socket);
-
-		socket->destroy_signal.tracked_connect(req, std::bind(&server::server_request::_destroy, req.get()));
-		socket->destroy_signal.tracked_connect(res, std::bind(&server::server_response::_destroy,  res.get()));
-
 		req->headers_complete_callback.connect([this, req, res](bool upgrade, bool keep_alive) {
 			using namespace node::literals;
 
-			res->_shutdown_on_end = !keep_alive;
+			/*
+			 * TODO: A HTTP_REQUEST parser should continously run
+			 * for the socket and *spawn* req/res pairs when needed.
+			 * The same goes for http::request().
+			 */
+			//res->_shutdown_on_end = !keep_alive;
+			//res->_reset();
 
 			// RFC 2616 - 14.23
 			if (!req->has_header("host"_view)) {

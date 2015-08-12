@@ -16,8 +16,8 @@ class request;
 class response;
 }
 
-typedef std::shared_ptr<detail::request> request;
-typedef std::shared_ptr<detail::response> response;
+typedef node::shared_ptr<detail::request> request;
+typedef node::shared_ptr<detail::response> response;
 typedef std::function<void(int err, const request& req, const response& res)> on_connect_t;
 
 
