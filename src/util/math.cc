@@ -35,7 +35,7 @@ unsigned int node::util::digits2(unsigned long n) {
 	unsigned long idx;
 
 	if (_BitScanReverse(&idx, n)) {
-		return std::numeric_limits<decltype(n)>::digits - idx;
+		return idx;
 	} else {
 		return 0;
 	}
@@ -48,7 +48,7 @@ unsigned int node::util::digits2(unsigned long long n) {
 	unsigned long idx;
 
 	if (_BitScanReverse64(&idx, n)) {
-		return std::numeric_limits<decltype(n)>::digits - idx;
+		return idx;
 	} else {
 		return 0;
 	}
@@ -155,8 +155,9 @@ unsigned int node::util::digits(size_t n, uint8_t base) {
 	default:
 		// it's a power of 2
 		if ((base & (base - 1)) == 0) {
-			unsigned int m = node::util::digits2((unsigned int)base);
-			return (node::util::digits2(n) + m - 2) / (m - 1);
+			const size_t a = node::util::digits2(static_cast<size_t>(n));
+			const size_t b = node::util::digits2(static_cast<size_t>(base));
+			return (a + b - 2) / (b - 1);
 		}
 
 		return (unsigned int)(std::log(n) / std::log(base));
