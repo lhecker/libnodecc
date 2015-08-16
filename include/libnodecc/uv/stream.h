@@ -201,8 +201,8 @@ protected:
 	void _destroy() override {
 		this->alloc_callback.clear();
 
-		duplex::_destroy();
-		handle::_destroy();
+		node::stream::duplex<stream<T>, int, node::buffer>::_destroy();
+		node::uv::handle<T>::_destroy();
 	}
 
 private:

@@ -15,7 +15,9 @@ namespace detail {
 
 template<typename... Args>
 struct connection_base {
-	constexpr connection_base() : next(nullptr) {}
+	connection_base() = default;
+	connection_base(connection_base&&) = delete;
+
 	virtual ~connection_base() = default;
 
 	virtual bool emit(Args&&... args) = 0;
@@ -272,50 +274,50 @@ class locking_signal<M, R(Args...)> : public signal<R(Args...)> {
 public:
 	operator bool() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::operator bool();
+		signal<R(Args...)>::operator bool();
 	}
 
 	bool empty() const noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::empty();
+		signal<R(Args...)>::empty();
 	}
 
 	template<typename F>
 	void connect(F&& func) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::connect(std::forward<F>(func));
+		signal<R(Args...)>::connect(std::forward<F>(func));
 	}
 
 	template<typename S, typename F>
 	void tracked_connect(S&& tracked_object, F&& func) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::tracked_connect(std::forward<S>(tracked_object), std::forward<F>(func));
+		signal<R(Args...)>::tracked_connect(std::forward<S>(tracked_object), std::forward<F>(func));
 	}
 
 	bool emit(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::emit(std::forward<Args>(args)...);
+		signal<R(Args...)>::emit(std::forward<Args>(args)...);
 	}
 
 	bool emit_and_clear(Args... args) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::emit(std::forward<Args>(args)...);
+		signal<R(Args...)>::emit(std::forward<Args>(args)...);
 	}
 
 	void remove(typename signal<R(Args...)>::connection_type* iter) {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::remove(iter);
+		signal<R(Args...)>::remove(iter);
 	}
 
 	void clear() {
 		std::lock_guard<typename std::remove_reference<M>::type> lock(this->_m);
-		signal::clear();
+		signal<R(Args...)>::clear();
 	}
 
 	void swap(signal<R(Args...)>& other) noexcept {
 		std::lock_guard<typename std::remove_reference<M>::type> lock1(this->_m);
 		std::lock_guard<typename std::remove_reference<M>::type> lock2(other._m);
-		signal::swap(other);
+		signal<R(Args...)>::swap(other);
 	}
 
 

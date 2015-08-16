@@ -256,7 +256,7 @@ template<typename BaseT, typename ErrorT, typename ChunkT>
 class readable : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT> {
 protected:
 	void _destroy() {
-		base::_destroy();
+		detail::base<ErrorT, ChunkT>::_destroy();
 		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 };
@@ -266,7 +266,7 @@ template<typename BaseT, typename ErrorT, typename ChunkT>
 class writable : public detail::base<ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
 protected:
 	void _destroy() {
-		base::_destroy();
+		detail::base<ErrorT, ChunkT>::_destroy();
 		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 };
@@ -276,22 +276,22 @@ template<typename BaseT, typename ErrorT, typename ChunkT>
 class duplex : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
 protected:
 	bool readable_has_ended() const noexcept {
-		return readable::has_ended();
+		return detail::readable<BaseT, ErrorT, ChunkT>::has_ended();
 	}
 
 	bool writable_has_ended() const noexcept {
-		return writable::has_ended();
+		return detail::writable<BaseT, ErrorT, ChunkT>::has_ended();
 	}
 
 	void _reset() {
-		readable::_destroy();
-		writable::_destroy();
+		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
+		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 
 	void _destroy() {
-		base::_destroy();
-		readable::_destroy();
-		writable::_destroy();
+		detail::base<ErrorT, ChunkT>::_destroy();
+		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
+		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
 	}
 };
 
