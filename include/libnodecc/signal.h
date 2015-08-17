@@ -139,9 +139,10 @@ public:
 
 			if (remove) {
 				this->_remove(prev, ptr);
+			} else {
+				prev = ptr;
 			}
 
-			prev = ptr;
 			ptr = next;
 		}
 
