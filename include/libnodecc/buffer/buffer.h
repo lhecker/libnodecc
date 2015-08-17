@@ -86,12 +86,12 @@ public:
 	 * @param size The size of the memory area.
 	 * @param d    An optional custom deleter callback. The default simply calls free().
 	 */
-	template<typename T, typename D>
+	template<typename T, typename D, typename = typename std::enable_if<!std::is_same<D, buffer_flags>::value>::type>
 	explicit buffer(const T* data, std::size_t size, D d) noexcept {
 		control_base* p = new(std::nothrow) control<T, D>(data, std::forward<D>(d));
 
 		if (p) {
-			this->_data = const_cast<void*>(data);
+			this->_data = (void*)data;
 			this->_size = size;
 			this->_p = p;
 		} else {
@@ -161,7 +161,7 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param d     An optional custom deleter callback. The default simply calls free().
 	 */
-	template<typename T, typename D>
+	template<typename T, typename D, typename = typename std::enable_if<!std::is_same<D, buffer_flags>::value>::type>
 	void reset(const T* data, std::size_t size, D d) {
 		this->_release();
 
@@ -224,7 +224,7 @@ protected:
 			 *   - Your deleter must accept a single parameter. Not more, not less.
 			 *   - This parameter must be one to which a void pointer can be cast.
 			 */
-			this->_deleter(static_cast<T*>(const_cast<void*>(this->base)));
+			this->_deleter((T*)this->base);
 		}
 
 	private:
