@@ -71,9 +71,7 @@ public:
 	node::signal<void()> destroy_signal;
 
 protected:
-	virtual ~intrusive_ptr() {
-		printf("%s\n", typeid(this).name());
-	}
+	virtual ~intrusive_ptr() = default;
 
 	void set_responsible_object(intrusive_ptr* parent) {
 		assert(parent);
