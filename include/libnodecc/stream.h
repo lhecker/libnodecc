@@ -83,7 +83,7 @@ public:
 		return to;
 	}
 
-	node::signal<void(const ChunkT chunks[], size_t chunkcnt)> data_callback;
+	node::callback<void(const ChunkT chunks[], size_t chunkcnt)> data_callback;
 	node::signal<void()> end_signal;
 
 protected:
