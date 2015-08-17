@@ -30,7 +30,6 @@ bool outgoing_message::headers_sent() const {
 void outgoing_message::destroy() {
 	if (this->_socket) {
 		this->_socket->destroy();
-		this->_socket.reset();
 	}
 }
 

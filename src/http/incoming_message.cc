@@ -273,7 +273,6 @@ void incoming_message::_pause() {
 void incoming_message::destroy() {
 	if (this->_socket) {
 		this->_socket->destroy();
-		this->_socket.reset();
 	}
 }
 
