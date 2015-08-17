@@ -30,6 +30,7 @@ bool outgoing_message::headers_sent() const {
 void outgoing_message::destroy() {
 	if (this->_socket) {
 		this->_socket->destroy();
+		this->_socket.reset();
 	}
 }
 
@@ -40,7 +41,6 @@ void outgoing_message::_write(const node::buffer chunks[], size_t chunkcnt) {
 void outgoing_message::_end(const node::buffer chunks[], size_t chunkcnt) {
 	this->http_write(chunks, chunkcnt, true);
 	this->_headers.clear();
-	this->_socket.reset();
 }
 
 void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool end) {

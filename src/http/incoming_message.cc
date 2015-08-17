@@ -273,6 +273,7 @@ void incoming_message::_pause() {
 void incoming_message::destroy() {
 	if (this->_socket) {
 		this->_socket->destroy();
+		this->_socket.reset();
 	}
 }
 
@@ -373,7 +374,7 @@ void incoming_message::_add_header_partials() {
 }
 
 node::buffer incoming_message::_buffer(const char* at, size_t length) {
-	const ssize_t start = (uint8_t*)at - this->_parser_buffer->data();
+	const size_t start = at - this->_parser_buffer->data<char>();
 	return this->_parser_buffer->slice(start, start + length);
 }
 
