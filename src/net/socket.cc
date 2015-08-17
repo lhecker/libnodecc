@@ -10,12 +10,18 @@ struct net_socket_connect {
 	explicit net_socket_connect(socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
 		this->req.data = this;
 		this->current_ai = this->ai.get();
+
+		this->socket->retain();
 	};
 
 	explicit net_socket_connect(socket* socket, const addrinfo& ai) : socket(socket) {
 		this->req.data = this;
 		this->current_ai = const_cast<addrinfo*>(&ai);
 	};
+
+	~net_socket_connect() {
+		this->socket->release();
+	}
 
 	addrinfo* next() {
 		this->current_ai = this->current_ai->ai_next;
@@ -77,16 +83,25 @@ bool socket::connect(const sockaddr& addr) {
 	uv_connect_t* req = new uv_connect_t;
 	req->data = this;
 
-	return 0 != uv_tcp_connect(req, *this, &addr, [](uv_connect_t* req, int status) {
+	const auto r = uv_tcp_connect(req, *this, &addr, [](uv_connect_t* req, int status) {
 		auto self = reinterpret_cast<net::socket*>(req->data);
+
 		delete req;
 
 		self->connect_callback.emit(status);
 
-		if (status) {
-			self->connect_callback.connect(nullptr);
+		if (status != 0) {
+			self->destroy();
 		}
+
+		self->release();
 	});
+
+	if (r == 0) {
+		this->retain();
+	}
+
+	return r != 0;
 }
 
 bool socket::connect(const addrinfo& info) {
@@ -97,14 +112,19 @@ bool socket::connect(const addrinfo& info) {
 }
 
 bool socket::connect(const node::string& address, uint16_t port) {
+	this->retain();
+
 	dns::lookup([this](int err, const std::shared_ptr<addrinfo>& res) {
 		if (err) {
 			this->connect_callback.emit(err);
-			this->connect_callback.connect(nullptr);
+			this->destroy();
 		} else {
+			// net_socket_connect deletes itself after it's finished
 			net_socket_connect* data = new net_socket_connect(this, res);
 			data->connect();
 		}
+
+		this->release();
 	}, *this, address, port);
 
 	return true;
