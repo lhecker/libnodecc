@@ -165,7 +165,7 @@ public:
 		this->_ptr = other._ptr;
 
 		if (this->_ptr) {
-			this->_ptr->release();
+			this->_ptr->retain();
 		}
 
 		return *this;
