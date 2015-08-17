@@ -77,7 +77,7 @@ unsigned int node::util::digits2(unsigned long n) {
 	n |= n >> 16;
 
 	if (n == UINT32_MAX) {
-		return 32;
+		return 32ul;
 	} else {
 		n |= n + 1; // output is not log2() but the amount of digits ---> ceil()
 		return index32[(uint32_t)(n * UINT32_C(0x07c4acdd)) >> 27];
@@ -102,7 +102,7 @@ unsigned int node::util::digits2(unsigned long long n) {
 	n |= n + 1;
 
 	if (n == UINT64_MAX) {
-		return 64;
+		return 64ul;
 	} else {
 		return index64[(n * UINT64_C(0x03f79d71b4cb0a89)) >> 58];
 	}
@@ -114,50 +114,50 @@ unsigned int node::util::digits(size_t n, uint8_t base) {
 	switch (base) {
 	case 0:
 	case 1:
-		return 0;
+		return 0ul;
 	case 2:
 		return node::util::digits2(n);
 #if SIZE_T_MAX <= UINT32_MAX
 	case 10:
-		return (n >= 1000000000ul) ? 10
-		     : (n >= 100000000ul) ? 9
-		     : (n >= 10000000ul) ? 8
-		     : (n >= 1000000ul) ? 7
-		     : (n >= 100000ul) ? 6
-		     : (n >= 10000ul) ? 5
-		     : (n >= 1000ul) ? 4
-		     : (n >= 100ul) ? 3
-		     : (n >= 10ul) ? 2
-			 : 1;
+		return (n >= 1000000000ul) ? 10ul
+		     : (n >= 100000000ul) ? 9ul
+		     : (n >= 10000000ul) ? 8ul
+		     : (n >= 1000000ul) ? 7ul
+		     : (n >= 100000ul) ? 6ul
+		     : (n >= 10000ul) ? 5ul
+		     : (n >= 1000ul) ? 4ul
+		     : (n >= 100ul) ? 3ul
+		     : (n >= 10ul) ? 2ul
+			 : 1ul;
 #elif SIZE_T_MAX == UINT64_MAX
 	case 10:
-		return (n >= 10000000000000000000ull) ? 20
-		     : (n >= 1000000000000000000ull) ? 19
-		     : (n >= 100000000000000000ull) ? 18
-		     : (n >= 10000000000000000ull) ? 17
-		     : (n >= 1000000000000000ull) ? 16
-		     : (n >= 100000000000000ull) ? 15
-		     : (n >= 10000000000000ull) ? 14
-		     : (n >= 1000000000000ull) ? 13
-		     : (n >= 100000000000ull) ? 12
-		     : (n >= 10000000000ull) ? 11
-		     : (n >= 1000000000ull) ? 10
-		     : (n >= 100000000ull) ? 9
-		     : (n >= 10000000ull) ? 8
-		     : (n >= 1000000ull) ? 7
-		     : (n >= 100000ull) ? 6
-		     : (n >= 10000ull) ? 5
-		     : (n >= 1000ull) ? 4
-		     : (n >= 100ull) ? 3
-		     : (n >= 10ull) ? 2
-			 : 1;
+		return (n >= 10000000000000000000ull) ? 20ul
+		     : (n >= 1000000000000000000ull) ? 19ul
+		     : (n >= 100000000000000000ull) ? 18ul
+		     : (n >= 10000000000000000ull) ? 17ul
+		     : (n >= 1000000000000000ull) ? 16ul
+		     : (n >= 100000000000000ull) ? 15ul
+		     : (n >= 10000000000000ull) ? 14ul
+		     : (n >= 1000000000000ull) ? 13ul
+		     : (n >= 100000000000ull) ? 12ul
+		     : (n >= 10000000000ull) ? 11ul
+		     : (n >= 1000000000ull) ? 10ul
+		     : (n >= 100000000ull) ? 9ul
+		     : (n >= 10000000ull) ? 8ul
+		     : (n >= 1000000ull) ? 7ul
+		     : (n >= 100000ull) ? 6ul
+		     : (n >= 10000ull) ? 5ul
+		     : (n >= 1000ull) ? 4ul
+		     : (n >= 100ull) ? 3ul
+		     : (n >= 10ull) ? 2ul
+			 : 1ul;
 #endif
 	default:
 		// it's a power of 2
 		if ((base & (base - 1)) == 0) {
-			const size_t a = node::util::digits2(static_cast<size_t>(n));
-			const size_t b = node::util::digits2(static_cast<size_t>(base));
-			return (a + b - 2) / (b - 1);
+			const unsigned int a = node::util::digits2(static_cast<size_t>(n));
+			const unsigned int b = node::util::digits2(static_cast<size_t>(base));
+			return (a + b - 2ul) / (b - 1ul);
 		}
 
 		return (unsigned int)(std::log(n) / std::log(base));
