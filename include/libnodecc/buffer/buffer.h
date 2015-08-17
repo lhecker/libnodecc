@@ -54,7 +54,7 @@ public:
 	 * @param flags node::weak or node::copy
 	 */
 	explicit buffer(const void* data, std::size_t size, buffer_flags flags = buffer_flags::copy) noexcept;
-	explicit buffer(const buffer_view& other, buffer_flags flags = buffer_flags::copy) noexcept : buffer(other.data(), other.size(), flags) {};
+	explicit buffer(const buffer_view& other, buffer_flags flags = buffer_flags::copy) noexcept : buffer(other.data<void>(), other.size(), flags) {};
 
 
 	/**
@@ -86,9 +86,9 @@ public:
 	 * @param size The size of the memory area.
 	 * @param d    An optional custom deleter callback. The default simply calls free().
 	 */
-	template<typename D>
-	explicit buffer(const void* data, std::size_t size, D d) noexcept {
-		control_base* p = new(std::nothrow) control<D>(data, std::forward<D>(d));
+	template<typename T, typename D>
+	explicit buffer(const T* data, std::size_t size, D d) noexcept {
+		control_base* p = new(std::nothrow) control<T, D>(data, std::forward<D>(d));
 
 		if (p) {
 			this->_data = const_cast<void*>(data);
@@ -161,11 +161,11 @@ public:
 	 * @param size  The size of the memory area.
 	 * @param d     An optional custom deleter callback. The default simply calls free().
 	 */
-	template<typename D>
-	void reset(const void* data, std::size_t size, D d) {
+	template<typename T, typename D>
+	void reset(const T* data, std::size_t size, D d) {
 		this->_release();
 
-		control_base* p = new(std::nothrow) control<D>(data, std::forward<D>(d));
+		control_base* p = new(std::nothrow) control<T, D>(data, std::forward<D>(d));
 
 		if (p) {
 			this->_data = const_cast<void*>(data);
@@ -213,10 +213,10 @@ protected:
 		std::atomic<unsigned int> use_count;
 	};
 
-	template<typename D>
+	template<typename T, typename D>
 	class control : public control_base {
 	public:
-		explicit control(const void* base, D d) noexcept : control_base(base), _deleter(std::move(d)) {}
+		explicit control(const T* base, D&& d) noexcept : control_base(base), _deleter(std::forward<D>(d)) {}
 
 		void free() override {
 			/*
@@ -224,7 +224,7 @@ protected:
 			 *   - Your deleter must accept a single parameter. Not more, not less.
 			 *   - This parameter must be one to which a void pointer can be cast.
 			 */
-			this->_deleter(static_cast<typename node::util::function_traits<D>::template arg<0>::type>(const_cast<void*>(this->base)));
+			this->_deleter(static_cast<T*>(const_cast<void*>(this->base)));
 		}
 
 	private:
