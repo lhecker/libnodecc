@@ -115,8 +115,8 @@ server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 		// TODO: (create and) use node::weak_ptr instead?
 		const auto& _is_destroyed = this->_is_destroyed;
 		socket->destroy_signal.connect([this, _is_destroyed, it, req, res]() {
-			req->_destroy();
-			res->_destroy();
+			req->intrusive_ptr::destroy();
+			res->intrusive_ptr::destroy();
 
 			if (!*_is_destroyed) {
 				this->_clients.erase(it);

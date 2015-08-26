@@ -98,7 +98,6 @@ public:
 
 	void destroy();
 
-	node::signal<void()> destroy_signal;
 	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
 
 protected:
