@@ -6,21 +6,14 @@
 namespace node {
 namespace net {
 
-struct net_socket_connect {
-	explicit net_socket_connect(socket* socket, const std::shared_ptr<addrinfo>& ai) : socket(socket), ai(ai) {
+struct connect_pack {
+	explicit connect_pack(node::loop& loop, socket::dns_connect_t&& cb) : loop(loop), cb(cb) {
 		this->req.data = this;
+	};
+
+	void set_ai(const std::shared_ptr<addrinfo>& ai) {
+		this->ai = ai;
 		this->current_ai = this->ai.get();
-
-		this->socket->retain();
-	};
-
-	explicit net_socket_connect(socket* socket, const addrinfo& ai) : socket(socket) {
-		this->req.data = this;
-		this->current_ai = const_cast<addrinfo*>(&ai);
-	};
-
-	~net_socket_connect() {
-		this->socket->release();
 	}
 
 	addrinfo* next() {
@@ -29,23 +22,36 @@ struct net_socket_connect {
 	}
 
 	void connect() {
+		/*
+		 * TODO: Is it really not possible to uv_close() and init() again?
+		 * But how would one transmit the self pointer across
+		 * the close callback without modifying handle.data?
+		 */
+		this->socket.reset();
+
+		this->socket = node::make_shared<net::socket>();
+		this->socket->init(this->loop);
+
+		this->socket->retain();
+
 		sockaddr* addr = this->current_ai->ai_addr;
 
-		int err = !addr ? EINVAL : uv_tcp_connect(&this->req, *this->socket, addr, [](uv_connect_t* req, int status) {
-			auto self = reinterpret_cast<net_socket_connect*>(req->data);
+		const int err = uv_tcp_connect(&this->req, *this->socket, addr, [](uv_connect_t* req, int status) {
+			auto self = reinterpret_cast<connect_pack*>(req->data);
+
+			self->socket->release();
 
 			if (status == 0) {
-				// connect successful ---> call callback with true
-				self->socket->connect_callback.emit(status);
+				// connect successful ---> call callback with socket
+				self->cb(status, self->socket);
 			} else {
 				// connect NOT successful but another address is available ---> call next connect
 				if (self->next()) {
 					self->connect();
 					return;
 				} else {
-					// connect NOT successful and NO another address available ---> call callback with false
-					self->socket->connect_callback.emit(status);
-					self->socket->connect_callback.connect(nullptr);
+					// connect NOT successful and NO another address available ---> call callback without socket
+					self->cb(status, nullptr);
 				}
 			}
 
@@ -54,20 +60,24 @@ struct net_socket_connect {
 		});
 
 		if (err) {
+			this->socket->release();
+
 			if (this->next()) {
+				// connect NOT successful but another address is available ---> call next connect
 				this->connect();
 			} else {
-				// connect NOT successful and NO another address available ---> call callback with false
-				this->socket->connect_callback.emit(err);
-				this->socket->connect_callback.connect(nullptr);
+				// connect NOT successful and NO another address available ---> call callback without socket
+				this->cb(err, nullptr);
 				delete this;
 			}
 		}
 	}
 
-	socket* socket;
-	addrinfo* current_ai;
+	node::loop& loop;
+	socket::dns_connect_t cb;
 	std::shared_ptr<addrinfo> ai;
+	addrinfo* current_ai;
+	node::shared_ptr<socket> socket;
 	uv_connect_t req;
 };
 
@@ -104,28 +114,25 @@ bool socket::connect(const sockaddr& addr) {
 	return r != 0;
 }
 
-bool socket::connect(const addrinfo& info) {
-	net_socket_connect* data = new net_socket_connect(this, info);
-	data->connect();
+/*
+ * We can't reuse a single socket for this again and again
+ * since it's not guaranteed that reusing a socket works.
+ * See: http://stackoverflow.com/a/4200797
+ *
+ * That's why this method must be a factory method.
+ */
+bool socket::connect(node::loop& loop, const node::string& address, uint16_t port, dns_connect_t cb) {
+	connect_pack* pack = new connect_pack(loop, std::move(cb));
 
-	return true;
-}
-
-bool socket::connect(const node::string& address, uint16_t port) {
-	this->retain();
-
-	dns::lookup([this](int err, const std::shared_ptr<addrinfo>& res) {
+	dns::lookup([pack](int err, const std::shared_ptr<addrinfo>& res) {
 		if (err) {
-			this->connect_callback.emit(err);
-			this->destroy();
+			pack->cb(err, nullptr);
+			delete pack;
 		} else {
-			// net_socket_connect deletes itself after it's finished
-			net_socket_connect* data = new net_socket_connect(this, res);
-			data->connect();
+			pack->set_ai(res);
+			pack->connect();
 		}
-
-		this->release();
-	}, *this, address, port);
+	}, loop, address, port);
 
 	return true;
 }

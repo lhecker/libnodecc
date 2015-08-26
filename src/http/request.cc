@@ -41,7 +41,6 @@ response::response(const node::shared_ptr<node::net::socket>& socket) : incoming
 
 
 static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
-	const auto socket = node::make_shared<node::net::socket>();
 	const auto req = node::make_shared<detail::request>(socket, host, method, path);
 	const auto res = node::make_shared<detail::response>(socket);
 
@@ -60,10 +59,6 @@ static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
 
 		req->socket()->connect_callback.clear();
 	});
-
-	socket->init(loop);
-
-	return socket;
 }
 
 } // namespace detail
@@ -92,12 +87,17 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	const auto socket = _generate(loop, host, method, path, cb);
-	socket->connect(host, parser.port ? parser.port : 80);
+	net::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](int err, node::shared_ptr<node::net::socket> socket) {
+		_generate(socket, host, method, path, cb);
+	});
 }
 
 void request(node::loop& loop, const sockaddr& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb) {
-	const auto socket = _generate(loop, host, method, path, cb);
+	const auto socket = node::make_shared<node::net::socket>();
+
+	_generate(socket, host, method, path, cb);
+
+	socket->init(loop);
 	socket->connect(addr);
 }
 

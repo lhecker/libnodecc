@@ -24,7 +24,7 @@ typedef std::function<void(int err, const request& req, const response& res)> on
 namespace detail {
 
 #define NODE_HTTP_REQUEST_GENERATOR_SIGNATURE \
-	node::shared_ptr<node::net::socket> _generate(node::loop& loop, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
+	void _generate(node::shared_ptr<node::net::socket> socket, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
 
 static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 

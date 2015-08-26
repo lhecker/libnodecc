@@ -13,6 +13,10 @@ class handle : public intrusive_ptr {
 public:
 	typedef handle handle_type;
 
+	
+	template<typename U, typename V>
+	static U* to_node(V* handle) { return dynamic_cast<U*>(((uv::handle<T>*)handle->data)); }
+
 
 	explicit handle() {
 		this->_handle.loop = nullptr;
@@ -20,11 +24,15 @@ public:
 	}
 
 
-	operator node::loop&() { return *static_cast<node::loop*>(this->_handle.loop->data); }
+	node::loop& loop() { return *static_cast<node::loop*>(this->_handle.loop->data); }
+	node::loop& loop() const { return *static_cast<node::loop*>(this->_handle.loop->data); }
+
+
+	operator node::loop&() { return this->loop(); }
 	operator uv_loop_t*() { return this->_handle.loop; }
 	operator uv_handle_t*() { return reinterpret_cast<uv_handle_t*>(&this->_handle); }
 
-	operator node::loop&() const { return *static_cast<node::loop*>(this->_handle.loop->data); }
+	operator node::loop&() const { return this->loop(); }
 	operator uv_loop_t*() const { return this->_handle.loop; }
 	operator const uv_handle_t*() const { return reinterpret_cast<const uv_handle_t*>(&this->_handle); }
 
@@ -37,8 +45,6 @@ public:
 	template<typename U = T, typename = typename std::enable_if<!std::is_same<U, uv_handle_t>::value>::type>
 	operator const T*() const { return &this->_handle; }
 
-	template<typename U, typename V>
-	static U* to_node(V* handle) { return dynamic_cast<U*>(((uv::handle<T>*)handle->data)); }
 
 	template<class T1, class T2>
 	friend bool operator==(const uv::handle<T1>& lhs, const uv::handle<T2>& rhs) noexcept {

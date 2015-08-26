@@ -8,16 +8,18 @@ namespace node {
 namespace net {
 
 class socket : public node::uv::stream<uv_tcp_t> {
-	friend struct net_socket_connect;
+	friend struct connect_pack;
 
 public:
+	typedef std::function<void(int err, node::shared_ptr<node::net::socket> socket)> dns_connect_t;
+
+
 	explicit socket();
 
 	bool init(node::loop& loop);
 
 	bool connect(const sockaddr& addr);
-	bool connect(const addrinfo& info);
-	bool connect(const node::string& address, uint16_t port);
+	static bool connect(node::loop& loop, const node::string& address, uint16_t port, dns_connect_t cb);
 
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);
@@ -28,6 +30,9 @@ public:
 
 protected:
 	~socket() override = default;
+
+private:
+	static void _try_next();
 };
 
 } // namespace net
