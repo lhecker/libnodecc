@@ -112,6 +112,7 @@ server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 		const auto req = node::make_shared<server_request>(socket, HTTP_REQUEST);
 		const auto res = node::make_shared<server_response>(socket);
 
+		// TODO: (create and) use node::weak_ptr instead?
 		const auto& _is_destroyed = this->_is_destroyed;
 		socket->destroy_signal.connect([this, _is_destroyed, it, req, res]() {
 			req->_destroy();
@@ -185,7 +186,7 @@ server::server() : net::server(), _is_destroyed(std::make_shared<bool>(false)) {
 }
 
 void server::_destroy() {
-	*this->_is_destroyed = false;
+	*this->_is_destroyed = true;
 
 	for (const auto& socket : this->_clients) {
 		socket->destroy();
