@@ -103,7 +103,7 @@ public:
 protected:
 	void _resume() override;
 	void _pause() override;
-	void _destroy();
+	void _destroy() override;
 
 private:
 	static int parser_on_url(http_parser* parser, const char* at, size_t length);

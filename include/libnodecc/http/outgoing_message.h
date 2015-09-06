@@ -42,7 +42,7 @@ public:
 protected:
 	void http_write(const node::buffer bufs[], size_t bufcnt, bool end);
 
-	void _destroy();
+	void _destroy() override;
 
 	void _write(const node::buffer chunks[], size_t chunkcnt) override;
 	void _end(const node::buffer chunks[], size_t chunkcnt) override;
