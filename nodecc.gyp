@@ -89,10 +89,6 @@
 					'include',
 					'deps',
 				],
-				'xcode_settings': {
-					'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
-					'CLANG_CXX_LIBRARY': 'libc++',
-				},
 			},
 			'export_dependent_settings': [
 				'deps/json11.gyp:json11',
