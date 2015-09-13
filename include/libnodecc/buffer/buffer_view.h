@@ -29,7 +29,7 @@ class buffer_view {
 	friend bool operator!=(buffer_view&, buffer_view&) noexcept;
 
 public:
-	static constexpr std::size_t npos = -1;
+	static constexpr std::size_t npos = std::size_t(-1);
 
 
 	constexpr buffer_view() : _data(nullptr), _size(0) {}
