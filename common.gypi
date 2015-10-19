@@ -91,6 +91,18 @@
 				'SuppressStartupBanner': 'true',
 			},
 		},
+		'xcode_settings': {
+			'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
+			'COMBINE_HIDPI_IMAGES': 'YES',
+			'DEAD_CODE_STRIPPING': 'YES',
+			'GCC_INLINES_ARE_PRIVATE_EXTERN': 'YES',
+			'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES',
+			'WARNING_CFLAGS': [
+				'-Wall',
+				'-Wextra',
+				'-Wno-unused-parameter',
+			],
+		},
 		'cflags': [
 			'-fdata-sections',
 			'-ffunction-sections',
@@ -104,17 +116,6 @@
 		'ldflags': [
 			'-Wl,--gc-sections',
 		],
-		'xcode_settings': {
-			'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
-			'DEAD_CODE_STRIPPING': 'YES',
-			'GCC_INLINES_ARE_PRIVATE_EXTERN': 'YES',
-			'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES',
-			'WARNING_CFLAGS': [
-				'-Wall',
-				'-Wextra',
-				'-Wno-unused-parameter',
-			],
-		},
 	},
 
 	# Some Xcode settings need to be set project-wide instead
