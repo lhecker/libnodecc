@@ -2,7 +2,7 @@
 
 #include <cctype>
 
-#include "libnodecc/net/socket.h"
+#include "libnodecc/tcp/socket.h"
 
 
 static const node::buffer_view method_map[] = {
@@ -161,7 +161,7 @@ node::buffer url::_get(uint_fast8_t type) noexcept {
 }
 
 
-incoming_message::incoming_message(const node::shared_ptr<node::net::socket>& socket, http_parser_type type) : _socket(socket), _is_websocket(UINT8_MAX) {
+incoming_message::incoming_message(const node::shared_ptr<node::tcp::socket>& socket, http_parser_type type) : _socket(socket), _is_websocket(UINT8_MAX) {
 	static const http_parser_settings http_req_parser_settings = {
 		nullptr,
 		incoming_message::parser_on_url,
@@ -201,7 +201,7 @@ incoming_message::incoming_message(const node::shared_ptr<node::net::socket>& so
 	});
 }
 
-const node::shared_ptr<node::net::socket>& incoming_message::socket() {
+const node::shared_ptr<node::tcp::socket>& incoming_message::socket() {
 	return this->_socket;
 }
 

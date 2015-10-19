@@ -3,7 +3,7 @@
 
 #include <list>
 
-#include "../net/server.h"
+#include "../tcp/server.h"
 #include "incoming_message.h"
 #include "outgoing_message.h"
 
@@ -11,7 +11,7 @@
 namespace node {
 namespace http {
 
-class server : public node::net::server {
+class server : public node::tcp::server {
 public:
 	class server_request : public node::http::incoming_message {
 		friend class server;
@@ -24,7 +24,7 @@ public:
 		friend class server;
 
 	public:
-		explicit server_response(const node::shared_ptr<node::net::socket>& socket);
+		explicit server_response(const node::shared_ptr<node::tcp::socket>& socket);
 
 		uint16_t status_code() const;
 		void set_status_code(uint16_t code);
@@ -54,7 +54,7 @@ protected:
 
 private:
 	std::shared_ptr<bool> _is_destroyed;
-	std::list<node::shared_ptr<net::socket>> _clients;
+	std::list<node::shared_ptr<tcp::socket>> _clients;
 };
 
 } // namespace http

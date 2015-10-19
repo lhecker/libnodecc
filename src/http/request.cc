@@ -10,7 +10,7 @@ namespace http {
 namespace client {
 namespace detail {
 
-request::request(const node::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path) : outgoing_message(socket), _host(host), _method(method), _path(path) {
+request::request(const node::shared_ptr<node::tcp::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path) : outgoing_message(socket), _host(host), _method(method), _path(path) {
 }
 
 void request::compile_headers(node::mutable_buffer& buf) {
@@ -36,7 +36,7 @@ void request::compile_headers(node::mutable_buffer& buf) {
 }
 
 
-response::response(const node::shared_ptr<node::net::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
+response::response(const node::shared_ptr<node::tcp::socket>& socket) : incoming_message(socket, HTTP_RESPONSE) {
 }
 
 
@@ -87,13 +87,13 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	net::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](int err, node::shared_ptr<node::net::socket> socket) {
+	tcp::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](int err, node::shared_ptr<node::tcp::socket> socket) {
 		_generate(socket, host, method, path, cb);
 	});
 }
 
 void request(node::loop& loop, const sockaddr& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb) {
-	const auto socket = node::make_shared<node::net::socket>();
+	const auto socket = node::make_shared<node::tcp::socket>();
 
 	_generate(socket, host, method, path, cb);
 

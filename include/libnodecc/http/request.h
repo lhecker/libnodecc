@@ -4,7 +4,7 @@
 #include "incoming_message.h"
 #include "outgoing_message.h"
 
-#include "../net/socket.h"
+#include "../tcp/socket.h"
 
 
 namespace node {
@@ -24,7 +24,7 @@ typedef std::function<void(int err, const request& req, const response& res)> on
 namespace detail {
 
 #define NODE_HTTP_REQUEST_GENERATOR_SIGNATURE \
-	void _generate(node::shared_ptr<node::net::socket> socket, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
+	void _generate(node::shared_ptr<node::tcp::socket> socket, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb)
 
 static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 
@@ -32,7 +32,7 @@ class request : public node::http::outgoing_message {
 	friend NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 
 public:
-	explicit request(const node::shared_ptr<node::net::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path);
+	explicit request(const node::shared_ptr<node::tcp::socket>& socket, const node::buffer& host, const node::buffer& method, const node::buffer& path);
 
 private:
 	void compile_headers(node::mutable_buffer& buf) override;
@@ -46,7 +46,7 @@ class response : public node::http::incoming_message {
 	friend NODE_HTTP_REQUEST_GENERATOR_SIGNATURE;
 
 public:
-	explicit response(const node::shared_ptr<node::net::socket>& socket);
+	explicit response(const node::shared_ptr<node::tcp::socket>& socket);
 };
 
 } // namespace detail

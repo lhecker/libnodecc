@@ -1,10 +1,10 @@
-#include "libnodecc/net/socket.h"
+#include "libnodecc/tcp/socket.h"
 
 #include "libnodecc/dns/lookup.h"
 
 
 namespace node {
-namespace net {
+namespace tcp {
 
 struct connect_pack {
 	explicit connect_pack(node::loop& loop, socket::dns_connect_t&& cb) : loop(loop), cb(cb) {
@@ -29,7 +29,7 @@ struct connect_pack {
 		 */
 		this->socket.reset();
 
-		this->socket = node::make_shared<net::socket>();
+		this->socket = node::make_shared<tcp::socket>();
 		this->socket->init(this->loop);
 
 		this->socket->retain();
@@ -94,7 +94,7 @@ bool socket::connect(const sockaddr& addr) {
 	req->data = this;
 
 	const auto r = uv_tcp_connect(req, *this, &addr, [](uv_connect_t* req, int status) {
-		auto self = reinterpret_cast<net::socket*>(req->data);
+		auto self = reinterpret_cast<tcp::socket*>(req->data);
 
 		delete req;
 
@@ -152,4 +152,4 @@ void socket::_destroy() {
 }
 
 } // namespace node
-} // namespace net
+} // namespace tcp

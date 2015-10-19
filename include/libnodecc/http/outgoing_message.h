@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "../buffer.h"
-#include "../net/socket.h"
+#include "../tcp/socket.h"
 #include "../stream.h"
 
 
@@ -16,9 +16,9 @@ class outgoing_message : public node::intrusive_ptr, public node::stream::writab
 	friend class server;
 
 public:
-	explicit outgoing_message(const node::shared_ptr<node::net::socket>& socket);
+	explicit outgoing_message(const node::shared_ptr<node::tcp::socket>& socket);
 
-	const node::shared_ptr<node::net::socket>& socket();
+	const node::shared_ptr<node::tcp::socket>& socket();
 
 	const node::buffer header(node::hashed_buffer& key);
 
@@ -51,7 +51,7 @@ protected:
 
 	// needs to be directly accessed by certain subclasses
 	std::unordered_map<node::hashed_buffer, node::buffer> _headers;
-	node::shared_ptr<node::net::socket> _socket;
+	node::shared_ptr<node::tcp::socket> _socket;
 	bool _headers_sent;
 	bool _is_chunked;
 };

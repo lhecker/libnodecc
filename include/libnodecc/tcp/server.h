@@ -1,11 +1,11 @@
-#ifndef nodecc_net_server_h
-#define nodecc_net_server_h
+#ifndef nodecc_tcp_server_h
+#define nodecc_tcp_server_h
 
 #include "socket.h"
 
 
 namespace node {
-namespace net {
+namespace tcp {
 
 class server : public node::uv::handle<uv_tcp_t> {
 public:
@@ -17,7 +17,7 @@ public:
 	bool listen4(uint16_t port = 0, const std::string& ip = "0.0.0.0", int backlog = 511);
 	bool listen6(uint16_t port = 0, const std::string& ip = "::", int backlog = 511, bool dualstack = true);
 
-	bool accept(node::net::socket& client);
+	bool accept(node::tcp::socket& client);
 
 	uint16_t port();
 
@@ -29,7 +29,7 @@ protected:
 	~server() override = default;
 };
 
-} // namespace net
+} // namespace tcp
 } // namespace node
 
-#endif // nodecc_net_server_h
+#endif // nodecc_tcp_server_h

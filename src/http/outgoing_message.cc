@@ -1,17 +1,17 @@
 #include "libnodecc/http/outgoing_message.h"
 
-#include "libnodecc/net/socket.h"
+#include "libnodecc/tcp/socket.h"
 #include "libnodecc/util/math.h"
 
 
 namespace node {
 namespace http {
 
-outgoing_message::outgoing_message(const node::shared_ptr<node::net::socket>& socket) : _socket(socket), _headers_sent(false) {
+outgoing_message::outgoing_message(const node::shared_ptr<node::tcp::socket>& socket) : _socket(socket), _headers_sent(false) {
 	this->_headers.max_load_factor(0.75);
 }
 
-const node::shared_ptr<node::net::socket>& outgoing_message::socket() {
+const node::shared_ptr<node::tcp::socket>& outgoing_message::socket() {
 	return this->_socket;
 }
 
