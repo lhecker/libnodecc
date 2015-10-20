@@ -5,6 +5,8 @@
 #include <vector>
 #include <uv.h>
 
+#include "error.h"
+
 
 namespace node {
 
@@ -13,15 +15,15 @@ public:
 	typedef std::function<void()> on_tick_t;
 
 
-	explicit loop() noexcept;
-	~loop() noexcept;
+	explicit loop();
+	~loop();
 
 	loop(const loop&) = delete;
 	loop& operator=(const loop&) = delete;
 
-	bool run();
-	bool run_once();
-	bool run_nowait();
+	void run();
+	void run_once();
+	void run_nowait();
 
 	void stop();
 

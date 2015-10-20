@@ -8,14 +8,14 @@ namespace node {
 
 class literal_string : public hashed_buffer_view {
 public:
-	constexpr literal_string(const char* str, std::size_t len, std::size_t hash) : hashed_buffer_view(str, len, hash) {}
+	constexpr literal_string(const char* str, std::size_t len) : hashed_buffer_view(str, len, node::util::fnv1a<std::size_t>::const_hash(str, len)) {}
 };
 
 
 inline namespace literals {
 
 constexpr literal_string operator "" _view(const char* str, std::size_t len) noexcept {
-	return literal_string(str, len, node::util::fnv1a<std::size_t>::const_hash(str, len));
+	return literal_string(str, len);
 }
 
 } // inline namespace literals

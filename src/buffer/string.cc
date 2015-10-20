@@ -37,8 +37,12 @@ string string::copy(std::size_t size) const {
 	return str;
 }
 
-std::unique_ptr<char, string::c_str_deleter> string::c_str() const noexcept {
-	return std::unique_ptr<char, c_str_deleter>(this->data<char>());
+std::unique_ptr<const char, string::c_str_deleter> string::create_c_str() const noexcept {
+	return std::unique_ptr<const char, c_str_deleter>(this->c_str());
+}
+
+const char* string::c_str() const noexcept {
+	return this->data<const char>();
 }
 
 void string::_copy(string& target, std::size_t size) const {

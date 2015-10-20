@@ -43,7 +43,7 @@ public:
 	typedef node::shared_ptr<server_request> request;
 	typedef node::shared_ptr<server_response> response;
 
-	explicit server();
+	explicit server(node::loop& loop);
 
 	void _destroy() override;
 

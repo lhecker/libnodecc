@@ -14,9 +14,7 @@ public:
 	node::callback<void(int err, int events, const std::string& str)> event_callback;
 
 public:
-	explicit event();
-
-	bool init(node::loop& loop);
+	explicit event(node::loop& loop);
 
 	bool start(const std::string& path);
 	bool stop();

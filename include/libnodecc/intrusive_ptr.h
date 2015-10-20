@@ -233,7 +233,7 @@ private:
 
 
 template<typename S, typename... Args>
-shared_ptr<S> make_shared(Args&&... args) {
+shared_ptr<S> make_shared(Args&&... args) noexcept(false) {
 	S* o = new S(std::forward<Args>(args)...);
 	return shared_ptr<S>(o);
 }

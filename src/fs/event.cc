@@ -4,11 +4,8 @@
 namespace node {
 namespace fs {
 
-event::event() : uv::handle<uv_fs_event_t>() {
-}
-
-bool event::init(node::loop& loop) {
-	return 0 == uv_fs_event_init(loop, *this);
+event::event(node::loop& loop) : uv::handle<uv_fs_event_t>() {
+	uv_fs_event_init(loop, *this);
 }
 
 bool event::start(const std::string& path) {

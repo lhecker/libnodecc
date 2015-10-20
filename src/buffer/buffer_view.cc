@@ -55,16 +55,16 @@ std::size_t buffer_view::index_of(const buffer_view& other) const noexcept {
 	}
 }
 
-std::unique_ptr<char> buffer_view::c_str() const noexcept {
-	char* str = nullptr;
+std::unique_ptr<char> buffer_view::create_c_str() const {
+	std::unique_ptr<char> ret;
 
 	if (this->size()) {
-		str = new char[this->size() + 1];
-		memcpy(str, this->data(), this->size());
-		str[this->size()] = '\0';
+		ret.reset(new char[this->size() + 1]);
+		memcpy(ret.get(), this->data(), this->size());
+		ret.get()[this->size()] = '\0';
 	}
 
-	return std::unique_ptr<char>(str);
+	return ret;
 }
 
 

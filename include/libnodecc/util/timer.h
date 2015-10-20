@@ -12,9 +12,7 @@ public:
 	node::callback<void()> timeout_callback;
 
 public:
-	explicit timer();
-
-	bool init(node::loop& loop);
+	explicit timer(node::loop& loop);
 
 	uint64_t repeat() const;
 
@@ -34,17 +32,17 @@ public:
 	/**
 	 * Stops the timer and rearms it with it's repeat value as timeout.
 	 */
-	bool again();
+	void again();
 
-	bool start(uint64_t timeout, uint64_t repeat);
+	void start(uint64_t timeout, uint64_t repeat);
 
 	template<typename T>
-	bool start(uint64_t timeout, uint64_t repeat, T cb) {
+	void start(uint64_t timeout, uint64_t repeat, T cb) {
 		this->timeout_callback.connect(std::forward<T>(cb));
-		return this->start(timeout, repeat);
+		this->start(timeout, repeat);
 	}
 
-	bool stop();
+	void stop();
 
 protected:
 	~timer() override = default;

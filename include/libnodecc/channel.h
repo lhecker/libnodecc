@@ -22,41 +22,9 @@ public:
 	 */
 	node::callback<void(const queue&)> notifications_callback;
 
-public:
-	explicit channel() : node::uv::async() {}
 
-	bool init(node::loop& loop) {
-		const bool ok = node::uv::async::init(loop, [](uv_async_t* handle) {
-			auto self = reinterpret_cast<channel<T>*>(handle->data);
-
-			queue q;
-
-			{
-				std::lock_guard<std::mutex> lock(self->_mutex);
-
-				// reserve some space for the next channel round to reduce reallocations
-				const auto capacity = self->_q.capacity();
-				q.reserve(capacity + (capacity >> 1));
-
-				std::swap(q, self->_q);
-			}
-
-			self->notifications_callback.emit(q);
-		});
-
-		if (ok) {
-			bool is_empty;
-			{
-				std::lock_guard<std::mutex> lock(this->_mutex);
-				is_empty = this->_q.empty();
-			}
-
-			if (!is_empty) {
-				this->send();
-			}
-		}
-
-		return ok;
+	explicit channel(node::loop& loop) : node::uv::async(loop, on_async_handler) {
+		this->send();
 	}
 
 	void push_back(const T& value) {
@@ -97,6 +65,25 @@ protected:
 	~channel() override = default;
 
 private:
+	static void on_async_handler(uv_async_t* handle) {
+		auto self = reinterpret_cast<channel<T>*>(handle->data);
+
+		queue q;
+
+		{
+			std::lock_guard<std::mutex> lock(self->_mutex);
+
+			// reserve some space for the next channel round to reduce reallocations
+			const auto capacity = self->_q.capacity();
+			q.reserve(capacity + (capacity >> 1));
+
+			std::swap(q, self->_q);
+		}
+
+		self->notifications_callback.emit(q);
+	}
+
+
 	std::vector<T> _q;
 	std::mutex _mutex;
 };

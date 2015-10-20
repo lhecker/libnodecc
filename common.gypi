@@ -92,7 +92,6 @@
 			},
 		},
 		'xcode_settings': {
-			'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
 			'COMBINE_HIDPI_IMAGES': 'YES',
 			'DEAD_CODE_STRIPPING': 'YES',
 			'GCC_INLINES_ARE_PRIVATE_EXTERN': 'YES',
@@ -124,7 +123,7 @@
 	# this recreates the default setting of projects created in Xcode 7.
 	'xcode_settings': {
 		'ALWAYS_SEARCH_USER_PATHS': 'NO',
-		'CLANG_CXX_LANGUAGE_STANDARD': 'gnu++0x',
+		'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',
 		'CLANG_CXX_LIBRARY': 'libc++',
 		'CLANG_ENABLE_MODULES': 'YES',
 		'CLANG_ENABLE_OBJC_ARC': 'YES',

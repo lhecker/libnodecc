@@ -4,51 +4,50 @@
 namespace node {
 namespace tcp {
 
-server::server() : uv::handle<uv_tcp_t>() {
+server::server(node::loop& loop) : uv::handle<uv_tcp_t>() {
+	node::uv::check(uv_tcp_init(loop, *this));
 }
 
-bool server::init(node::loop& loop) {
-	return 0 == uv_tcp_init(loop, *this);
-}
+void server::listen(const sockaddr& addr, int backlog, bool dualstack) {
+	node::uv::check(uv_tcp_bind(*this, &addr, dualstack ? 0 : UV_TCP_IPV6ONLY));
 
-bool server::listen(const sockaddr& addr, int backlog, bool dualstack) {
-	if (uv_tcp_bind(*this, &addr, dualstack ? 0 : UV_TCP_IPV6ONLY) != 0) {
-		return false;
-	}
-
-	return 0 == uv_listen(reinterpret_cast<uv_stream_t*>(&this->_handle), backlog, [](uv_stream_t* server, int status) {
+	node::uv::check(uv_listen(reinterpret_cast<uv_stream_t*>(&this->_handle), backlog, [](uv_stream_t* server, int status) {
 		if (status == 0) {
 			auto self = reinterpret_cast<node::tcp::server*>(server->data);
 			self->connection_callback.emit();
 		}
-	});
+	}));
 }
 
-bool server::listen4(uint16_t port, const std::string& ip, int backlog) {
+void server::listen4(uint16_t port, const node::string& ip, int backlog) {
 	sockaddr_in addr;
 	uv_ip4_addr(ip.c_str(), port, &addr);
-	return this->listen(reinterpret_cast<const sockaddr&>(addr), backlog);
+	this->listen(reinterpret_cast<const sockaddr&>(addr), backlog);
 }
 
-bool server::listen6(uint16_t port, const std::string& ip, int backlog, bool dualstack) {
+void server::listen6(uint16_t port, const node::string& ip, int backlog, bool dualstack) {
 	sockaddr_in6 addr;
 	uv_ip6_addr(ip.c_str(), port, &addr);
-	return this->listen(reinterpret_cast<const sockaddr&>(addr), backlog, dualstack);
+	this->listen(reinterpret_cast<const sockaddr&>(addr), backlog, dualstack);
 }
 
-bool server::accept(socket& client) {
-	return client.init(*this) && 0 == uv_accept(reinterpret_cast<uv_stream_t*>(&this->_handle), static_cast<uv_stream_t*>(client));
+void server::accept(socket& client) {
+	node::uv::check(uv_accept(reinterpret_cast<uv_stream_t*>(&this->_handle), static_cast<uv_stream_t*>(client)));
+}
+
+void server::address(sockaddr& addr, int& len) {
+	node::uv::check(uv_tcp_getsockname(*this, &addr, &len));
 }
 
 uint16_t server::port() {
-	sockaddr_in name;
-	int nameLen = sizeof(name);
+	static_assert(offsetof(sockaddr_in, sin_port) == offsetof(sockaddr_in6, sin6_port), "sockaddr_in and sockaddr_in6 struct layouts must be the same");
 
-	if (0 == uv_tcp_getsockname(*this, (sockaddr*)&name, &nameLen)) {
-		return ntohs(name.sin_port);
-	} else {
-		return 0;
-	}
+	sockaddr_in addr;
+	int addrLen = sizeof(addr);
+
+	this->address((sockaddr&)addr, addrLen);
+
+	return ntohs(addr.sin_port);
 }
 
 void server::_destroy() {

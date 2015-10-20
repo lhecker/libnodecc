@@ -1,16 +1,11 @@
 #include "libnodecc/loop.h"
 
-#include <system_error>
-
 
 namespace node {
 
-loop::loop() noexcept {
-	// always returns 0
-	uv_loop_init(&this->_loop);
-
-	// always returns 0
-	uv_async_init(&this->_loop, &this->_tick_async, &loop::_on_async);
+loop::loop() {
+	node::uv::check(uv_loop_init(&this->_loop));
+	node::uv::check(uv_async_init(&this->_loop, &this->_tick_async, &loop::_on_async));
 
 	uv_unref(reinterpret_cast<uv_handle_t*>(&this->_tick_async));
 
@@ -18,22 +13,22 @@ loop::loop() noexcept {
 	this->_tick_async.data = this;
 }
 
-loop::~loop() noexcept {
+loop::~loop() {
 	uv_close(reinterpret_cast<uv_handle_t*>(&this->_tick_async), nullptr);
 	this->run(); // close the async handle
-	uv_loop_close(&this->_loop);
+	node::uv::check(uv_loop_close(&this->_loop));
 }
 
-bool loop::run() {
-	return 0 != uv_run(&this->_loop, UV_RUN_DEFAULT);
+void loop::run() {
+	node::uv::check(uv_run(&this->_loop, UV_RUN_DEFAULT));
 }
 
-bool loop::run_once() {
-	return 0 != uv_run(&this->_loop, UV_RUN_ONCE);
+void loop::run_once() {
+	node::uv::check(uv_run(&this->_loop, UV_RUN_ONCE));
 }
 
-bool loop::run_nowait() {
-	return 0 != uv_run(&this->_loop, UV_RUN_NOWAIT);
+void loop::run_nowait() {
+	node::uv::check(uv_run(&this->_loop, UV_RUN_NOWAIT));
 }
 
 void loop::stop() {

@@ -1,18 +1,7 @@
 #include "libnodecc/dns/lookup.h"
 
-#include "libnodecc/loop.h"
-
 
 namespace {
-
-struct getaddrinfo_packed_req {
-	explicit getaddrinfo_packed_req(node::dns::on_lookup_t&& cb) : cb(std::move(cb)) {
-		this->req.data = this;
-	}
-
-	uv_getaddrinfo_t req;
-	node::dns::on_lookup_t cb;
-};
 
 struct addrinfo_deleter {
 	void operator()(addrinfo* ptr) const {
@@ -25,18 +14,9 @@ struct addrinfo_deleter {
 
 namespace node {
 namespace dns {
+namespace detail {
 
-void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, const addrinfo* hints) {
-	lookup(cb, loop, domain, node::string(), hints);
-}
-
-void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, uint16_t port, const addrinfo* hints) {
-	lookup(cb, loop, domain, node::to_string(port), hints);
-}
-
-void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, const node::string& service, const addrinfo* hints) {
-	auto packed_req = new getaddrinfo_packed_req(std::move(cb));
-
+void lookup(std::unique_ptr<packed_req_base>&& pack, node::loop& loop, const node::string& domain, const node::string& service, const addrinfo* hints) {
 	if (!hints) {
 		static const addrinfo static_hints {
 			0,           // ai_flags
@@ -52,16 +32,25 @@ void lookup(on_lookup_t cb, node::loop& loop, const node::string& domain, const 
 		hints = &static_hints;
 	}
 
-	uv_getaddrinfo(loop, &packed_req->req, [](uv_getaddrinfo_t* req, int status, addrinfo* res) {
-		auto packed_req = reinterpret_cast<getaddrinfo_packed_req*>(req->data);
-		std::shared_ptr<addrinfo> ptr;
+	pack->req.data = pack.get();
+
+	node::uv::check(uv_getaddrinfo(loop, &pack->req, [](uv_getaddrinfo_t* req, int status, addrinfo* res) {
+		auto pack = reinterpret_cast<packed_req_base*>(req->data);
+		std::error_code err(status, std::system_category());
+		std::shared_ptr<addrinfo> info;
 
 		if (status == 0) {
-			ptr.reset(res, addrinfo_deleter());
+			info.reset(res, addrinfo_deleter());
 		}
 
-		packed_req->cb(status, ptr);
-	}, domain.c_str().get(), service.empty() ? nullptr : service.c_str().get(), hints);
+		pack->emit(status == 0 ? nullptr : &err, info);
+
+		delete pack;
+	}, domain.c_str(), service.empty() ? nullptr : service.c_str(), hints));
+
+	pack.release();
 }
 
-} } // namespace node::dns
+} // namespace detail
+} // namespace dns
+} // namespace node

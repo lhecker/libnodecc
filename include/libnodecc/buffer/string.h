@@ -19,7 +19,7 @@ public:
 	 *      node::buffer should simply inherit (multiple inheritance) from it.
 	 */
 	struct c_str_deleter {
-		void operator()(char* str) const noexcept {}
+		void operator()(const char* str) const noexcept {}
 	};
 
 
@@ -31,12 +31,16 @@ public:
 	string(const node::literal_string& other);
 	string(const node::buffer_view& other);
 
+	template<typename CharT>
+	string(const CharT* str) noexcept : buffer(const_cast<CharT*>(str), std::char_traits<CharT>::length(str) * sizeof(CharT)) {}
+
 	using buffer::reset;
 	void reset(std::size_t size);
 
 	string copy(std::size_t size) const;
 
-	std::unique_ptr<char, c_str_deleter> c_str() const noexcept;
+	std::unique_ptr<const char, c_str_deleter> create_c_str() const noexcept;
+	const char* c_str() const noexcept;
 
 private:
 	void _copy(string& target, std::size_t size = 0) const;

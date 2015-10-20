@@ -14,10 +14,9 @@ namespace uv {
 
 class async : public node::uv::handle<uv_async_t> {
 public:
-	explicit async() noexcept;
+	explicit async(node::loop& loop, uv_async_cb cb);
 
-	bool init(node::loop& loop, uv_async_cb cb);
-	bool send();
+	void send();
 
 protected:
 	~async() override = default;

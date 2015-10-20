@@ -103,7 +103,7 @@ public:
 	std::size_t index_of(const char ch) const noexcept;
 	std::size_t index_of(const buffer_view& other) const noexcept;
 
-	std::unique_ptr<char> c_str() const noexcept;
+	std::unique_ptr<char> create_c_str() const;
 
 	template<typename CharT = char, typename Traits = std::char_traits<CharT>, typename Allocator = std::allocator<CharT>>
 	std::basic_string<CharT, Traits, Allocator> to_string() const {

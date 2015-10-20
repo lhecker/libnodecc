@@ -98,17 +98,14 @@ void server::server_response::_end(const node::buffer chunks[], size_t chunkcnt)
 }
 
 
-server::server() : tcp::server(), _is_destroyed(std::make_shared<bool>(false)) {
+server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_shared<bool>(false)) {
 	this->connection_callback.connect([this]() {
-		const auto socket = node::make_shared<tcp::socket>();
+		const auto socket = node::make_shared<tcp::socket>(*this);
+		this->accept(*socket);
+
 		this->_clients.emplace_front(socket);
-
+		
 		const auto it = this->_clients.cbegin();
-
-		if (!this->accept(*socket)) {
-			return;
-		}
-
 		const auto req = node::make_shared<server_request>(socket, HTTP_REQUEST);
 		const auto res = node::make_shared<server_response>(socket);
 

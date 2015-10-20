@@ -29,7 +29,7 @@ protected:
 	~stream() override = default;
 
 	void _resume() override {
-		uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+		node::uv::check(uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
 			const auto r = self->alloc_callback.emit();
@@ -66,11 +66,11 @@ protected:
 			}
 
 			self->_alloc_buffer.reset();
-		});
+		}));
 	}
 
 	void _pause() override {
-		uv_read_stop(*this);
+		node::uv::check(uv_read_stop(*this));
 	}
 
 	void _write(const node::buffer bufs[], size_t bufcnt) override {
@@ -145,26 +145,22 @@ protected:
 			size_t total;
 		};
 
-		packed_req* pack = new packed_req(*this, bufs, bufcnt, total);
+		auto pack = std::unique_ptr<packed_req>(new packed_req(*this, bufs, bufcnt, total));
 
-		int ret = uv_write(&pack->req, *this, uv_bufs, static_cast<unsigned int>(bufcnt), [](uv_write_t* req, int status) {
-			packed_req* pack = reinterpret_cast<packed_req*>(req);
+		node::uv::check(uv_write(&pack->req, *this, uv_bufs, static_cast<unsigned int>(bufcnt), [](uv_write_t* req, int status) {
 			uv::stream<T>* self = reinterpret_cast<uv::stream<T>*>(req->data);
 
-			delete pack;
+			delete reinterpret_cast<packed_req*>(req);
 
 			if (status != 0) {
 				self->destroy();
 			}
 
 			self->release();
-		});
+		}));
 
-		if (ret == 0) {
-			this->retain();
-		} else {
-			delete pack;
-		}
+		this->retain();
+		pack.release();
 	}
 
 	void _end(const node::buffer bufs[], size_t bufcnt) override {
@@ -173,10 +169,10 @@ protected:
 				this->_write(bufs, bufcnt);
 			}
 
-			uv_shutdown_t* req = new uv_shutdown_t;
+			auto req = std::unique_ptr<uv_shutdown_t>(new uv_shutdown_t);
 			req->data = this;
 
-			int ret = uv_shutdown(req, *this, [](uv_shutdown_t* req, int status) {
+			node::uv::check(uv_shutdown(req.get(), *this, [](uv_shutdown_t* req, int status) {
 				node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(req->data);
 
 				delete req;
@@ -188,13 +184,10 @@ protected:
 				}
 
 				self->release();
-			});
+			}));
 
-			if (ret == 0) {
-				this->retain();
-			} else {
-				delete req;
-			}
+			this->retain();
+			req.release();
 		}
 	}
 

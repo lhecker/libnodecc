@@ -87,17 +87,20 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	tcp::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](int err, node::shared_ptr<node::tcp::socket> socket) {
-		_generate(socket, host, method, path, cb);
+	tcp::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](std::error_code* err, node::shared_ptr<node::tcp::socket> socket) {
+		if (err) {
+			cb(err->value(), client::request(), client::response());
+		} else {
+			_generate(socket, host, method, path, cb);
+		}
 	});
 }
 
 void request(node::loop& loop, const sockaddr& addr, const node::buffer& host, const node::buffer& method, const node::buffer& path, const client::on_connect_t& cb) {
-	const auto socket = node::make_shared<node::tcp::socket>();
+	const auto socket = node::make_shared<node::tcp::socket>(loop);
 
 	_generate(socket, host, method, path, cb);
 
-	socket->init(loop);
 	socket->connect(addr);
 }
 

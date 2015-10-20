@@ -26,7 +26,7 @@ static uint8_t hex_to_int(uint8_t c) {
 namespace node {
 namespace util {
 
-node::buffer uri::component_decode(const node::buffer_view& buffer, bool urlencoded) {
+node::buffer uri::component_decode(const node::buffer_view& buffer, bool urlencoded) noexcept {
 	try {
 		// TODO: UTF-8 support
 		// TODO: use result.set_capacity() to minimize allocations

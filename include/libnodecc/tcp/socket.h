@@ -11,15 +11,13 @@ class socket : public node::uv::stream<uv_tcp_t> {
 	friend struct connect_pack;
 
 public:
-	typedef std::function<void(int err, node::shared_ptr<node::tcp::socket> socket)> dns_connect_t;
+	typedef std::function<void(std::error_code* err, node::shared_ptr<node::tcp::socket> socket)> dns_connect_t;
 
+	static void connect(node::loop& loop, const node::string& address, uint16_t port, dns_connect_t cb);
 
-	explicit socket();
+	explicit socket(node::loop& loop);
 
-	bool init(node::loop& loop);
-
-	bool connect(const sockaddr& addr);
-	static bool connect(node::loop& loop, const node::string& address, uint16_t port, dns_connect_t cb);
+	void connect(const sockaddr& addr);
 
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);

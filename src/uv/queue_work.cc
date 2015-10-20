@@ -18,8 +18,9 @@ namespace node {
 namespace uv {
 
 void queue_work(node::loop& loop, const work_cb_t& work_cb, const work_cb_t& after_cb) {
-	work_t *pack = new work_t(work_cb, after_cb);
-	uv_queue_work(loop, &pack->req, [](uv_work_t* req) {
+	auto pack = std::unique_ptr<work_t>(new work_t(work_cb, after_cb));
+
+	node::uv::check(uv_queue_work(loop, &pack->req, [](uv_work_t* req) {
 		auto self = reinterpret_cast<work_t*>(req);
 		self->work_cb();
 	}, [](uv_work_t* req, int status) {
@@ -30,7 +31,7 @@ void queue_work(node::loop& loop, const work_cb_t& work_cb, const work_cb_t& aft
 		}
 
 		delete self;
-	});
+	}));
 }
 
 } // namespace node
