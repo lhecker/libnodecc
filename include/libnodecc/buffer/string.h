@@ -32,7 +32,7 @@ public:
 	string(const node::buffer_view& other);
 
 	template<typename CharT>
-	string(const CharT* str) noexcept : buffer(const_cast<CharT*>(str), std::char_traits<CharT>::length(str) * sizeof(CharT)) {}
+	string(const CharT* str) noexcept : buffer(const_cast<CharT*>(str), (std::char_traits<CharT>::length(str) + 1) * sizeof(CharT)) {}
 
 	using buffer::reset;
 	void reset(std::size_t size);

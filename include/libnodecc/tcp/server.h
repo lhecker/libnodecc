@@ -7,6 +7,15 @@
 namespace node {
 namespace tcp {
 
+enum class flags : unsigned int {
+	none      = 0,
+	ipv6only  = UV_TCP_IPV6ONLY,
+};
+
+constexpr flags operator|(flags a, flags b) {
+	return static_cast<flags>(static_cast<unsigned int>(a) | static_cast<unsigned int>(b));
+}
+
 /*
  * TODO:
  *   - Consolidate with node::udp::socket
@@ -17,9 +26,9 @@ class server : public node::uv::handle<uv_tcp_t> {
 public:
 	explicit server(node::loop& loop);
 
-	void listen(const sockaddr& addr, int backlog = 511, bool dualstack = true);
-	void listen4(uint16_t port = 0, const node::string& ip = node::literal_string("0.0.0.0", 7), int backlog = 511);
-	void listen6(uint16_t port = 0, const node::string& ip = node::literal_string("::", 2),      int backlog = 511, bool dualstack = true);
+	void listen(const sockaddr& addr, int backlog = 511, node::tcp::flags flags = flags::none);
+	void listen4(uint16_t port = 0, const node::string& ip = node::literal_string("0.0.0.0", 7), int backlog = 511, node::tcp::flags flags = flags::none);
+	void listen6(uint16_t port = 0, const node::string& ip = node::literal_string("::0", 2), int backlog = 511, node::tcp::flags flags = flags::none);
 
 	void accept(node::tcp::socket& client);
 

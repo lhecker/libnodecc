@@ -9,7 +9,7 @@ socket::socket(node::loop& loop) : uv::handle<uv_udp_t>() {
 }
 
 void socket::listen(const sockaddr& addr, node::udp::flags flags) {
-	node::uv::check(uv_udp_bind(*this, &addr, (unsigned int)flags));
+	node::uv::check(uv_udp_bind(*this, &addr, static_cast<unsigned int>(flags)));
 }
 
 void socket::listen4(uint16_t port, const node::string& ip, node::udp::flags flags) {

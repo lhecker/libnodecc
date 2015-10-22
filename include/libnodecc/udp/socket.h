@@ -20,7 +20,7 @@ enum class flags : unsigned int {
 };
 
 constexpr flags operator|(flags a, flags b) {
-	return static_cast<flags>(static_cast<int>(a) | static_cast<int>(b));
+	return static_cast<flags>(static_cast<unsigned int>(a) | static_cast<unsigned int>(b));
 }
 
 class socket : public node::uv::handle<uv_udp_t> {
@@ -29,7 +29,7 @@ public:
 
 	void listen(const sockaddr& addr, node::udp::flags flags = flags::none);
 	void listen4(uint16_t port = 0, const node::string& ip = node::literal_string("0.0.0.0", 7), node::udp::flags flags = flags::none);
-	void listen6(uint16_t port = 0, const node::string& ip = node::literal_string("::", 2), node::udp::flags flags = flags::none);
+	void listen6(uint16_t port = 0, const node::string& ip = node::literal_string("::0", 2), node::udp::flags flags = flags::none);
 
 	void address(sockaddr& addr, int& len);
 	uint16_t port();

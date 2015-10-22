@@ -8,8 +8,8 @@ server::server(node::loop& loop) : uv::handle<uv_tcp_t>() {
 	node::uv::check(uv_tcp_init(loop, *this));
 }
 
-void server::listen(const sockaddr& addr, int backlog, bool dualstack) {
-	node::uv::check(uv_tcp_bind(*this, &addr, dualstack ? 0 : UV_TCP_IPV6ONLY));
+void server::listen(const sockaddr& addr, int backlog, node::tcp::flags flags) {
+	node::uv::check(uv_tcp_bind(*this, &addr, static_cast<unsigned int>(flags)));
 
 	node::uv::check(uv_listen(reinterpret_cast<uv_stream_t*>(&this->_handle), backlog, [](uv_stream_t* server, int status) {
 		if (status == 0) {
@@ -19,16 +19,16 @@ void server::listen(const sockaddr& addr, int backlog, bool dualstack) {
 	}));
 }
 
-void server::listen4(uint16_t port, const node::string& ip, int backlog) {
+void server::listen4(uint16_t port, const node::string& ip, int backlog, node::tcp::flags flags) {
 	sockaddr_in addr;
 	uv_ip4_addr(ip.c_str(), port, &addr);
-	this->listen(reinterpret_cast<const sockaddr&>(addr), backlog);
+	this->listen(reinterpret_cast<const sockaddr&>(addr), backlog, flags);
 }
 
-void server::listen6(uint16_t port, const node::string& ip, int backlog, bool dualstack) {
+void server::listen6(uint16_t port, const node::string& ip, int backlog, node::tcp::flags flags) {
 	sockaddr_in6 addr;
 	uv_ip6_addr(ip.c_str(), port, &addr);
-	this->listen(reinterpret_cast<const sockaddr&>(addr), backlog, dualstack);
+	this->listen(reinterpret_cast<const sockaddr&>(addr), backlog, flags);
 }
 
 void server::accept(socket& client) {

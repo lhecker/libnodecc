@@ -2,34 +2,41 @@
 
 #include <cmath>
 
+#if defined(NODE_HAS_BUILTIN_CLZ)
+# include <limits>
+#elif defined(NODE_HAS_BUILTIN_BSR)
+# include <intrin.h>
+# include <limits>
+#else
+# include <cstdint>
+#endif
+
+
+namespace node {
+namespace util {
 
 #if defined(NODE_HAS_BUILTIN_CLZ)
 
-#include <limits>
-
-unsigned int node::util::digits2(unsigned int n) {
+unsigned int digits2(unsigned int n) {
 	return n ? std::numeric_limits<unsigned int>::digits - __builtin_clz(n) : 0;
 }
 
-unsigned int node::util::digits2(unsigned long n) {
+unsigned int digits2(unsigned long n) {
 	return n ? std::numeric_limits<unsigned long>::digits - __builtin_clzl(n) : 0;
 }
 
-unsigned int node::util::digits2(unsigned long long n) {
+unsigned int digits2(unsigned long long n) {
 	return n ? std::numeric_limits<unsigned long long>::digits - __builtin_clzll(n) : 0;
 }
 
 #elif defined(NODE_HAS_BUILTIN_BSR)
 
-#include <intrin.h>
-#include <limits>
-
-unsigned int node::util::digits2(unsigned int n) {
+unsigned int digits2(unsigned int n) {
 	// it's guaranteed that long is at least as large as an int
-	return node::util::digits2(static_cast<unsigned long>(n));
+	return digits2(static_cast<unsigned long>(n));
 }
 
-unsigned int node::util::digits2(unsigned long n) {
+unsigned int digits2(unsigned long n) {
 	static_assert(std::numeric_limits<decltype(n)>::digits == 32, "_BitScanReverse needs uint32_t");
 
 	unsigned long idx;
@@ -42,7 +49,7 @@ unsigned int node::util::digits2(unsigned long n) {
 }
 
 #if !defined(NODE_WITHOUT_BUILTIN_BSR64)
-unsigned int node::util::digits2(unsigned long long n) {
+unsigned int digits2(unsigned long long n) {
 	static_assert(std::numeric_limits<decltype(n)>::digits == 64, "_BitScanReverse needs uint64_t");
 
 	unsigned long idx;
@@ -57,14 +64,12 @@ unsigned int node::util::digits2(unsigned long long n) {
 
 #else // no builtin CLZ/BSR
 
-#include <cstdint>
-
-unsigned int node::util::digits2(unsigned int n) {
+unsigned int digits2(unsigned int n) {
 	// it's guaranteed that long is at least as large as an int
-	return node::util::digits2(static_cast<unsigned long>(n));
+	return digits2(static_cast<unsigned long>(n));
 }
 
-unsigned int node::util::digits2(unsigned long n) {
+unsigned int digits2(unsigned long n) {
 #if ULONG_MAX == UINT32_MAX
 	// uses De Bruijn Multiplication
 	static const unsigned int index32[32] = { 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30, 8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 32 };
@@ -83,11 +88,11 @@ unsigned int node::util::digits2(unsigned long n) {
 		return index32[(uint32_t)(n * UINT32_C(0x07c4acdd)) >> 27];
 	}
 #else
-	return node::util::digits2(static_cast<unsigned long long>(n));
+	return digits2(static_cast<unsigned long long>(n));
 #endif
 }
 
-unsigned int node::util::digits2(unsigned long long n) {
+unsigned int digits2(unsigned long long n) {
 	static_assert(std::numeric_limits<unsigned long long>::digits == 64, "unsigned long long needs to be 64Bit for this De Bruijn Multiplication to work");
 
 	// see 32bit variant
@@ -110,13 +115,13 @@ unsigned int node::util::digits2(unsigned long long n) {
 
 #endif
 
-unsigned int node::util::digits(size_t n, uint8_t base) {
+unsigned int digits(size_t n, uint8_t base) {
 	switch (base) {
 	case 0:
 	case 1:
 		return 0ul;
 	case 2:
-		return node::util::digits2(n);
+		return digits2(n);
 #if SIZE_T_MAX <= UINT32_MAX
 	case 10:
 		return (n >= 1000000000ul) ? 10ul
@@ -155,11 +160,14 @@ unsigned int node::util::digits(size_t n, uint8_t base) {
 	default:
 		// it's a power of 2
 		if ((base & (base - 1)) == 0) {
-			const unsigned int a = node::util::digits2(static_cast<size_t>(n));
-			const unsigned int b = node::util::digits2(static_cast<size_t>(base));
+			const unsigned int a = digits2(static_cast<size_t>(n));
+			const unsigned int b = digits2(static_cast<size_t>(base));
 			return (a + b - 2ul) / (b - 1ul);
 		}
 
 		return (unsigned int)(std::log(n) / std::log(base));
 	}
 }
+
+} // namespace util
+} // namespace node
