@@ -65,6 +65,7 @@ if __name__ == '__main__':
 		args.extend(['-I', common_fn])
 
 	args.append('--depth=' + root_dir)
+	args.append('--no-duplicate-basename-check')
 
 
 	# There's a bug with windows which doesn't allow this feature.

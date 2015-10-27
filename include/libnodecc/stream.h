@@ -4,31 +4,18 @@
 #include <array>
 
 #include "callback.h"
-#include "signal.h"
+#include "events.h"
 
 
 namespace node {
 namespace stream {
-namespace detail {
 
-template<typename ErrorT, typename ChunkT>
-class base {
-public:
-	typedef ErrorT error_type;
-	typedef ChunkT chunk_type;
-
-	node::signal<void(ErrorT err)> error_signal;
-
-protected:
-	void _destroy() {
-		this->error_signal.clear();
-	}
-};
-
-
-template<typename BaseT, typename ErrorT, typename ChunkT>
+template<typename BaseT, typename ChunkT>
 class readable {
 public:
+	static const node::events::type<void(const ChunkT& chunk)> data_event;
+	static const node::events::type<void()> end_event;
+
 	void resume() {
 		if (!this->_is_consuming) {
 			this->_resume();
@@ -83,9 +70,6 @@ public:
 		return to;
 	}
 
-	node::callback<void(const ChunkT chunks[], size_t chunkcnt)> data_callback;
-	node::signal<void()> end_signal;
-
 protected:
 	bool is_consuming() const noexcept {
 		return this->_is_consuming;
@@ -101,18 +85,13 @@ protected:
 	void _set_reading_ended() {
 		if (!this->_has_ended) {
 			this->_has_ended = true;
-			this->end_signal.emit_and_clear();
+			static_cast<BaseT*>(this)->emit(end_event);
 		}
 	}
 
 	void _reset() {
 		this->_is_consuming = false;
 		this->_has_ended = false;
-	}
-
-	void _destroy() {
-		this->data_callback.clear();
-		this->end_signal.clear();
 	}
 
 	virtual void _resume() = 0;
@@ -123,9 +102,18 @@ private:
 	bool _has_ended = false;
 };
 
-template<typename BaseT, typename ErrorT, typename ChunkT>
+template<typename BaseT, typename ChunkT>
+const node::events::type<void(const ChunkT& chunk)> readable<BaseT, ChunkT>::data_event;
+
+template<typename BaseT, typename ChunkT>
+const node::events::type<void()> readable<BaseT, ChunkT>::end_event;
+
+
+template<typename BaseT, typename ChunkT>
 class writable {
 public:
+	static const node::events::type<void()> drain_event;
+
 	explicit writable(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0) {}
 
 	/*
@@ -195,8 +183,6 @@ public:
 		return this->_is_regular_level;
 	}
 
-	node::signal<void()> drain_signal;
-
 protected:
 	bool is_writable() const noexcept {
 		return this->_is_writable;
@@ -218,7 +204,7 @@ protected:
 
 		if (!this->_is_regular_level && this->_wm <= this->_lwm) {
 			this->_is_regular_level = true;
-			this->drain_signal.emit();
+			static_cast<BaseT*>(this)->emit(drain_event);
 		}
 	}
 
@@ -233,10 +219,6 @@ protected:
 		this->_has_ended = false;
 	}
 
-	void _destroy() {
-		this->drain_signal.clear();
-	}
-
 	virtual void _write(const ChunkT chunks[], size_t chunkcnt) = 0;
 	virtual void _end(const ChunkT chunks[], size_t chunkcnt) = 0;
 
@@ -249,49 +231,19 @@ private:
 	bool _has_ended = false;
 };
 
-} // namespace detail
+template<typename BaseT, typename ChunkT>
+const node::events::type<void()> writable<BaseT, ChunkT>::drain_event;
 
 
-template<typename BaseT, typename ErrorT, typename ChunkT>
-class readable : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT> {
-protected:
-	void _destroy() {
-		detail::base<ErrorT, ChunkT>::_destroy();
-		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
-	}
-};
-
-
-template<typename BaseT, typename ErrorT, typename ChunkT>
-class writable : public detail::base<ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
-protected:
-	void _destroy() {
-		detail::base<ErrorT, ChunkT>::_destroy();
-		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
-	}
-};
-
-
-template<typename BaseT, typename ErrorT, typename ChunkT>
-class duplex : public detail::base<ErrorT, ChunkT>, public detail::readable<BaseT, ErrorT, ChunkT>, public detail::writable<BaseT, ErrorT, ChunkT> {
+template<typename BaseT, typename ChunkT>
+class duplex : public readable<BaseT, ChunkT>, public writable<BaseT, ChunkT> {
 protected:
 	bool readable_has_ended() const noexcept {
-		return detail::readable<BaseT, ErrorT, ChunkT>::has_ended();
+		return readable<BaseT, ChunkT>::has_ended();
 	}
 
 	bool writable_has_ended() const noexcept {
-		return detail::writable<BaseT, ErrorT, ChunkT>::has_ended();
-	}
-
-	void _reset() {
-		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
-		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
-	}
-
-	void _destroy() {
-		detail::base<ErrorT, ChunkT>::_destroy();
-		detail::readable<BaseT, ErrorT, ChunkT>::_destroy();
-		detail::writable<BaseT, ErrorT, ChunkT>::_destroy();
+		return writable<BaseT, ChunkT>::has_ended();
 	}
 };
 

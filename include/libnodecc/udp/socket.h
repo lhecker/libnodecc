@@ -50,14 +50,10 @@ public:
 
 	void write(sockaddr& addr, const node::buffer chunks[], size_t chunkcnt);
 
-	node::callback<node::buffer()> alloc_callback;
-	node::callback<void(const sockaddr& remote, const node::buffer chunks[], size_t chunkcnt)> data_callback;
-	node::signal<void(int err)> error_signal;
+	static const node::events::type<void(const sockaddr& remote, const node::buffer& buf)> data_event;
 
 protected:
 	~socket() override = default;
-
-	void _destroy() override;
 
 	bool is_consuming() const noexcept {
 		return this->_is_consuming;

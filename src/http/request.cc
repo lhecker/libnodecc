@@ -44,20 +44,19 @@ static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
 	const auto req = node::make_shared<detail::request>(socket, host, method, path);
 	const auto res = node::make_shared<detail::response>(socket);
 
-	socket->destroy_signal.connect([req, res]() {
+	socket->on(node::tcp::socket::destroy_event, [req, res]() {
 		req->_destroy();
 		res->_destroy();
 	});
 
-	socket->connect_callback.connect([req, res, cb](int err) {
-		cb(err, req, res);
+	socket->on(node::tcp::socket::connect_event, [req, res, cb]() {
+		cb(nullptr, req, res);
+		req->socket()->resume();
+		req->socket()->removeAllListeners(node::tcp::socket::connect_event);
+	});
 
-		if (err == 0) {
-			// start reading for incoming_message
-			req->socket()->resume();
-		}
-
-		req->socket()->connect_callback.clear();
+	socket->on(node::tcp::socket::error_event, [req, res, cb](const std::error_code& err) {
+		cb(&err, req, res);
 	});
 }
 
@@ -89,7 +88,7 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 
 	tcp::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](std::error_code* err, node::shared_ptr<node::tcp::socket> socket) {
 		if (err) {
-			cb(err->value(), client::request(), client::response());
+			cb(err, client::request(), client::response());
 		} else {
 			_generate(socket, host, method, path, cb);
 		}

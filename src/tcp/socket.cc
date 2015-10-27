@@ -95,9 +95,11 @@ void socket::connect(const sockaddr& addr) {
 
 		delete req;
 
-		self->connect_callback.emit(status);
 
-		if (status != 0) {
+		if (status == 0) {
+			self->emit(connect_event);
+		} else {
+			self->emit(error_event, node::uv::to_error(status));
 			self->destroy();
 		}
 
@@ -140,12 +142,6 @@ bool socket::keepalive(unsigned int delay) {
 
 bool socket::nodelay(bool enable) {
 	return 0 == uv_tcp_nodelay(*this, enable ? 1 : 0);
-}
-
-void socket::_destroy() {
-	this->connect_callback.clear();
-
-	node::uv::stream<uv_tcp_t>::_destroy();
 }
 
 } // namespace node

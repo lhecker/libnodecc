@@ -104,16 +104,16 @@ server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_sh
 		this->accept(*socket);
 
 		this->_clients.emplace_front(socket);
-		
+
 		const auto it = this->_clients.cbegin();
 		const auto req = node::make_shared<server_request>(socket, HTTP_REQUEST);
 		const auto res = node::make_shared<server_response>(socket);
 
 		// TODO: (create and) use node::weak_ptr instead?
 		const auto& _is_destroyed = this->_is_destroyed;
-		socket->destroy_signal.connect([this, _is_destroyed, it, req, res]() {
-			req->intrusive_ptr::destroy();
-			res->intrusive_ptr::destroy();
+		socket->on(destroy_event, [this, _is_destroyed, it, req, res]() {
+			req->object::destroy();
+			res->object::destroy();
 
 			if (!*_is_destroyed) {
 				this->_clients.erase(it);

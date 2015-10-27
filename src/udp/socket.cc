@@ -4,6 +4,9 @@
 namespace node {
 namespace udp {
 
+decltype(socket::data_event) socket::data_event;
+
+
 socket::socket(node::loop& loop) : uv::handle<uv_udp_t>() {
 	uv_udp_init(loop, *this);
 }
@@ -71,11 +74,7 @@ void socket::resume() {
 	node::uv::check(uv_udp_recv_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 		auto self = reinterpret_cast<socket*>(handle->data);
 
-		const auto r = self->alloc_callback.emit();
-
-		if (r) {
-			self->_alloc_buffer = r.value();
-		} else if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
+		if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
 			self->_alloc_buffer.reset(suggested_size);
 		}
 
@@ -84,12 +83,12 @@ void socket::resume() {
 	}, [](uv_udp_t* handle, ssize_t nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned int flags) {
 		auto self = reinterpret_cast<socket*>(handle->data);
 
-		if (nread > 0 && self->data_callback) {
+		if (nread > 0) {
 			const node::buffer buf = self->_alloc_buffer.slice(0, nread);
-			self->data_callback.emit(*addr, &buf, 1);
+			self->emit(data_event, *addr, buf);
 		} else if (nread < 0) {
 			// other error --> hard close
-			self->error_signal.emit(int(nread));
+			self->emit(error_event, node::uv::to_error(int(nread)));
 			self->destroy();
 		}
 
@@ -191,15 +190,6 @@ void socket::write(sockaddr& addr, const node::buffer bufs[], size_t bufcnt) {
 	this->retain();
 	pack.release();
 }
-
-void socket::_destroy() {
-	this->alloc_callback.clear();
-	this->data_callback.clear();
-	this->error_signal.clear();
-
-	node::uv::handle<uv_udp_t>::_destroy();
-}
-
 
 } // namespace node
 } // namespace udp

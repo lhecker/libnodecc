@@ -1,7 +1,7 @@
 #ifndef nodecc_uv_handle_h
 #define nodecc_uv_handle_h
 
-#include "../intrusive_ptr.h"
+#include "../object.h"
 #include "../loop.h"
 
 
@@ -9,11 +9,19 @@ namespace node {
 namespace uv {
 
 template<typename T>
-class handle : public intrusive_ptr {
+class handle : public object {
 public:
-	typedef handle handle_type;
+	static const node::events::type<void(const std::error_code& err)> error_event;
 
-	
+	using object::emit;
+
+	template<typename... Args>
+	void emit(const decltype(error_event)& type, Args ...args) {
+		object::emit(type, std::forward<Args>(args)...);
+		this->removeAllListeners();
+	}
+
+
 	template<typename U, typename V>
 	static U* to_node(V* handle) { return dynamic_cast<U*>(((uv::handle<T>*)handle->data)); }
 
@@ -75,7 +83,7 @@ public:
 			});
 		}
 
-		intrusive_ptr::_destroy();
+		object::_destroy();
 	}
 
 	void ref() {
@@ -91,6 +99,9 @@ protected:
 
 	T _handle;
 };
+
+template<typename T>
+const node::events::type<void(const std::error_code& err)> handle<T>::error_event;
 
 } // namespace uv
 } // namespace node

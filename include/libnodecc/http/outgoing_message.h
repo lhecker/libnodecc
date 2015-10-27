@@ -12,7 +12,7 @@
 namespace node {
 namespace http {
 
-class outgoing_message : public node::intrusive_ptr, public node::stream::writable<outgoing_message, int, node::buffer> {
+class outgoing_message : public node::object, public node::stream::writable<outgoing_message, node::buffer> {
 	friend class server;
 
 public:

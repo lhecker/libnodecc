@@ -14,40 +14,34 @@ namespace node {
 namespace uv {
 
 template<typename T>
-class stream : public node::uv::handle<T>, public node::stream::duplex<stream<T>, int, node::buffer> {
+class stream : public node::uv::handle<T>, public node::stream::duplex<stream<T>, node::buffer> {
 public:
-	explicit stream() : node::uv::handle<T>() {
-	}
-
 	operator uv_stream_t*() {
 		return reinterpret_cast<uv_stream_t*>(&this->_handle);
 	}
 
-	node::callback<node::buffer()> alloc_callback;
-
 protected:
+	typedef node::uv::handle<T> handle_type;
+	typedef node::stream::duplex<stream<T>, node::buffer> stream_type;
+
 	~stream() override = default;
 
 	void _resume() override {
 		node::uv::check(uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
+			auto self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
-			const auto r = self->alloc_callback.emit();
-
-			if (r) {
-				self->_alloc_buffer = r.value();
-			} else if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
+			if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
 				self->_alloc_buffer.reset(suggested_size);
 			}
 
 			buf->base = self->_alloc_buffer.template data<char>();
 			buf->len = self->_alloc_buffer.size();
 		}, [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-			node::uv::stream<T>* self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
+			auto self = reinterpret_cast<node::uv::stream<T>*>(stream->data);
 
-			if (nread > 0 && self->data_callback) {
+			if (nread > 0) {
 				const node::buffer buf = self->_alloc_buffer.slice(0, nread);
-				self->data_callback.emit(&buf, 1);
+				self->emit(stream_type::data_event, buf);
 			} else if (nread < 0) {
 				if (nread == UV_EOF) {
 					// the other side shut down it's side (FIN)
@@ -60,7 +54,7 @@ protected:
 					}
 				} else {
 					// other error --> hard close
-					self->error_signal.emit(int(nread));
+					self->emit(handle_type::error_event, node::uv::to_error(int(nread)));
 					self->destroy();
 				}
 			}
@@ -189,13 +183,6 @@ protected:
 			this->retain();
 			req.release();
 		}
-	}
-
-	void _destroy() override {
-		this->alloc_callback.clear();
-
-		node::stream::duplex<stream<T>, int, node::buffer>::_destroy();
-		node::uv::handle<T>::_destroy();
 	}
 
 private:

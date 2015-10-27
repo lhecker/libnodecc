@@ -227,9 +227,7 @@ writeEnd:
 
 void outgoing_message::_destroy() {
 	this->_socket.reset();
-
-	node::stream::writable<outgoing_message, int, node::buffer>::_destroy();
-	node::intrusive_ptr::_destroy();
+	object::_destroy();
 }
 
 } // namespace node

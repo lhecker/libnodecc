@@ -76,7 +76,7 @@ private:
 };
 
 
-class incoming_message : public node::intrusive_ptr, public node::stream::readable<incoming_message, int, node::buffer> {
+class incoming_message : public node::object, public node::stream::readable<incoming_message, node::buffer> {
 	friend class server;
 
 public:

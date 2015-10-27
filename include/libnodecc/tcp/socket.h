@@ -13,18 +13,14 @@ class socket : public node::uv::stream<uv_tcp_t> {
 public:
 	typedef std::function<void(std::error_code* err, node::shared_ptr<node::tcp::socket> socket)> dns_connect_t;
 
+	static const node::events::type<void()> connect_event;
+
 	static void connect(node::loop& loop, const node::string& address, uint16_t port, dns_connect_t cb);
 
 	explicit socket(node::loop& loop);
-
 	void connect(const sockaddr& addr);
-
 	bool keepalive(unsigned int delay);
 	bool nodelay(bool enable);
-
-	void _destroy() override;
-
-	node::callback<void(int err)> connect_callback;
 
 protected:
 	~socket() override = default;

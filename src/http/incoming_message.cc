@@ -181,22 +181,19 @@ incoming_message::incoming_message(const node::shared_ptr<node::tcp::socket>& so
 
 	this->_headers.max_load_factor(0.75);
 
-	this->_socket->data_callback.connect([this](const node::buffer* bufs, size_t bufcnt) {
-		for (size_t i = 0; i < bufcnt; i++) {
-			const node::buffer* buf = bufs + i;
+	this->_socket->on(data_event, [this](const node::buffer& buf) {
+		this->_parser_buffer = &buf;
 
-			this->_parser_buffer = buf;
-			size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buf->data<char>(), buf->size());
+		const size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buf.data<char>(), buf.size());
 
-			// TODO: handle upgrade
-			if (this->_parser.upgrade == 1 || nparsed != buf->size()) {
-				// prevent final http_parser_execute() in .end_callback.connect()?
-				this->_socket->end();
-			}
+		// TODO: handle upgrade
+		if (this->_parser.upgrade == 1 || nparsed != buf.size()) {
+			// prevent final http_parser_execute() in .end_callback.connect()?
+			this->_socket->end();
 		}
 	});
 
-	this->_socket->end_signal.connect([this]() {
+	this->_socket->on(end_event, [this]() {
 		http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 	});
 }
@@ -327,10 +324,8 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 int incoming_message::parser_on_body(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
-	if (self->data_callback) {
-		const auto buf = self->_buffer(at, length);
-		self->data_callback.emit(&buf, 1);
-	}
+	const auto buf = self->_buffer(at, length);
+	self->emit(data_event, buf);
 
 	return 0;
 }
@@ -339,7 +334,7 @@ int incoming_message::parser_on_message_complete(http_parser* parser) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
 	if (self->_is_websocket != 1) {
-		self->end_signal.emit();
+		self->emit(end_event);
 		self->_generic_value.reset();
 		self->_headers.clear();
 		self->url.clear();
@@ -379,11 +374,9 @@ node::buffer incoming_message::_buffer(const char* at, size_t length) {
 
 void incoming_message::_destroy() {
 	this->_socket.reset();
-
 	this->headers_complete_callback.clear();
 
-	node::stream::readable<incoming_message, int, node::buffer>::_destroy();
-	node::intrusive_ptr::_destroy();
+	object::_destroy();
 }
 
 } // namespace node

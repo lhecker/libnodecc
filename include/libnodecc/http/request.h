@@ -18,7 +18,7 @@ class response;
 
 typedef node::shared_ptr<detail::request> request;
 typedef node::shared_ptr<detail::response> response;
-typedef std::function<void(int err, const request& req, const response& res)> on_connect_t;
+typedef std::function<void(const std::error_code* err, const request& req, const response& res)> on_connect_t;
 
 
 namespace detail {

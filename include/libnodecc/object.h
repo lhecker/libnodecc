@@ -2,10 +2,8 @@
 #define nodecc_object_h
 
 #include <cassert>
-#include <type_traits>
 
-#include "callback.h"
-#include "signal.h"
+#include "events.h"
 
 
 namespace node {
@@ -22,27 +20,24 @@ class shared_ptr;
  *
  * @attention Subclasses SHOULD make their destructor protected to enforce the usage of destroy() etc.
  */
-class intrusive_ptr {
+class object : public events::emitter {
+private:
 	template<typename T>
 	friend class shared_ptr;
 
-private:
-	intrusive_ptr* _responsible_object = nullptr;
-	unsigned int   _use_count          = 1;
-	bool           _is_destroyed       = false;
-	bool           _is_shared          = false;
-
 public:
+	static const node::events::type<void()> destroy_event;
+
 	struct destructor {
-		void operator()(intrusive_ptr* o) {
+		void operator()(object* o) {
 			o->destroy();
 		}
 	};
 
-	intrusive_ptr() = default;
-	intrusive_ptr(intrusive_ptr&&) = delete;
+	object() = default;
+	object(object&&) = delete;
 
-	decltype(_use_count) use_count() const noexcept {
+	size_t use_count() const noexcept {
 		return this->_use_count;
 	}
 
@@ -62,24 +57,16 @@ public:
 		}
 	}
 
-	template<typename F>
-	void destroy(F&& func) {
-		this->destroy_signal.connect(func);
-		this->destroy();
-	}
-
-	node::signal<void()> destroy_signal;
-
 protected:
 #if 0
-	virtual ~intrusive_ptr() {
-		printf("%s::~intrusive_ptr\n", typeid(this).name());
+	virtual ~object() {
+		printf("%s::~object\n", typeid(this).name());
 	}
 #else
-	virtual ~intrusive_ptr() = default;
+	virtual ~object() = default;
 #endif
 
-	void set_responsible_object(intrusive_ptr* parent) {
+	void set_responsible_object(object* parent) {
 		assert(parent);
 
 		std::swap(this->_responsible_object, parent);
@@ -92,11 +79,6 @@ protected:
 	}
 
 	void retain() {
-		if (this->_use_count >= std::numeric_limits<decltype(this->_use_count)>::max()) {
-			assert(false);
-			abort();
-		}
-
 		++this->_use_count;
 	}
 
@@ -123,18 +105,25 @@ protected:
 	}
 
 	virtual void _destroy() {
-		this->destroy_signal.emit();
+		this->emit(destroy_event);
+		this->removeAllListeners();
 	}
+
+private:
+	object* _responsible_object = nullptr;
+	size_t  _use_count          = 1;
+	bool    _is_destroyed       = false;
+	bool    _is_shared          = false;
 };
 
 
 template<typename T>
-class intrusive_ptr_wrapper : public T {
+class object_wrapper : public T {
 public:
 	typedef T element_type;
 
 	template<typename... Args>
-	intrusive_ptr_wrapper(intrusive_ptr* o, Args&&... args) : element_type(std::forward<Args>(args)...) {
+	object_wrapper(object* o, Args&&... args) : element_type(std::forward<Args>(args)...) {
 		this->set_responsible_object(o);
 	}
 };
