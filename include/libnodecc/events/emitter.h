@@ -2,6 +2,7 @@
 #define nodecc_events_emitter_h
 
 #include <map>
+#include <vector>
 #include <type_traits>
 
 #include "type.h"
@@ -63,59 +64,10 @@ public:
 			const auto tmp = ptr;
 			ptr = ptr->next;
 			delete tmp;
-		}
+		}	
 	}
 
-	template<typename T, typename F>
-	void* on(F&& func) {
-		auto ptr = new basic_event_handler<F, T>(std::forward<F>(func));
-		this->_append(ptr);
-		return ptr;
-	}
-
-	bool off(void* iter) {
-		if (iter) {
-			event_handler_base* prev = nullptr;
-			event_handler_base* ptr = this->_head;
-
-			while (ptr) {
-				if (ptr == iter) {
-					return this->_remove(prev, ptr);
-				}
-
-				prev = ptr;
-				ptr = ptr->next;
-			}
-		}
-
-		return false;
-	}
-
-	template<typename T, typename... Args>
-	bool emit(Args&& ...args) {
-		typedef event_handler<T> event_handler_type;
-
-		event_handler_type* prev = nullptr;
-		event_handler_type* ptr = static_cast<event_handler_type*>(this->_head);
-
-		while (ptr) {
-			event_handler_type* next = static_cast<event_handler_type*>(ptr->next);
-			const bool remove = ptr->emit(std::forward<Args>(args)...);
-
-			if (remove) {
-				this->_remove(prev, ptr);
-			} else {
-				prev = ptr;
-			}
-
-			ptr = next;
-		}
-
-		return this->_head == nullptr;
-	}
-
-private:
-	void _append(event_handler_base* ptr) {
+	void append(event_handler_base* ptr) {
 		if (this->_tail) {
 			this->_tail->next = ptr;
 		} else {
@@ -125,7 +77,7 @@ private:
 		this->_tail = ptr;
 	}
 
-	bool _remove(event_handler_base* prev, event_handler_base* ptr) {
+	bool remove(event_handler_base* prev, event_handler_base* ptr) {
 		const auto next = ptr->next;
 
 		if (prev) {
@@ -170,15 +122,32 @@ class emitter {
 public:
 	template<typename T, typename F>
 	void* on(const events::type<T>& type, F&& func) {
-		return this->_events[(void*)&type].on<T>(std::forward<F>(func));
+		auto& root = this->_events[(void*)&type];
+		auto ptr = new detail::basic_event_handler<F, T>(std::forward<F>(func));
+		root.append(ptr);
+		return ptr;
 	}
 
 	template<typename T>
 	void off(const events::type<T>& type, void* iter) {
 		const auto& it = this->_events.find((void*)&type);
 
-		if (it != this->_events.cend() && it->second.off(iter)) {
-			this->_events.erase(it);
+		if (it != this->_events.cend()) {
+			detail::event_handler_base* prev = nullptr;
+			detail::event_handler_base* ptr = it->second._head;
+
+			while (ptr) {
+				if (ptr == iter) {
+					if (it->second.remove(prev, ptr)) {
+						this->_events.erase(it);
+					}
+
+					return;
+				}
+
+				prev = ptr;
+				ptr = ptr->next;
+			}
 		}
 	}
 
@@ -186,8 +155,28 @@ public:
 	void emit(const events::type<T>& type, Args&& ...args) {
 		const auto& it = this->_events.find((void*)&type);
 
-		if (it != this->_events.cend() && it->second.emit<T>(std::forward<Args>(args)...)) {
-			this->_events.erase(it);
+		if (it != this->_events.cend()) {
+			typedef detail::event_handler<T> event_handler_type;
+
+			event_handler_type* prev = nullptr;
+			event_handler_type* ptr = static_cast<event_handler_type*>(it->second._head);
+
+			while (ptr) {
+				event_handler_type* next = static_cast<event_handler_type*>(ptr->next);
+				const bool remove = ptr->emit(std::forward<Args>(args)...);
+
+				if (remove) {
+					it->second.remove(prev, ptr);
+				} else {
+					prev = ptr;
+				}
+
+				ptr = next;
+			}
+
+			if (it->second._head == nullptr) {
+				this->_events.erase(it);
+			}
 		}
 	}
 

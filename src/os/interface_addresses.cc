@@ -1,13 +1,12 @@
 #include "libnodecc/os/interface_addresses.h"
 
-#include <new>
 #include <net/if.h>
 #include <ifaddrs.h>
 
 #include "libnodecc/error.h"
 
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__)
+#ifdef SIOCGIFAFLAG_IN6
 # define NODE_IFF_BSD
 # include <sys/ioctl.h>
 # include <netinet/in_var.h>
@@ -63,10 +62,10 @@ std::vector<interface_address> interface_addresses(node::af type, node::iff wl, 
 		node::util::throw_errno();
 	}
 
-	const bool check_in6_iff = static_cast<uint32_t>(wl | bl) & 0xffff0000;
 	auto ifa = ifas;
 
 #ifdef NODE_IFF_BSD
+	const bool check_in6_iff = static_cast<uint32_t>(wl | bl) & 0xffff0000;
 	int sockfd = -1;
 #endif
 

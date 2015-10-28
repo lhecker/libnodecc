@@ -16,9 +16,9 @@ public:
 	using object::emit;
 
 	template<typename... Args>
-	void emit(const decltype(error_event)& type, Args ...args) {
-		object::emit(type, std::forward<Args>(args)...);
-		this->removeAllListeners();
+	void emit(const decltype(error_event)& type, const std::error_code& err) {
+		object::emit(type, err);
+		this->destroy();
 	}
 
 

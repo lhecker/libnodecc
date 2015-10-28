@@ -45,6 +45,7 @@
 				'include/libnodecc/tcp/socket.h',
 				'include/libnodecc/udp/socket.h',
 				'include/libnodecc/util/_boost_endian.h',
+				'include/libnodecc/util/async_channel.h',
 				'include/libnodecc/util/base64.h',
 				'include/libnodecc/util/crc32c.h',
 				'include/libnodecc/util/endian.h',

@@ -6,6 +6,9 @@
 namespace node {
 namespace tcp {
 
+decltype(socket::connect_event) socket::connect_event;
+
+
 struct connect_pack {
 	explicit connect_pack(node::loop& loop, socket::dns_connect_t&& cb) : loop(loop), cb(cb) {
 		this->req.data = this;

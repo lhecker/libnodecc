@@ -4,6 +4,9 @@
 namespace node {
 namespace tcp {
 
+decltype(server::connection_event) server::connection_event;
+
+
 server::server(node::loop& loop) : uv::handle<uv_tcp_t>() {
 	node::uv::check(uv_tcp_init(loop, *this));
 }
@@ -14,7 +17,7 @@ void server::listen(const sockaddr& addr, int backlog, node::tcp::flags flags) {
 	node::uv::check(uv_listen(reinterpret_cast<uv_stream_t*>(&this->_handle), backlog, [](uv_stream_t* server, int status) {
 		if (status == 0) {
 			auto self = reinterpret_cast<node::tcp::server*>(server->data);
-			self->connection_callback.emit();
+			self->emit(connection_event);
 		}
 	}));
 }
@@ -48,12 +51,6 @@ uint16_t server::port() {
 	this->address((sockaddr&)addr, addrLen);
 
 	return ntohs(addr.sin_port);
-}
-
-void server::_destroy() {
-	this->connection_callback.clear();
-
-	node::uv::handle<uv_tcp_t>::_destroy();
 }
 
 } // namespace node

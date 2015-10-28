@@ -25,6 +25,9 @@ constexpr flags operator|(flags a, flags b) {
 
 class socket : public node::uv::handle<uv_udp_t> {
 public:
+	static const node::events::type<void(const sockaddr& remote, const node::buffer& buf)> data_event;
+
+
 	explicit socket(node::loop& loop);
 
 	void listen(const sockaddr& addr, node::udp::flags flags = flags::none);
@@ -49,8 +52,6 @@ public:
 	}
 
 	void write(sockaddr& addr, const node::buffer chunks[], size_t chunkcnt);
-
-	static const node::events::type<void(const sockaddr& remote, const node::buffer& buf)> data_event;
 
 protected:
 	~socket() override = default;

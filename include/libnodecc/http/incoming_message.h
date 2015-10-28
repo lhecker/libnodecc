@@ -101,6 +101,8 @@ public:
 	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
 
 protected:
+	~incoming_message() override = default;
+
 	void _resume() override;
 	void _pause() override;
 	void _destroy() override;

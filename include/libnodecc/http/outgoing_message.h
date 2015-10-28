@@ -40,6 +40,8 @@ public:
 	void destroy();
 
 protected:
+	~outgoing_message() override = default;
+
 	void http_write(const node::buffer bufs[], size_t bufcnt, bool end);
 
 	void _destroy() override;

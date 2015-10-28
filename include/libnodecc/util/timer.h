@@ -35,13 +35,6 @@ public:
 	void again();
 
 	void start(uint64_t timeout, uint64_t repeat);
-
-	template<typename T>
-	void start(uint64_t timeout, uint64_t repeat, T cb) {
-		this->on(timeout, std::forward<T>(cb));
-		this->start(timeout, repeat);
-	}
-
 	void stop();
 
 protected:

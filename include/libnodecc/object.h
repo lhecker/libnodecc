@@ -199,7 +199,7 @@ public:
 		return this->_ptr != nullptr;
 	}
 
-	decltype(_ptr->use_count()) use_count() const {
+	size_t use_count() const {
 		return this->_ptr ? this->_ptr->use_count() : 0;
 	}
 

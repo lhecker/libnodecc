@@ -99,7 +99,7 @@ void server::server_response::_end(const node::buffer chunks[], size_t chunkcnt)
 
 
 server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_shared<bool>(false)) {
-	this->connection_callback.connect([this]() {
+	this->on(connection_event, [this]() {
 		const auto socket = node::make_shared<tcp::socket>(*this);
 		this->accept(*socket);
 

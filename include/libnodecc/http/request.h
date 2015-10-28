@@ -18,7 +18,7 @@ class response;
 
 typedef node::shared_ptr<detail::request> request;
 typedef node::shared_ptr<detail::response> response;
-typedef std::function<void(const std::error_code* err, const request& req, const response& res)> on_connect_t;
+typedef std::function<void(const std::error_code* err, const node::http::client::request& req, const node::http::client::response& res)> on_connect_t;
 
 
 namespace detail {
@@ -40,6 +40,9 @@ private:
 	node::buffer _host;
 	node::buffer _method;
 	node::buffer _path;
+
+protected:
+	~request() override = default;
 };
 
 class response : public node::http::incoming_message {
@@ -47,6 +50,9 @@ class response : public node::http::incoming_message {
 
 public:
 	explicit response(const node::shared_ptr<node::tcp::socket>& socket);
+
+protected:
+	~response() override = default;
 };
 
 } // namespace detail

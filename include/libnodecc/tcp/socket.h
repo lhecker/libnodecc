@@ -11,7 +11,7 @@ class socket : public node::uv::stream<uv_tcp_t> {
 	friend struct connect_pack;
 
 public:
-	typedef std::function<void(std::error_code* err, node::shared_ptr<node::tcp::socket> socket)> dns_connect_t;
+	typedef std::function<void(const std::error_code* err, const node::shared_ptr<node::tcp::socket>& socket)> dns_connect_t;
 
 	static const node::events::type<void()> connect_event;
 

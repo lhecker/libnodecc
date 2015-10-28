@@ -24,6 +24,8 @@ constexpr flags operator|(flags a, flags b) {
  */
 class server : public node::uv::handle<uv_tcp_t> {
 public:
+	static const node::events::type<void()> connection_event;
+
 	explicit server(node::loop& loop);
 
 	void listen(const sockaddr& addr, int backlog = 511, node::tcp::flags flags = flags::none);
@@ -35,9 +37,8 @@ public:
 	void address(sockaddr& addr, int& len);
 	uint16_t port();
 
-	void _destroy() override;
-
-	node::callback<void()> connection_callback;
+protected:
+	~server() override = default;
 };
 
 } // namespace tcp

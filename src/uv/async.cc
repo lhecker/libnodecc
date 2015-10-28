@@ -4,8 +4,15 @@
 namespace node {
 namespace uv {
 
-async::async(node::loop& loop, uv_async_cb cb) : handle<uv_async_t>() {
-	node::uv::check(uv_async_init(loop, *this, cb));
+decltype(async::async_event) async::async_event;
+
+
+async::async(node::loop& loop) : handle<uv_async_t>() {
+	node::uv::check(uv_async_init(loop, *this, [](uv_async_t* handle) {
+		auto self = reinterpret_cast<async*>(handle->data);
+
+		self->emit(async_event);
+	}));
 }
 
 void async::send() {

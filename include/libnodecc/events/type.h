@@ -1,10 +1,6 @@
 #ifndef nodecc_events_type_h
 #define nodecc_events_type_h
 
-#include <map>
-#include <type_traits>
-
-
 namespace node {
 namespace events {
 

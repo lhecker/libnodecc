@@ -86,7 +86,7 @@ void request(node::loop& loop, const node::buffer& method, const node::buffer& u
 		path = "/"_view;
 	}
 
-	tcp::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](std::error_code* err, node::shared_ptr<node::tcp::socket> socket) {
+	tcp::socket::connect(loop, host, parser.port ? parser.port : 80, [host, method, path, cb](const std::error_code* err, const node::shared_ptr<node::tcp::socket>& socket) {
 		if (err) {
 			cb(err, client::request(), client::response());
 		} else {

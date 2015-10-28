@@ -13,7 +13,6 @@ class watcher : public node::uv::handle<uv_fs_event_t> {
 public:
 	static const node::events::type<void(int events, const std::string& str)> event;
 
-public:
 	explicit watcher(node::loop& loop);
 
 	bool start(const std::string& path);
