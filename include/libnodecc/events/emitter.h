@@ -48,33 +48,33 @@ struct basic_event_handler<F, R(Args...)> : event_handler<R(Args...)> {
 
 class event_handler_root {
 public:
-	constexpr event_handler_root() : _head(nullptr), _tail(nullptr) {}
+	constexpr event_handler_root() : head(nullptr), tail(nullptr) {}
 
 	event_handler_root(const event_handler_root&) = delete;
 	event_handler_root& operator=(const event_handler_root&) = delete;
 
 	~event_handler_root() {
-		auto ptr = this->_head;
+		auto ptr = this->head;
 
 		// set head to nullptr early to prevent recursive calls to clear()
-		this->_head = nullptr;
-		this->_tail = nullptr;
+		this->head = nullptr;
+		this->tail = nullptr;
 
 		while (ptr) {
 			const auto tmp = ptr;
 			ptr = ptr->next;
 			delete tmp;
-		}	
+		}
 	}
 
 	void append(event_handler_base* ptr) {
-		if (this->_tail) {
-			this->_tail->next = ptr;
+		if (this->tail) {
+			this->tail->next = ptr;
 		} else {
-			this->_head = ptr;
+			this->head = ptr;
 		}
 
-		this->_tail = ptr;
+		this->tail = ptr;
 	}
 
 	bool remove(event_handler_base* prev, event_handler_base* ptr) {
@@ -84,24 +84,24 @@ public:
 			prev->next = next;
 
 			if (!next) {
-				this->_tail = prev;
+				this->tail = prev;
 			}
 		} else {
-			// prev is null --> ptr is _head
-			this->_head = next;
+			// prev is null --> ptr is head
+			this->head = next;
 
 			if (!next) {
-				this->_tail = nullptr;
+				this->tail = nullptr;
 			}
 		}
 
 		delete ptr;
 
-		return this->_head == nullptr;
+		return this->head == nullptr;
 	}
 
-	event_handler_base* _head;
-	event_handler_base* _tail;
+	event_handler_base* head;
+	event_handler_base* tail;
 };
 
 } // namespace detail
@@ -122,33 +122,10 @@ class emitter {
 public:
 	template<typename T, typename F>
 	void* on(const events::type<T>& type, F&& func) {
-		auto& root = this->_events[(void*)&type];
 		auto ptr = new detail::basic_event_handler<F, T>(std::forward<F>(func));
+		auto& root = this->_events[(void*)&type];
 		root.append(ptr);
 		return ptr;
-	}
-
-	template<typename T>
-	void off(const events::type<T>& type, void* iter) {
-		const auto& it = this->_events.find((void*)&type);
-
-		if (it != this->_events.cend()) {
-			detail::event_handler_base* prev = nullptr;
-			detail::event_handler_base* ptr = it->second._head;
-
-			while (ptr) {
-				if (ptr == iter) {
-					if (it->second.remove(prev, ptr)) {
-						this->_events.erase(it);
-					}
-
-					return;
-				}
-
-				prev = ptr;
-				ptr = ptr->next;
-			}
-		}
 	}
 
 	template<typename T, typename... Args>
@@ -159,11 +136,28 @@ public:
 			typedef detail::event_handler<T> event_handler_type;
 
 			event_handler_type* prev = nullptr;
-			event_handler_type* ptr = static_cast<event_handler_type*>(it->second._head);
+			event_handler_type* ptr = static_cast<event_handler_type*>(it->second.head);
+
+			this->_locked_type = (void*)&type;
 
 			while (ptr) {
 				event_handler_type* next = static_cast<event_handler_type*>(ptr->next);
 				const bool remove = ptr->emit(std::forward<Args>(args)...);
+
+				/*
+				 * If someone tries to call off()/removeAllListeners(...) inside the callback,
+				 * we need to ensure that the root is deleted *after* the callback ended.
+				 * The code below fulfills this requirement in combination with the 3 remove methods.
+				 */
+				if (this->_locked_type != (void*)&type) {
+					if (this->_locked_type == kEraseAll) {
+						this->_events.clear();
+					} else {
+						this->_events.erase((void*)&type);
+					}
+
+					return;
+				}
 
 				if (remove) {
 					it->second.remove(prev, ptr);
@@ -174,23 +168,23 @@ public:
 				ptr = next;
 			}
 
-			if (it->second._head == nullptr) {
+			this->_locked_type = nullptr;
+
+			if (it->second.head == nullptr) {
 				this->_events.erase(it);
 			}
 		}
 	}
 
-	template<typename T>
-	void removeAllListeners(const events::type<T>& type) {
-		this->_events.erase((void*)&type);
-	}
-
-	void removeAllListeners() {
-		this->_events.clear();
-	}
+	void off(const events::detail::base_type& type, void* iter);
+	void removeAllListeners(const events::detail::base_type& type);
+	void removeAllListeners();
 
 private:
+	static const void* kEraseAll;
+
 	std::map<void*, detail::event_handler_root> _events;
+	void* _locked_type;
 };
 
 

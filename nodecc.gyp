@@ -71,6 +71,7 @@
 				'src/buffer/string.cc',
 				'src/dns/lookup.cc',
 				'src/error.cc',
+				'src/events/emitter.cc',
 				'src/fs/watcher.cc',
 				'src/http/_http_date_buffer.cc',
 				'src/http/incoming_message.cc',

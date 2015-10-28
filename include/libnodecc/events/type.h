@@ -4,8 +4,12 @@
 namespace node {
 namespace events {
 
+namespace detail {
+struct base_type {};
+} // namespace detail
+
 template<typename T>
-struct type {
+struct type : detail::base_type {
 	constexpr type() {}
 };
 
