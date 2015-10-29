@@ -2,7 +2,6 @@
 #define nodecc_events_emitter_h
 
 #include <map>
-#include <vector>
 #include <type_traits>
 
 #include "type.h"
@@ -48,56 +47,58 @@ struct basic_event_handler<F, R(Args...)> : event_handler<R(Args...)> {
 
 class event_handler_root {
 public:
+	struct iterator {
+		constexpr iterator(event_handler_base* ptr) : _curr(ptr), _prev(nullptr) {}
+		constexpr iterator(event_handler_base* curr, event_handler_base* prev) : _curr(curr), _prev(prev) {}
+
+		event_handler_base& operator*() const noexcept {
+			return *this->_curr;
+		}
+
+		event_handler_base* operator->() const noexcept {
+			return this->_curr;
+		}
+
+		event_handler_root::iterator& operator++() noexcept {
+			this->_prev = this->_curr;
+			this->_curr = this->_curr->next;
+			return *this;
+		}
+
+		event_handler_root::iterator operator++(int) noexcept {
+			iterator it(this->_curr->next, this->_curr);
+			++(*this);
+			return it;
+		}
+
+		friend bool operator==(const iterator& lhs, const iterator& rhs) noexcept {
+			return lhs._curr == rhs._curr;
+		}
+
+		friend bool operator!=(const iterator& lhs, const iterator& rhs) noexcept {
+			return lhs._curr != rhs._curr;
+		}
+
+		event_handler_base* _curr;
+		event_handler_base* _prev;
+	};
+
 	constexpr event_handler_root() : head(nullptr), tail(nullptr) {}
 
 	event_handler_root(const event_handler_root&) = delete;
 	event_handler_root& operator=(const event_handler_root&) = delete;
 
-	~event_handler_root() {
-		auto ptr = this->head;
+	~event_handler_root();
 
-		// set head to nullptr early to prevent recursive calls to clear()
-		this->head = nullptr;
-		this->tail = nullptr;
+	void push_back(event_handler_base* ptr) noexcept;
+	void erase(iterator it) noexcept;
 
-		while (ptr) {
-			const auto tmp = ptr;
-			ptr = ptr->next;
-			delete tmp;
-		}
+	iterator begin() const noexcept {
+		return iterator(this->head);
 	}
 
-	void append(event_handler_base* ptr) {
-		if (this->tail) {
-			this->tail->next = ptr;
-		} else {
-			this->head = ptr;
-		}
-
-		this->tail = ptr;
-	}
-
-	bool remove(event_handler_base* prev, event_handler_base* ptr) {
-		const auto next = ptr->next;
-
-		if (prev) {
-			prev->next = next;
-
-			if (!next) {
-				this->tail = prev;
-			}
-		} else {
-			// prev is null --> ptr is head
-			this->head = next;
-
-			if (!next) {
-				this->tail = nullptr;
-			}
-		}
-
-		delete ptr;
-
-		return this->head == nullptr;
+	iterator end() const noexcept {
+		return iterator(nullptr);
 	}
 
 	event_handler_base* head;
@@ -122,9 +123,9 @@ class emitter {
 public:
 	template<typename T, typename F>
 	void* on(const events::type<T>& type, F&& func) {
-		auto ptr = new detail::basic_event_handler<F, T>(std::forward<F>(func));
 		auto& root = this->_events[(void*)&type];
-		root.append(ptr);
+		auto ptr = new detail::basic_event_handler<F, T>(std::forward<F>(func));
+		root.push_back(ptr);
 		return ptr;
 	}
 
@@ -133,16 +134,13 @@ public:
 		const auto& it = this->_events.find((void*)&type);
 
 		if (it != this->_events.cend()) {
-			typedef detail::event_handler<T> event_handler_type;
-
-			event_handler_type* prev = nullptr;
-			event_handler_type* ptr = static_cast<event_handler_type*>(it->second.head);
+			const auto rend = it->second.end();
+			auto rit = it->second.begin();
 
 			this->_locked_type = (void*)&type;
 
-			while (ptr) {
-				event_handler_type* next = static_cast<event_handler_type*>(ptr->next);
-				const bool remove = ptr->emit(std::forward<Args>(args)...);
+			while (rit != rend) {
+				const bool remove = static_cast<detail::event_handler<T>&>(*rit).emit(std::forward<Args>(args)...);
 
 				/*
 				 * If someone tries to call off()/removeAllListeners(...) inside the callback,
@@ -153,19 +151,17 @@ public:
 					if (this->_locked_type == kEraseAll) {
 						this->_events.clear();
 					} else {
-						this->_events.erase((void*)&type);
+						this->_events.erase(it);
 					}
 
 					return;
 				}
 
 				if (remove) {
-					it->second.remove(prev, ptr);
+					it->second.erase(rit++);
 				} else {
-					prev = ptr;
+					++rit;
 				}
-
-				ptr = next;
 			}
 
 			this->_locked_type = nullptr;

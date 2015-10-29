@@ -64,9 +64,6 @@
 						'LinkIncremental': 1,
 					},
 				},
-				'xcode_settings': {
-					'GCC_OPTIMIZATION_LEVEL': '3',
-				},
 			}
 		},
 		'msvs_settings': {

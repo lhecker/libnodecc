@@ -3,10 +3,24 @@
 		{
 			'target_name': 'libnodecc',
 			'type': '<(library)',
+			'dependencies': [
+				'deps/json11.gyp:json11',
+				'deps/libuv/uv.gyp:libuv',
+			],
+			'export_dependent_settings': [
+				'deps/json11.gyp:json11',
+				'deps/libuv/uv.gyp:libuv',
+			],
 			'include_dirs': [
 				'include',
 				'deps',
 			],
+			'direct_dependent_settings': {
+				'include_dirs': [
+					'include',
+					'deps',
+				],
+			},
 			'sources': [
 				'deps/http-parser/http_parser.h',
 				'deps/http-parser/http_parser.c',
@@ -28,7 +42,7 @@
 				'include/libnodecc/error.h',
 				'include/libnodecc/events.h',
 				'include/libnodecc/events/emitter.h',
-				'include/libnodecc/events/types.h',
+				'include/libnodecc/events/type.h',
 				'include/libnodecc/fs/read_stream.h',
 				'include/libnodecc/fs/watcher.h',
 				'include/libnodecc/http/_http_date_buffer.h',
@@ -92,20 +106,6 @@
 				'src/util/uri.cc',
 				'src/uv/async.cc',
 				'src/uv/queue_work.cc',
-			],
-			'dependencies': [
-				'deps/json11.gyp:json11',
-				'deps/libuv/uv.gyp:libuv',
-			],
-			'direct_dependent_settings': {
-				'include_dirs': [
-					'include',
-					'deps',
-				],
-			},
-			'export_dependent_settings': [
-				'deps/json11.gyp:json11',
-				'deps/libuv/uv.gyp:libuv',
 			],
 			'xcode_settings': {
 				'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
