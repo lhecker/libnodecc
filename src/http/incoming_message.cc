@@ -181,7 +181,7 @@ incoming_message::incoming_message(const node::shared_ptr<node::tcp::socket>& so
 
 	this->_headers.max_load_factor(0.75);
 
-	this->_socket->on(data_event, [this](const node::buffer& buf) {
+	this->_socket->on(this->_socket->data_event, [this](const node::buffer& buf) {
 		this->_parser_buffer = &buf;
 
 		const size_t nparsed = http_parser_execute(&this->_parser, &http_req_parser_settings, buf.data<char>(), buf.size());
@@ -193,7 +193,7 @@ incoming_message::incoming_message(const node::shared_ptr<node::tcp::socket>& so
 		}
 	});
 
-	this->_socket->on(end_event, [this]() {
+	this->_socket->on(this->_socket->end_event, [this]() {
 		http_parser_execute(&this->_parser, &http_req_parser_settings, nullptr, 0);
 	});
 }
