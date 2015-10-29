@@ -5,10 +5,6 @@
 
 namespace node {
 
-string::string(std::size_t size) : buffer() {
-	this->_reset_unsafe(size);
-}
-
 string::string(const node::literal_string& other) : buffer(other) {
 }
 
@@ -27,7 +23,20 @@ string::string(const node::buffer_view& other) : buffer() {
 	}
 }
 
+string::string(std::size_t size) : buffer() {
+	this->_reset_unsafe(size);
+}
+
+string::string(const void* data, std::size_t size) : buffer(data, size, node::buffer_flags::weak) {
+	this->_copy(*this);
+}
+
+void string::reset() {
+	buffer::reset();
+}
+
 void string::reset(std::size_t size) {
+	this->_release();
 	this->_reset_unsafe(size);
 }
 
@@ -46,21 +55,23 @@ const char* string::c_str() const noexcept {
 }
 
 void string::_copy(string& target, std::size_t size) const {
-	size = size == 0 ? this->size() + 1 : size + 1;
-
-	buffer::_copy(target, size == 0 ? this->size() + 1 : size + 1);
-
-	if (target) {
-		target._size = size;
-		target.data<char>()[size] = '\0';
+	if (size == 0) {
+		size = this->_size;
 	}
+
+	string str(size);
+
+	if (this->_data) {
+		memcpy(str._data, this->_data, std::min(size, this->_size) + 1);
+	}
+
+	str.data<char>()[size] = '\0';
+	target = std::move(str);
 }
 
 void string::_reset_unsafe(std::size_t size) {
 	if (size > 0) {
 		buffer::_reset_unsafe(size + 1);
-
-		std::to_string(0);
 
 		if (this->_size) {
 			this->_size = size;

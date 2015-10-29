@@ -6,7 +6,7 @@
 #include "libnodecc/error.h"
 
 
-#ifdef SIOCGIFAFLAG_IN6
+#if defined(__has_include) && __has_include(<netinet/in_var.h>)
 # define NODE_IFF_BSD
 # include <sys/ioctl.h>
 # include <netinet/in_var.h>
@@ -15,6 +15,18 @@
 
 namespace node {
 namespace os {
+
+node::string interface_address::address_string() const {
+	char buf[std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)];
+	const void* addr = this->is_ipv6 ? (void*)&this->address.address6.sin6_addr : (void*)&this->address.address4.sin_addr;
+
+	if (0 == uv_inet_ntop(this->address.address4.sin_family, addr, buf, sizeof(buf))) {
+		return node::string(buf);
+	}
+
+	throw std::runtime_error("invalid address");
+}
+
 
 static constexpr bool iff_filter(node::iff wl, node::iff bl, node::iff flag, bool cond) {
 	return (!(static_cast<uint32_t>(wl) & static_cast<uint32_t>(flag)) || cond) && (!(static_cast<uint32_t>(bl) & static_cast<uint32_t>(flag)) || !cond);

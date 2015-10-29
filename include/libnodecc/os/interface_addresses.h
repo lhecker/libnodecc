@@ -27,6 +27,8 @@ struct interface_address {
 		struct sockaddr_in netmask4;
 		struct sockaddr_in6 netmask6;
 	} netmask;
+
+	node::string address_string() const;
 };
 
 std::vector<interface_address> interface_addresses(node::af type = af::any, node::iff whitelist = iff::up | iff::running, node::iff blacklist = iff::loopback | iff::linklocal | iff::detached | iff::deprecated | iff::temporary | iff::notready);

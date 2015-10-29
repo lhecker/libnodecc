@@ -24,7 +24,7 @@ buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other), _p(other._
 
 buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept : buffer_view(data, size), _p(nullptr) {
 	if (flags == buffer_flags::copy) {
-		this->copy(*this);
+		this->_copy(*this);
 	}
 }
 
@@ -90,7 +90,7 @@ void buffer::reset(const buffer_view& other, buffer_flags flags) {
 	this->_size = other.size();
 
 	if (flags == buffer_flags::copy) {
-		this->copy(*this);
+		this->_copy(*this);
 	}
 }
 
@@ -125,22 +125,13 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 		size = this->_size;
 	}
 
-	constexpr const std::size_t control_size = (sizeof(default_control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
-	uint8_t* base = (uint8_t*)malloc(control_size + size);
-	uint8_t* data = base + control_size;
+	buffer buf(size);
 
-	// we need to do this upfront since target might be *this
-	if (base && this->_data) {
-		memcpy(data, this->_data, std::min(size, this->_size));
+	if (this->_data) {
+		memcpy(buf._data, this->_data, std::min(size, this->_size));
 	}
 
-	target._release();
-
-	if (base) {
-		target._p = new(base) default_control(base);
-		target._data = data;
-		target._size = size;
-	}
+	target = std::move(buf);
 }
 
 void buffer::_reset_unsafe(std::size_t size) {

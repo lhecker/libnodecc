@@ -27,14 +27,16 @@ public:
 
 	string() : buffer() {}
 
-	string(std::size_t size);
 	string(const node::literal_string& other);
 	string(const node::buffer_view& other);
 
-	template<typename CharT>
-	string(const CharT* str) noexcept : buffer(const_cast<CharT*>(str), (std::char_traits<CharT>::length(str) + 1) * sizeof(CharT)) {}
+	explicit string(std::size_t size);
+	explicit string(const void* data, std::size_t size);
 
-	using buffer::reset;
+	template<typename CharT>
+	string(const CharT* str) : string(const_cast<CharT*>(str), std::char_traits<CharT>::length(str) * sizeof(CharT)) {}
+
+	void reset();
 	void reset(std::size_t size);
 
 	string copy(std::size_t size) const;
