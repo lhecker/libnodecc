@@ -32,6 +32,8 @@ void queue_work(node::loop& loop, const work_cb_t& work_cb, const work_cb_t& aft
 
 		delete self;
 	}));
+
+	pack.release();
 }
 
 } // namespace node

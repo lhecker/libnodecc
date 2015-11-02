@@ -144,6 +144,8 @@ void buffer::_reset_unsafe(std::size_t size) {
 			this->_p = new(base) default_control(base);
 			this->_data = data;
 			this->_size = size;
+		} else {
+			throw std::bad_alloc();
 		}
 	}
 }

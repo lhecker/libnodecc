@@ -267,12 +267,6 @@ void incoming_message::_pause() {
 	}
 }
 
-void incoming_message::destroy() {
-	if (this->_socket) {
-		this->_socket->destroy();
-	}
-}
-
 int incoming_message::parser_on_url(http_parser* parser, const char* at, size_t length) {
 	auto self = static_cast<incoming_message*>(parser->data);
 
@@ -373,6 +367,10 @@ node::buffer incoming_message::_buffer(const char* at, size_t length) {
 }
 
 void incoming_message::_destroy() {
+	if (this->_socket) {
+		this->_socket->destroy();
+	}
+
 	this->_socket.reset();
 	this->headers_complete_callback.clear();
 

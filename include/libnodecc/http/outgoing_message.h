@@ -37,8 +37,6 @@ public:
 		this->write(nullptr, 0);
 	}
 
-	void destroy();
-
 protected:
 	~outgoing_message() override = default;
 

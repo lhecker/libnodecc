@@ -95,6 +95,7 @@
 				'src/loop.cc',
 				'src/object.cc',
 				'src/os/interface_addresses.cc',
+				'src/stream.cc',
 				'src/tcp/server.cc',
 				'src/tcp/socket.cc',
 				'src/udp/socket.cc',

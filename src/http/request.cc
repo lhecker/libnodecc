@@ -45,8 +45,8 @@ static NODE_HTTP_REQUEST_GENERATOR_SIGNATURE {
 	const auto res = node::make_shared<detail::response>(socket);
 
 	socket->on(node::tcp::socket::destroy_event, [req, res]() {
-		req->_destroy();
-		res->_destroy();
+		req->destroy();
+		res->destroy();
 	});
 
 	socket->on(node::tcp::socket::connect_event, [req, res, cb]() {

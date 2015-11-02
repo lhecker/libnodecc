@@ -12,7 +12,9 @@ namespace events {
 namespace detail {
 
 struct event_handler_base {
-	constexpr event_handler_base() : next(nullptr) {}
+	static constexpr size_t delete_flag = size_t(1) << (std::numeric_limits<size_t>::digits - 1);
+
+	constexpr event_handler_base() : next(nullptr), ref_count(0) {}
 
 	event_handler_base(const event_handler_base&) = delete;
 	event_handler_base& operator=(const event_handler_base&) = delete;
@@ -20,6 +22,7 @@ struct event_handler_base {
 	virtual ~event_handler_base() = default;
 
 	event_handler_base* next;
+	size_t ref_count;
 };
 
 template<typename T>
@@ -27,7 +30,7 @@ struct event_handler;
 
 template<typename R, typename... Args>
 struct event_handler<R(Args...)> : event_handler_base {
-	virtual bool emit(Args ...args) = 0;
+	virtual void emit(Args ...args) = 0;
 };
 
 template<typename F, typename T>
@@ -37,9 +40,8 @@ template<typename F, typename R, typename... Args>
 struct basic_event_handler<F, R(Args...)> : event_handler<R(Args...)> {
 	basic_event_handler(F&& func) : event_handler<R(Args...)>(), func(std::forward<F>(func)) {}
 
-	bool emit(Args ...args) override {
+	void emit(Args ...args) override {
 		this->func(std::forward<Args>(args)...);
-		return false;
 	}
 
 	F func;
@@ -137,50 +139,46 @@ public:
 			const auto rend = it->second.end();
 			auto rit = it->second.begin();
 
-			this->_locked_type = (void*)&type;
-
 			while (rit != rend) {
-				const bool remove = static_cast<detail::event_handler<T>&>(*rit).emit(std::forward<Args>(args)...);
+				detail::event_handler<T>& handler = static_cast<detail::event_handler<T>&>(*rit);
 
-				/*
-				 * If someone tries to call off()/removeAllListeners(...) inside the callback,
-				 * we need to ensure that the root is deleted *after* the callback ended.
-				 * The code below fulfills this requirement in combination with the 3 remove methods.
-				 */
-				if (this->_locked_type != (void*)&type) {
-					if (this->_locked_type == kEraseAll) {
-						this->_events.clear();
-					} else {
-						this->_events.erase(it);
-					}
+				// Guard the handler
+				++handler.ref_count;
 
-					return;
-				}
+				// Call the callback! Remember: The callback might call off() or removeAllListeners() - even recursively!
+				handler.emit(std::forward<Args>(args)...);
 
-				if (remove) {
-					it->second.erase(rit++);
-				} else {
-					++rit;
+				// Advance the iterator before we possibly delete it below
+				++rit;
+
+				// Delete the handler if it has been marked and we're the last emit() in the callstack to use it
+				if (--handler.ref_count == detail::event_handler_base::delete_flag) {
+					delete &handler;
 				}
 			}
 
-			this->_locked_type = nullptr;
-
-			if (it->second.head == nullptr) {
-				this->_events.erase(it);
-			}
+			/*
+			 * If it->second.head is nullptr we should actually delete the root,
+			 * but we can't do that since the root might already have been deleted
+			 * using removeAllListeners() by one of the callbacks of the handlers above.
+			 */
 		}
 	}
 
 	void off(const events::detail::base_type& type, void* iter);
-	void removeAllListeners(const events::detail::base_type& type);
-	void removeAllListeners();
+
+	void removeAllListeners(const events::detail::base_type& type) {
+		this->_events.erase((void*)&type);
+	}
+
+	void removeAllListeners() {
+		this->_events.clear();
+	}
 
 private:
 	static const void* kEraseAll;
 
 	std::map<void*, detail::event_handler_root> _events;
-	void* _locked_type;
 };
 
 

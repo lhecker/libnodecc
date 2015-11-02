@@ -15,7 +15,13 @@ event_handler_root::~event_handler_root() {
 	while (ptr) {
 		const auto tmp = ptr;
 		ptr = ptr->next;
-		delete tmp;
+
+		if (tmp->ref_count == 0) {
+			delete tmp;
+		} else {
+			// prevent emit() from advancing
+			tmp->next = nullptr;
+		}
 	}
 }
 
@@ -47,10 +53,16 @@ void event_handler_root::erase(iterator it) noexcept {
 		}
 	}
 
-	delete it._curr;
+	if (it->ref_count == 0) {
+		delete it._curr;
+	} else {
+		// prevent emit() from advancing
+		it->next = nullptr;
+	}
 }
 
 } // namespace detail
+
 
 const void* emitter::kEraseAll = (const void*)&emitter::kEraseAll;
 
@@ -72,22 +84,6 @@ void emitter::off(const events::detail::base_type& type, void* iter) {
 				return;
 			}
 		}
-	}
-}
-
-void emitter::removeAllListeners(const events::detail::base_type& type) {
-	if (this->_locked_type == (void*)&type) {
-		this->_locked_type = nullptr;
-	} else {
-		this->_events.erase((void*)&type);
-	}
-}
-
-void emitter::removeAllListeners() {
-	if (this->_locked_type) {
-		this->_locked_type = (void*)kEraseAll;
-	} else {
-		this->_events.clear();
 	}
 }
 

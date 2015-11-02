@@ -30,8 +30,10 @@ protected:
 		node::uv::check(uv_read_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 			auto self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
-			if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
-				self->_alloc_buffer.reset(suggested_size);
+			try {
+				self->_alloc_buffer.reset(4096);
+			} catch (...) {
+				return;
 			}
 
 			buf->base = self->_alloc_buffer.template data<char>();

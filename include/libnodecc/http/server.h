@@ -45,12 +45,12 @@ public:
 
 	explicit server(node::loop& loop);
 
-	void _destroy() override;
-
 	node::callback<void(const server::request& req, const server::response& res)> request_callback;
 
 protected:
 	~server() override = default;
+
+	void _destroy() override;
 
 private:
 	std::shared_ptr<bool> _is_destroyed;

@@ -96,8 +96,6 @@ public:
 
 	bool is_websocket_request();
 
-	void destroy();
-
 	node::callback<void(bool upgrade, bool keep_alive)> headers_complete_callback;
 
 protected:

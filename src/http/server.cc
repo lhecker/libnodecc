@@ -112,8 +112,8 @@ server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_sh
 		// TODO: (create and) use node::weak_ptr instead?
 		const auto& _is_destroyed = this->_is_destroyed;
 		socket->on(destroy_event, [this, _is_destroyed, it, req, res]() {
-			req->object::destroy();
-			res->object::destroy();
+			req->destroy();
+			res->destroy();
 
 			if (!*_is_destroyed) {
 				this->_clients.erase(it);
