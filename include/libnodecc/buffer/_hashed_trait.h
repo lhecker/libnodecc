@@ -1,10 +1,12 @@
 #ifndef nodecc_buffer__hashed_trait_h
 #define nodecc_buffer__hashed_trait_h
 
+#include "../util/fnv.h"
+
 
 namespace node {
 
-	class buffer_view;
+class buffer_view;
 
 namespace detail {
 

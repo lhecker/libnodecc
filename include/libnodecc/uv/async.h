@@ -9,7 +9,7 @@ namespace uv {
 
 class async : public node::uv::handle<uv_async_t> {
 public:
-	static const node::events::type<void()> async_event;
+	static const node::events::symbol<void()> async_event;
 
 	explicit async(node::loop& loop);
 	void send();

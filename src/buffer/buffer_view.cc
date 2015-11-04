@@ -5,6 +5,9 @@
 
 namespace node {
 
+const std::size_t buffer_view::npos;
+
+
 buffer_view& buffer_view::operator=(const buffer_view& other) {
 	this->_data = other._data;
 	this->_size = other._size;
@@ -34,7 +37,7 @@ std::size_t buffer_view::index_of(const char ch) const noexcept {
 		const uint8_t* pos = static_cast<uint8_t*>(memchr(this->data(), ch, this->size()));
 
 		if (pos) {
-			return static_cast<std::size_t>(this->data() - pos);
+			return static_cast<std::size_t>(pos - this->data());
 		}
 	}
 
@@ -49,7 +52,7 @@ std::size_t buffer_view::index_of(const buffer_view& other) const noexcept {
 
 	if (data1 && data2) {
 		const uint8_t* pos = std::search(data1, data1_end, data2, data2_end);
-		return pos == data1_end ? npos : static_cast<std::size_t>(data1 - pos);
+		return pos == data1_end ? npos : static_cast<std::size_t>(pos - data1);
 	} else {
 		return npos;
 	}

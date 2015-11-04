@@ -1,8 +1,9 @@
 #ifndef nodecc_os_interface_addresses_h
 #define nodecc_os_interface_addresses_h
 
-#include <array>
-#include <uv.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <vector>
 
 #include "../buffer.h"
 #include "../util/raw_vector.h"

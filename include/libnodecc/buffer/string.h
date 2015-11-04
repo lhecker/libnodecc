@@ -33,9 +33,6 @@ public:
 	explicit string(std::size_t size);
 	explicit string(const void* data, std::size_t size);
 
-	template<typename CharT>
-	string(const CharT* str) : string(const_cast<CharT*>(str), std::char_traits<CharT>::length(str) * sizeof(CharT)) {}
-
 	void reset();
 	void reset(std::size_t size);
 

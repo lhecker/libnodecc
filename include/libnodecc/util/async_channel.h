@@ -14,8 +14,8 @@ class async_channel : public node::events::emitter {
 public:
 	typedef typename node::channel<T>::queue_type queue_type;
 
-	static const node::events::type<void(const queue_type& queue)> recv_event;
-	static const node::events::type<void(const std::error_code& err)> error_event;
+	static const node::events::symbol<void(const queue_type& queue)> recv_event;
+	static const node::events::symbol<void(const std::error_code& err)> error_event;
 
 
 	void send(const T& value) {
@@ -77,10 +77,10 @@ private:
 };
 
 template<typename T>
-const node::events::type<void(const typename async_channel<T>::queue_type& queue)> async_channel<T>::recv_event;
+const node::events::symbol<void(const typename async_channel<T>::queue_type& queue)> async_channel<T>::recv_event;
 
 template<typename T>
-const node::events::type<void(const std::error_code& err)> async_channel<T>::error_event;
+const node::events::symbol<void(const std::error_code& err)> async_channel<T>::error_event;
 
 } // namespace util
 } // namespace node

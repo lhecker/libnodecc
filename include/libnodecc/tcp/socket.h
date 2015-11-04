@@ -13,7 +13,7 @@ class socket : public node::uv::stream<uv_tcp_t> {
 public:
 	typedef std::function<void(const std::error_code* err, const node::shared_ptr<node::tcp::socket>& socket)> dns_connect_t;
 
-	static const node::events::type<void()> connect_event;
+	static const node::events::symbol<void()> connect_event;
 
 	static void connect(node::loop& loop, const node::string& address, uint16_t port, dns_connect_t cb);
 

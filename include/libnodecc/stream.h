@@ -13,7 +13,7 @@ namespace detail {
 
 class readable_base {
 public:
-	static const node::events::type<void()> end_event;
+	static const node::events::symbol<void()> end_event;
 
 	void resume() {
 		if (!this->_is_consuming) {
@@ -54,11 +54,11 @@ protected:
 template<typename ChunkT>
 class readable : public readable_base {
 public:
-	static const node::events::type<void(const ChunkT& chunk)> data_event;
+	static const node::events::symbol<void(const ChunkT& chunk)> data_event;
 };
 
 template<typename ChunkT>
-const node::events::type<void(const ChunkT& chunk)> readable<ChunkT>::data_event;
+const node::events::symbol<void(const ChunkT& chunk)> readable<ChunkT>::data_event;
 
 } // namespace detail
 
@@ -120,7 +120,7 @@ namespace detail {
 
 class writable_base {
 public:
-	static const node::events::type<void()> drain_event;
+	static const node::events::symbol<void()> drain_event;
 
 	explicit writable_base(size_t hwm = 16 * 1024, size_t lwm = 4 * 1024) : _hwm(hwm), _lwm(lwm), _wm(0) {}
 

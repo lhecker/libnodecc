@@ -42,7 +42,7 @@
 				'include/libnodecc/error.h',
 				'include/libnodecc/events.h',
 				'include/libnodecc/events/emitter.h',
-				'include/libnodecc/events/type.h',
+				'include/libnodecc/events/symbol.h',
 				'include/libnodecc/fs/read_stream.h',
 				'include/libnodecc/fs/watcher.h',
 				'include/libnodecc/http/_http_date_buffer.h',
@@ -118,5 +118,25 @@
 				'UNICODE',
 			],
 		},
-	]
+
+
+		{
+			'target_name': 'run-tests',
+			'type': 'executable',
+			'dependencies': [ 'libnodecc' ],
+			'include_dirs': [
+				'deps/Catch/include',
+			],
+			'sources': [
+				'test/buffer.cc',
+				'test/events.cc',
+				'test/main.cc',
+			],
+			'msvs-settings': {
+				'VCLinkerTool': {
+					'SubSystem': 1, # /subsystem:console
+				},
+			},
+		},
+	],
 }

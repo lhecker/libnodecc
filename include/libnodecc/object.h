@@ -26,7 +26,7 @@ private:
 	friend class shared_ptr;
 
 public:
-	static const node::events::type<void()> destroy_event;
+	static const node::events::symbol<void()> destroy_event;
 
 	struct destructor {
 		void operator()(object* o) {

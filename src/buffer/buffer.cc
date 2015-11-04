@@ -115,8 +115,6 @@ buffer buffer::slice(std::size_t beg, std::size_t end) const noexcept {
 		}
 	}
 
-#undef PTRDIFF_GREATER_SIZE
-
 	return buf;
 }
 
@@ -135,18 +133,25 @@ void buffer::_copy(buffer& target, std::size_t size) const {
 }
 
 void buffer::_reset_unsafe(std::size_t size) {
-	if (size > 0) {
-		constexpr const std::size_t control_size = (sizeof(default_control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
-		uint8_t* base = (uint8_t*)malloc(control_size + size);
-		uint8_t* data = base + control_size;
+	static constexpr std::size_t control_size = (sizeof(default_control) + sizeof(std::max_align_t) - 1) & ~(sizeof(std::max_align_t) - 1);
 
-		if (base) {
-			this->_p = new(base) default_control(base);
-			this->_data = data;
-			this->_size = size;
-		} else {
-			throw std::bad_alloc();
+	if (size > 0) {
+		const auto alloc_size = control_size + size;
+
+		// check for integer overflow
+		if (alloc_size > size) {
+			uint8_t* base = (uint8_t*)malloc(alloc_size);
+			uint8_t* data = base + control_size;
+
+			if (base) {
+				this->_p = new(base) default_control(base);
+				this->_data = data;
+				this->_size = size;
+				return;
+			}
 		}
+
+		throw std::bad_alloc();
 	}
 }
 

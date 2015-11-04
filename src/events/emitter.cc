@@ -5,6 +5,9 @@ namespace node {
 namespace events {
 namespace detail {
 
+const std::size_t event_handler_base::delete_flag;
+
+
 event_handler_root::~event_handler_root() {
 	auto ptr = this->head;
 
@@ -66,8 +69,8 @@ void event_handler_root::erase(iterator it) noexcept {
 
 const void* emitter::kEraseAll = (const void*)&emitter::kEraseAll;
 
-void emitter::off(const events::detail::base_type& type, void* iter) {
-	const auto& it = this->_events.find((void*)&type);
+void emitter::off(const events::detail::base_symbol& symbol, void* iter) {
+	const auto& it = this->_events.find((void*)&symbol);
 
 	if (it != this->_events.cend()) {
 		const auto rend = it->second.end();
@@ -83,6 +86,8 @@ void emitter::off(const events::detail::base_type& type, void* iter) {
 
 				return;
 			}
+
+			++rit;
 		}
 	}
 }

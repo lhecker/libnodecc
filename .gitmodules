@@ -13,3 +13,6 @@
 [submodule "deps/wslay"]
 	path = deps/wslay
 	url = https://github.com/tatsuhiro-t/wslay.git
+[submodule "deps/Catch"]
+	path = deps/Catch
+	url = https://github.com/philsquared/Catch.git

@@ -24,7 +24,7 @@ constexpr flags operator|(flags a, flags b) {
  */
 class server : public node::uv::handle<uv_tcp_t> {
 public:
-	static const node::events::type<void()> connection_event;
+	static const node::events::symbol<void()> connection_event;
 
 	explicit server(node::loop& loop);
 

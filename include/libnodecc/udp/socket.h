@@ -25,7 +25,7 @@ constexpr flags operator|(flags a, flags b) {
 
 class socket : public node::uv::handle<uv_udp_t> {
 public:
-	static const node::events::type<void(const sockaddr& remote, const node::buffer& buf)> data_event;
+	static const node::events::symbol<void(const sockaddr& remote, const node::buffer& buf)> data_event;
 
 
 	explicit socket(node::loop& loop);

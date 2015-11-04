@@ -1,7 +1,8 @@
 #include "libnodecc/os/interface_addresses.h"
 
-#include <net/if.h>
 #include <ifaddrs.h>
+#include <net/if.h>
+#include <uv.h>
 
 #include "libnodecc/error.h"
 

@@ -9,7 +9,7 @@ namespace util {
 
 class timer : public node::uv::handle<uv_timer_t> {
 public:
-	static const node::events::type<void()> timeout_event;
+	static const node::events::symbol<void()> timeout_event;
 
 public:
 	explicit timer(node::loop& loop);

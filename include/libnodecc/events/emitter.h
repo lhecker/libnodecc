@@ -4,7 +4,7 @@
 #include <map>
 #include <type_traits>
 
-#include "type.h"
+#include "symbol.h"
 
 
 namespace node {
@@ -12,7 +12,7 @@ namespace events {
 namespace detail {
 
 struct event_handler_base {
-	static constexpr size_t delete_flag = size_t(1) << (std::numeric_limits<size_t>::digits - 1);
+	static constexpr std::size_t delete_flag = size_t(1) << (std::numeric_limits<std::size_t>::digits - 1);
 
 	constexpr event_handler_base() : next(nullptr), ref_count(0) {}
 
@@ -22,7 +22,7 @@ struct event_handler_base {
 	virtual ~event_handler_base() = default;
 
 	event_handler_base* next;
-	size_t ref_count;
+	std::size_t ref_count;
 };
 
 template<typename T>
@@ -111,7 +111,7 @@ public:
 
 
 /*
- * - This class (as emitter<void(size_t)>, using -O3 and only a single type entry)
+ * - This class (as emitter<void(size_t)>, using -O3 and only a single symbol entry)
  *   manages to invoke up to 250 million event handlers per second on a i7 3770
  *   and is thus only about 17% slower than a pure std::forward_list<std::function<void(int)>>.
  *   (The std::function list iteration was by the way completely inlined while the emitter was not.)
@@ -124,16 +124,16 @@ public:
 class emitter {
 public:
 	template<typename T, typename F>
-	void* on(const events::type<T>& type, F&& func) {
-		auto& root = this->_events[(void*)&type];
+	void* on(const events::symbol<T>& symbol, F&& func) {
+		auto& root = this->_events[(void*)&symbol];
 		auto ptr = new detail::basic_event_handler<F, T>(std::forward<F>(func));
 		root.push_back(ptr);
 		return ptr;
 	}
 
 	template<typename T, typename... Args>
-	void emit(const events::type<T>& type, Args&& ...args) {
-		const auto& it = this->_events.find((void*)&type);
+	void emit(const events::symbol<T>& symbol, Args&& ...args) {
+		const auto& it = this->_events.find((void*)&symbol);
 
 		if (it != this->_events.cend()) {
 			const auto rend = it->second.end();
@@ -145,7 +145,7 @@ public:
 				// Guard the handler
 				++handler.ref_count;
 
-				// Call the callback! Remember: The callback might call off() or removeAllListeners() - even recursively!
+				// Call the callback! Remember: The callback might call off() or removeAllListeners() recursively!
 				handler.emit(std::forward<Args>(args)...);
 
 				// Advance the iterator before we possibly delete it below
@@ -165,10 +165,10 @@ public:
 		}
 	}
 
-	void off(const events::detail::base_type& type, void* iter);
+	void off(const events::detail::base_symbol& symbol, void* iter);
 
-	void removeAllListeners(const events::detail::base_type& type) {
-		this->_events.erase((void*)&type);
+	void removeAllListeners(const events::detail::base_symbol& symbol) {
+		this->_events.erase((void*)&symbol);
 	}
 
 	void removeAllListeners() {

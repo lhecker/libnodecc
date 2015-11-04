@@ -4,9 +4,6 @@
 #include "buffer.h"
 
 
-/*
- * TODO: Add tests to ensure that _hash is set to zero if the buffer is mutated.
- */
 namespace node {
 
 class mutable_buffer : public node::buffer {
@@ -28,10 +25,6 @@ public:
 	mutable_buffer(const mutable_buffer& other) noexcept;
 	mutable_buffer& operator=(const mutable_buffer& other) noexcept;
 
-	mutable_buffer& append(const void* data, std::size_t size) noexcept;
-	mutable_buffer& append(const node::buffer_view& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
-	mutable_buffer& append(const node::buffer& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
-
 	template<typename charT>
 	void push_back(charT ch) noexcept {
 		charT* p = static_cast<charT*>(this->_expand_size(sizeof(charT)));
@@ -40,6 +33,10 @@ public:
 			*p = ch;
 		}
 	}
+
+	mutable_buffer& append(const void* data, std::size_t size) noexcept;
+	mutable_buffer& append(const node::buffer_view& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
+	mutable_buffer& append(const node::buffer& buf, std::size_t pos = 0, std::size_t count = npos) noexcept;
 
 	template<typename charT>
 	mutable_buffer& append(const charT* data) noexcept {
@@ -75,6 +72,7 @@ public:
 	void set_capacity(std::size_t capacity) noexcept;
 	void set_size(std::size_t size) noexcept;
 
+	// unlike reset() this does not free the underlying buffer
 	void clear() noexcept;
 
 	mutable_buffer slice(std::size_t start = 0, std::size_t end = PTRDIFF_MAX) const noexcept;

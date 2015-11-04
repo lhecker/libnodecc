@@ -1,10 +1,8 @@
 #ifndef nodecc_buffer_buffer_view_h
 #define nodecc_buffer_buffer_view_h
 
-#include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 
 
 namespace node {
@@ -59,8 +57,7 @@ public:
 
 	template<typename T = uint8_t>
 	T* end() const noexcept {
-		const auto data = this->data<uint8_t>();
-		return data ? static_cast<T*>(data + this->size()) : nullptr;
+		return this->_data ? reinterpret_cast<T*>(static_cast<uint8_t*>(this->_data) + this->size()) : nullptr;
 	}
 
 	template<typename T = uint8_t>
@@ -116,9 +113,6 @@ protected:
 }; // class buffer_view
 
 } // namespace node
-
-
-#include "../util/fnv.h"
 
 
 namespace node {

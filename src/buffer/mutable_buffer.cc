@@ -159,7 +159,7 @@ void mutable_buffer::set_size(std::size_t size) noexcept {
 		// if size is larger than cap
 		this->_copy(*this, std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
 		this->_capacity = this->_size;
-	} else if ((size + (size >> 1)) < this->_capacity) {
+	} else if ((size + (size >> 1)) <= this->_capacity) {
 		// if size is much less than cap
 		this->_copy(*this, std::max(std::size_t(16), size));
 		this->_capacity = this->_size;

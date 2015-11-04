@@ -11,7 +11,7 @@ namespace uv {
 template<typename T>
 class handle : public object {
 public:
-	static const node::events::type<void(const std::error_code& err)> error_event;
+	static const node::events::symbol<void(const std::error_code& err)> error_event;
 
 	using object::emit;
 
@@ -101,7 +101,7 @@ protected:
 };
 
 template<typename T>
-const node::events::type<void(const std::error_code& err)> handle<T>::error_event;
+const node::events::symbol<void(const std::error_code& err)> handle<T>::error_event;
 
 } // namespace uv
 } // namespace node
