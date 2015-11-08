@@ -8,44 +8,73 @@ This project is still heavily WIP.
 Requirements:
 - C++11 Compiler (Xcode 6, Visual Studio 2013, gcc, …)
 - Python 2.6 or newer
-- [gyp](https://code.google.com/p/gyp/) in the ./build directory
 
-
-To build this project GYP is required as a meta-build system.
-The general build process is similia to building [libuv](https://github.com/joyent/libuv).
+The general build process is similiar to building [libuv](https://github.com/joyent/libuv).
 
 ### OS X / Linux
 
-    $ mkdir -p build && git clone https://git.chromium.org/external/gyp.git build/gyp
+    $ mkdir -p build && git clone https://chromium.googlesource.com/external/gyp build/gyp
     $ ./configure -f [cmake|eclipse|make|msvs|ninja|xcode]
 
 ### Windows
 
-Not yet tested, but try using ./configure directly with python 2.x.
+Almost everything should work right away but some bits and pieces haven't been ported yet due to lack of time.
 
 ### Example
 
+The following code will create a simple TCP IPv4/6 echo server:
+
 ```cpp
-#include <libnodecc/net/server.h>
+#include <libnodecc/tcp/server.h>
 
 int main() {
 	node::loop loop;
 
-	node::net::server server;
-	server.init(loop);
-	server.listen6();
+	auto server = node::make_shared<node::tcp::server>(loop);
+	server->listen6(8080);
 
-	server.on_connection([&server]() {
-		auto client = std::make_shared<node::net::socket>();
-		server.accept(*client);
+	server->on(server->connection_event, [server]() {
+		auto client = node::make_shared<node::tcp::socket>(server->loop());
+		server->accept(*client);
 
-		client->on_read([client](int err, const node::buffer& buffer) {
-			if (!err) {
-				client->write(buffer);
-			}
+		client->on(client->data_event, [client](const node::buffer& buffer) {
+			client->write(buffer);
 		});
 
-		client->read_start();
+		client->resume();
+	});
+
+	loop.run();
+
+	return 0;
+}
+```
+
+The following code will create a simple HTTP server, which replies with all request headers:
+
+```cpp
+#include <libnodecc/http/server.h>
+
+int main() {
+	node::loop loop;
+
+	auto server = node::make_shared<node::http::server>(loop);
+	server->listen6(8080);
+
+	server->on(server->request_event, [](const node::http::server::request& req, const node::http::server::response& res) {
+		using namespace node::literals;
+
+		node::mutable_buffer buf;
+
+		for (const auto& it : req->headers()) {
+			buf.append(it.first);
+			buf.append(": ");
+			buf.append(it.second);
+			buf.push_back('\n');
+		}
+
+		res->set_header("content-type"_view, "text/plain"_view);
+		res->end(buf);
 	});
 
 	loop.run();
