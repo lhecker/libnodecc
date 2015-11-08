@@ -219,6 +219,10 @@ const node::buffer& incoming_message::header(const node::hashed_buffer& key) con
 	}
 }
 
+const std::unordered_map<node::hashed_buffer, node::mutable_buffer>& incoming_message::headers() const {
+	return this->_headers;
+}
+
 uint16_t incoming_message::status_code() const {
 	return this->_status_code;
 }

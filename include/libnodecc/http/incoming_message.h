@@ -89,6 +89,7 @@ public:
 
 	bool has_header(const node::hashed_buffer& key) const;
 	const node::buffer& header(const node::hashed_buffer& key) const;
+	const std::unordered_map<node::hashed_buffer, node::mutable_buffer>& headers() const;
 
 	uint16_t status_code() const;
 	uint8_t http_version_major() const;
