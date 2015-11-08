@@ -49,7 +49,7 @@ struct basic_event_handler<F, R(Args...)> : event_handler<R(Args...)> {
 
 class event_handler_root {
 public:
-	struct iterator {
+	struct iterator : std::iterator<std::forward_iterator_tag, event_handler_base> {
 		constexpr iterator(event_handler_base* ptr) : _curr(ptr), _prev(nullptr) {}
 		constexpr iterator(event_handler_base* curr, event_handler_base* prev) : _curr(curr), _prev(prev) {}
 
@@ -165,15 +165,12 @@ public:
 		}
 	}
 
+	bool has_listener(const events::detail::base_symbol& symbol) const;
+	std::size_t listener_count(const events::detail::base_symbol& symbol) const;
+
 	void off(const events::detail::base_symbol& symbol, void* iter);
-
-	void removeAllListeners(const events::detail::base_symbol& symbol) {
-		this->_events.erase((void*)&symbol);
-	}
-
-	void removeAllListeners() {
-		this->_events.clear();
-	}
+	void removeAllListeners(const events::detail::base_symbol& symbol);
+	void removeAllListeners();
 
 private:
 	static const void* kEraseAll;

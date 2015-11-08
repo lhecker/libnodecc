@@ -92,5 +92,33 @@ void emitter::off(const events::detail::base_symbol& symbol, void* iter) {
 	}
 }
 
+bool emitter::has_listener(const events::detail::base_symbol& symbol) const {
+	return this->_events.find((void*)&symbol) != this->_events.cend();
+}
+
+std::size_t emitter::listener_count(const events::detail::base_symbol& symbol) const {
+	const auto& it = this->_events.find((void*)&symbol);
+	size_t count = 0;
+
+	if (it != this->_events.cend()) {
+		const auto rend = it->second.end();
+		auto rit = it->second.begin();
+
+		while (rit != rend) {
+			count++;
+		}
+	}
+
+	return count;
+}
+
+void emitter::removeAllListeners(const events::detail::base_symbol& symbol) {
+	this->_events.erase((void*)&symbol);
+}
+
+void emitter::removeAllListeners() {
+	this->_events.clear();
+}
+
 } // namespace events
 } // namespace node
