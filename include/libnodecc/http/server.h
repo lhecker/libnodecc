@@ -43,9 +43,10 @@ public:
 	typedef node::shared_ptr<server_request> request;
 	typedef node::shared_ptr<server_response> response;
 
-	explicit server(node::loop& loop);
+	static const node::events::symbol<void(const node::http::server::request& req, const node::http::server::response& res)> request_event;
 
-	node::callback<void(const server::request& req, const server::response& res)> request_callback;
+
+	explicit server(node::loop& loop);
 
 protected:
 	~server() override = default;

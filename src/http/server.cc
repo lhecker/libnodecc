@@ -98,6 +98,8 @@ void server::server_response::_end(const node::buffer chunks[], size_t chunkcnt)
 }
 
 
+decltype(server::request_event) server::request_event;
+
 server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_shared<bool>(false)) {
 	this->on(connection_event, [this]() {
 		const auto socket = node::make_shared<tcp::socket>(*this);
@@ -138,7 +140,7 @@ server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_sh
 				return;
 			}
 
-			if (!this->request_callback.emit(req, res)) {
+			if (!this->has_listener(request_event)) {
 				res->set_status_code(500);
 				res->end();
 				return;
@@ -175,7 +177,10 @@ server::server(node::loop& loop) : tcp::server(loop), _is_destroyed(std::make_sh
 
 				res->set_status_code(501);
 				res->end();
+				return;
 			}
+
+			this->emit(request_event, req, res);
 		});
 
 		socket->resume();
@@ -190,7 +195,6 @@ void server::_destroy() {
 	}
 
 	this->_clients.clear();
-	this->request_callback.clear();
 
 	node::tcp::server::_destroy();
 }
