@@ -198,7 +198,7 @@ void outgoing_message::http_write(const node::buffer bufs[], size_t bufcnt, bool
 		static const auto end_chunk_0 = end_chunk.slice(2);
 		static const auto end_chunk_rn = end_chunk.slice(0, 2);
 
-		compiledBufs[compiledBufsPos++].reset(end ? (bufcnt > 0 ? end_chunk : end_chunk_0) : end_chunk_rn, node::buffer_flags::weak);
+		compiledBufs[compiledBufsPos++] = node::buffer(end ? (bufcnt > 0 ? end_chunk : end_chunk_0) : end_chunk_rn, node::buffer_flags::weak);
 	} else {
 		for (size_t i = 0; i < bufcnt; i++) {
 			compiledBufs[compiledBufsPos++] = bufs[i];

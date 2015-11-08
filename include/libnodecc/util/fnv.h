@@ -39,7 +39,7 @@ struct fnv1a {
 	static T hash(const buffer_view& view) {
 		T hash = _basis;
 
-		uint8_t* data = view.data();
+		const uint8_t* data = view.data();
 		const uint8_t* data_end = data + view.size();
 
 		for (; data < data_end; data++) {

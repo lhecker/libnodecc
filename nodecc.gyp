@@ -28,7 +28,6 @@
 				'include/libnodecc/buffer.h',
 				'include/libnodecc/buffer/_hashed_trait.h',
 				'include/libnodecc/buffer/buffer.h',
-				'include/libnodecc/buffer/buffer_ref_list.h',
 				'include/libnodecc/buffer/buffer_view.h',
 				'include/libnodecc/buffer/hashed_buffer.h',
 				'include/libnodecc/buffer/hashed_buffer_view.h',
@@ -76,7 +75,6 @@
 				'include/libnodecc/uv/stream.h',
 
 				'src/buffer/buffer.cc',
-				'src/buffer/buffer_ref_list.cc',
 				'src/buffer/buffer_view.cc',
 				'src/buffer/hashed_buffer.cc',
 				'src/buffer/hashed_buffer_view.cc',

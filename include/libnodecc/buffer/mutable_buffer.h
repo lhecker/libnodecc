@@ -77,11 +77,7 @@ public:
 
 	mutable_buffer slice(std::size_t start = 0, std::size_t end = PTRDIFF_MAX) const noexcept;
 
-	template<typename... Args>
-	void reset(Args&&... args) noexcept {
-		buffer::reset(std::forward<Args>(args)...);
-		this->_capacity = 0;
-	}
+	void reset() noexcept;
 
 private:
 	/*

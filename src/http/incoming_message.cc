@@ -113,7 +113,7 @@ void url::_parse_params() {
 		const node::buffer& query = this->query();
 
 		if (query) {
-			uint8_t* data = query.data();
+			uint8_t* data = (uint8_t*)query.data();
 			const size_t size = query.size();
 
 			size_t current_amp_pos = size_t(-1);
@@ -308,7 +308,7 @@ int incoming_message::parser_on_headers_complete(http_parser* parser) {
 
 		self->url.set_url(self->_generic_value);
 
-		self->_generic_value.reset(method_map[parser->method], node::buffer_flags::weak);
+		self->_generic_value = node::buffer(method_map[parser->method], node::buffer_flags::weak);
 	} else {
 		// HTTP_RESPONSE
 		self->_status_code = static_cast<uint16_t>(parser->status_code);

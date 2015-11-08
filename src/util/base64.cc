@@ -27,7 +27,7 @@ namespace util {
 node::buffer base64::encode(const node::buffer_view& buffer, bool base64url) {
 	const uint8_t* encode_table = base64url ? encode_table_url : encode_table_def;
 
-	uint8_t* base = buffer.data<uint8_t>();
+	uint8_t* base = (uint8_t*)buffer.data();
 	const size_t len = buffer.size();
 	const uint8_t* end = base + len;
 
@@ -225,7 +225,7 @@ node::buffer base64::decode(const node::buffer_view& buffer) {
         ri++;           \
     }
 
-	uint8_t* base = buffer.data<uint8_t>();
+	uint8_t* base = (uint8_t*)buffer.data();
 	const size_t len = buffer.size();
 	const uint8_t* end = base + len;
 

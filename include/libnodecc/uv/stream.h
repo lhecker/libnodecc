@@ -31,7 +31,7 @@ protected:
 			auto self = reinterpret_cast<node::uv::stream<T>*>(handle->data);
 
 			try {
-				self->_alloc_buffer.reset(4096);
+				self->_alloc_buffer = node::buffer(4000);
 			} catch (...) {
 				return;
 			}
@@ -82,7 +82,7 @@ protected:
 			uv_buf_t* a = uv_bufs + i;
 			const node::buffer* b = bufs + i;
 
-			a->base = b->data<char>();
+			a->base = (char*)b->data();
 			a->len  = b->size();
 
 			total += b->size();
@@ -126,7 +126,7 @@ protected:
 		}
 
 		struct packed_req {
-			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, size_t total) : ref_list(bufs, bufcnt), total(total) {
+			explicit packed_req(uv::stream<T>& stream, const node::buffer bufs[], size_t bufcnt, size_t total) : ref_list(bufs, bufs + bufcnt), total(total) {
 				stream._increase_watermark(this->total);
 				this->req.data = &stream;
 			}
@@ -137,7 +137,7 @@ protected:
 			}
 
 			uv_write_t req;
-			node::buffer_ref_list ref_list;
+			std::vector<node::buffer> ref_list;
 			size_t total;
 		};
 

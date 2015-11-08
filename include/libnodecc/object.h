@@ -23,18 +23,13 @@ class shared_ptr;
 class object : public events::emitter {
 private:
 	template<typename T>
-	friend class shared_ptr;
+	friend class node::shared_ptr;
 
 public:
 	static const node::events::symbol<void()> destroy_event;
 
-	struct destructor {
-		void operator()(object* o) {
-			o->destroy();
-		}
-	};
+	explicit object() : _responsible_object(nullptr), _use_count(1), _is_destroyed(0) {}
 
-	object() = default;
 	object(object&&) = delete;
 
 	size_t use_count() const noexcept {
@@ -42,39 +37,38 @@ public:
 	}
 
 	template<typename S>
-	shared_ptr<S> shared_from_this() {
-		return shared_ptr<S>(static_cast<S*>(this));
+	node::shared_ptr<S> shared_from_this() {
+		return node::shared_ptr<S>(static_cast<S*>(this));
 	}
 
 	void destroy() {
+		// prevent double destroy()
 		if (!this->_is_destroyed) {
-			this->_is_destroyed = true;
+			this->_is_destroyed = 1;
 			this->_destroy();
 
-			if (!this->_is_shared) {
+			/*
+			 * We don't need to release() if we don't have a responsible_object and
+			 * thus are shared, since the shared_ptr will call release for us already.
+			 */
+			if (this->_responsible_object) {
 				this->release();
 			}
 		}
 	}
 
 protected:
-#if 0
-	virtual ~object() {
-		printf("%s::~object\n", typeid(this).name());
-	}
-#else
 	virtual ~object() = default;
-#endif
 
 	void set_responsible_object(object* parent) {
-		assert(parent);
-
 		std::swap(this->_responsible_object, parent);
 
-		parent->retain();
+		if (this->_responsible_object) {
+			this->_responsible_object->retain();
+		}
 
 		if (parent) {
-			return parent->release();
+			parent->release();
 		}
 	}
 
@@ -87,7 +81,7 @@ protected:
 
 		if (--this->_use_count == 0) {
 			if (!this->_is_destroyed) {
-				this->_is_destroyed = true;
+				this->_is_destroyed = 1;
 				this->_destroy();
 
 				if (this->_use_count > 0) {
@@ -110,10 +104,9 @@ protected:
 	}
 
 private:
-	object* _responsible_object = nullptr;
-	size_t  _use_count          = 1;
-	bool    _is_destroyed       = false;
-	bool    _is_shared          = false;
+	object* _responsible_object;
+	size_t  _use_count    : 31;
+	size_t  _is_destroyed : 1;
 };
 
 
@@ -212,8 +205,7 @@ public:
 	}
 
 private:
-	explicit shared_ptr(element_type* o) : _ptr(o) {
-		this->_ptr->_is_shared = true;
+	constexpr shared_ptr(element_type* o) : _ptr(o) {
 		// there is no need for a retain() here since it's guaranteed that o will have a use_count of exactly 1
 	}
 };

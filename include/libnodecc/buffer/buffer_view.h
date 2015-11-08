@@ -45,47 +45,23 @@ public:
 	buffer_view& operator=(const buffer_view& other);
 
 
-	template<typename T = uint8_t>
-	T* begin() const noexcept {
-		return static_cast<T*>(this->_data);
-	}
+	template<typename T = uint8_t>       T*  begin()       noexcept { return static_cast<T*>(this->_data); }
+	template<typename T = uint8_t> const T*  begin() const noexcept { return static_cast<T*>(this->_data); }
+	template<typename T = uint8_t> const T* cbegin() const noexcept { return this->begin<T>(); }
 
-	template<typename T = uint8_t>
-	const T* cbegin() const noexcept {
-		return this->begin<T>();
-	}
+	template<typename T = uint8_t>       T*  end()         noexcept { return this->_data ? reinterpret_cast<T*>(static_cast<uint8_t*>(this->_data) + this->_size) : nullptr; }
+	template<typename T = uint8_t> const T*  end()   const noexcept { return this->_data ? reinterpret_cast<T*>(static_cast<uint8_t*>(this->_data) + this->_size) : nullptr; }
+	template<typename T = uint8_t> const T* cend()   const noexcept { return this->end<T>(); }
 
-	template<typename T = uint8_t>
-	T* end() const noexcept {
-		return this->_data ? reinterpret_cast<T*>(static_cast<uint8_t*>(this->_data) + this->size()) : nullptr;
-	}
+	template<typename T = uint8_t>       T* data()         noexcept { return static_cast<T*>(this->_data); }
+	template<typename T = uint8_t> const T* data()   const noexcept { return static_cast<T*>(this->_data); }
 
-	template<typename T = uint8_t>
-	const T* cend() const noexcept {
-		return this->end<T>();
-	}
+	template<typename T = uint8_t>       T& operator[](std::size_t pos)       noexcept { return this->data()[pos]; }
+	template<typename T = uint8_t> const T& operator[](std::size_t pos) const noexcept { return this->data()[pos]; }
 
-
-	template<typename T = uint8_t>
-	constexpr T* data() const noexcept {
-		return static_cast<T*>(this->_data);
-	}
-
-	uint8_t& operator[](std::size_t pos) const noexcept {
-		return this->data()[pos];
-	}
-
-	constexpr std::size_t size() const noexcept {
-		return this->_size;
-	}
-
-	constexpr operator bool() const noexcept {
-		return this->_data != nullptr;
-	}
-
-	constexpr bool empty() const noexcept {
-		return this->_data == nullptr;
-	}
+	constexpr std::size_t size() const noexcept { return this->_size; }
+	constexpr operator bool()    const noexcept { return this->_data != nullptr; }
+	constexpr bool empty()       const noexcept { return this->_data == nullptr; }
 
 
 	buffer_view view(std::size_t beg = 0, std::size_t end = npos) const noexcept;
@@ -99,13 +75,6 @@ public:
 
 	std::size_t index_of(const char ch) const noexcept;
 	std::size_t index_of(const buffer_view& other) const noexcept;
-
-	std::unique_ptr<char> create_c_str() const;
-
-	template<typename CharT = char, typename Traits = std::char_traits<CharT>, typename Allocator = std::allocator<CharT>>
-	std::basic_string<CharT, Traits, Allocator> to_string() const {
-		return std::basic_string<CharT, Traits, Allocator>(this->data<CharT*>(), this->size());
-	}
 
 protected:
 	void* _data;

@@ -157,11 +157,11 @@ void mutable_buffer::set_size(std::size_t size) noexcept {
 	 */
 	if (size > this->_capacity) {
 		// if size is larger than cap
-		this->_copy(*this, std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
+		*this = this->copy(std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
 		this->_capacity = this->_size;
 	} else if ((size + (size >> 1)) <= this->_capacity) {
 		// if size is much less than cap
-		this->_copy(*this, std::max(std::size_t(16), size));
+		*this = this->copy(std::max(std::size_t(16), size));
 		this->_capacity = this->_size;
 	}
 
@@ -182,13 +182,18 @@ mutable_buffer mutable_buffer::slice(std::size_t start, std::size_t end) const n
 	return buf;
 }
 
+void mutable_buffer::reset() noexcept {
+	buffer::reset();
+	this->_capacity = 0;
+}
+
 void* mutable_buffer::_expand_size(std::size_t size) {
 	const std::size_t prev_size = this->size();
 
 	size += prev_size;
 
 	if (size > this->_capacity) {
-		this->_copy(*this, std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
+		*this = this->copy(std::max({ std::size_t(16), size, this->_capacity + (this->_capacity >> 1) }));
 
 		if (!this->_size) {
 			return nullptr;

@@ -88,17 +88,10 @@ public:
 	 */
 	template<typename T, typename D, typename = typename std::enable_if<!std::is_same<D, buffer_flags>::value>::type>
 	explicit buffer(const T* data, std::size_t size, D d) noexcept {
-		control_base* p = new(std::nothrow) control<T, D>(data, std::forward<D>(d));
-
-		if (p) {
-			this->_data = (void*)data;
-			this->_size = size;
-			this->_p = p;
-		} else {
-			this->_data = nullptr;
-			this->_size = 0;
-			this->_p = nullptr;
-		}
+		control_base* p = new control<T, D>(data, std::forward<D>(d));
+		this->_data = (void*)data;
+		this->_size = size;
+		this->_p = p;
 	}
 
 
@@ -142,37 +135,6 @@ public:
 	 * Releases the buffer and resets it's data and size to zero.
 	 */
 	void reset();
-
-	/**
-	 * Releases the buffer and allocates a new one with the specified size.
-	 */
-	void reset(size_t size);
-
-	void reset(const buffer_view& other, buffer_flags flags = buffer_flags::copy);
-
-	inline void reset(const void* data, std::size_t size, buffer_flags flags = buffer_flags::copy) {
-		this->reset(node::buffer_view(data, size), flags);
-	}
-
-	/**
-	 * Releases the current buffer and starts managing the given memory area.
-	 *
-	 * @param data  The base address of the memory area.
-	 * @param size  The size of the memory area.
-	 * @param d     An optional custom deleter callback. The default simply calls free().
-	 */
-	template<typename T, typename D, typename = typename std::enable_if<!std::is_same<D, buffer_flags>::value>::type>
-	void reset(const T* data, std::size_t size, D d) {
-		this->_release();
-
-		control_base* p = new(std::nothrow) control<T, D>(data, std::forward<D>(d));
-
-		if (p) {
-			this->_data = const_cast<void*>(data);
-			this->_size = size;
-			this->_p = p;
-		}
-	}
 
 	/**
 	 * Returns a copy of the buffer, while optionally resizing it.
@@ -238,11 +200,6 @@ protected:
 		void free() override {}
 	};
 
-
-	/**
-	 * Creates a copy of this buffer in target, while optionally resizing it.
-	 */
-	void _copy(buffer& target, std::size_t size = 0) const;
 
 	void _reset_unsafe(std::size_t size);
 	void _reset_zero() noexcept;

@@ -58,18 +58,6 @@ std::size_t buffer_view::index_of(const buffer_view& other) const noexcept {
 	}
 }
 
-std::unique_ptr<char> buffer_view::create_c_str() const {
-	std::unique_ptr<char> ret;
-
-	if (this->size()) {
-		ret.reset(new char[this->size() + 1]);
-		memcpy(ret.get(), this->data(), this->size());
-		ret.get()[this->size()] = '\0';
-	}
-
-	return ret;
-}
-
 
 bool operator==(node::buffer_view& lhs, node::buffer_view& rhs) noexcept {
 	return lhs.data() == rhs.data() && lhs.size() == rhs.size();

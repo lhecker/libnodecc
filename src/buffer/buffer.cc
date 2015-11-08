@@ -24,7 +24,7 @@ buffer::buffer(mutable_buffer&& other) noexcept : buffer_view(other), _p(other._
 
 buffer::buffer(const void* data, std::size_t size, buffer_flags flags) noexcept : buffer_view(data, size), _p(nullptr) {
 	if (flags == buffer_flags::copy) {
-		this->_copy(*this);
+		*this = this->copy();
 	}
 }
 
@@ -78,25 +78,17 @@ void buffer::reset() {
 	this->_release();
 }
 
-void buffer::reset(std::size_t size) {
-	this->_release();
-	this->_reset_unsafe(size);
-}
-
-void buffer::reset(const buffer_view& other, buffer_flags flags) {
-	this->_release();
-
-	this->_data = other.data();
-	this->_size = other.size();
-
-	if (flags == buffer_flags::copy) {
-		this->_copy(*this);
-	}
-}
-
 buffer buffer::copy(std::size_t size) const {
-	buffer buf;
-	this->_copy(buf, size);
+	if (size == 0) {
+		size = this->_size;
+	}
+
+	buffer buf(size);
+
+	if (this->_data) {
+		memcpy(buf._data, this->_data, std::min(size, this->_size));
+	}
+
 	return buf;
 }
 
@@ -108,7 +100,7 @@ buffer buffer::slice(std::size_t beg, std::size_t end) const noexcept {
 		const std::size_t cend = std::min(end, this->size());
 
 		if (cend > cbeg) {
-			buf._data = this->data() + cbeg;
+			buf._data = static_cast<uint8_t*>(this->_data) + cbeg;
 			buf._size = cend - cbeg;
 			buf._p = this->_p;
 			buf._retain();
@@ -116,20 +108,6 @@ buffer buffer::slice(std::size_t beg, std::size_t end) const noexcept {
 	}
 
 	return buf;
-}
-
-void buffer::_copy(buffer& target, std::size_t size) const {
-	if (size == 0) {
-		size = this->_size;
-	}
-
-	buffer buf(size);
-
-	if (this->_data) {
-		memcpy(buf._data, this->_data, std::min(size, this->_size));
-	}
-
-	target = std::move(buf);
 }
 
 void buffer::_reset_unsafe(std::size_t size) {

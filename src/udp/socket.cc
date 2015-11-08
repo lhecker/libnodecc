@@ -74,8 +74,10 @@ void socket::resume() {
 	node::uv::check(uv_udp_recv_start(*this, [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 		auto self = reinterpret_cast<socket*>(handle->data);
 
-		if (self->_alloc_buffer.use_count() != 1 || self->_alloc_buffer.size() != suggested_size) {
-			self->_alloc_buffer.reset(suggested_size);
+		try {
+			self->_alloc_buffer = node::buffer(4000);
+		} catch (...) {
+			return;
 		}
 
 		buf->base = self->_alloc_buffer.data<char>();
@@ -121,7 +123,7 @@ void socket::write(sockaddr& addr, const node::buffer bufs[], size_t bufcnt) {
 		uv_buf_t* a = uv_bufs + i;
 		const node::buffer* b = bufs + i;
 
-		a->base = b->data<char>();
+		a->base = (char*)b->data();
 		a->len  = b->size();
 
 		total += b->size();
@@ -165,12 +167,12 @@ void socket::write(sockaddr& addr, const node::buffer bufs[], size_t bufcnt) {
 	}
 
 	struct packed_req {
-		explicit packed_req(socket& self, const node::buffer bufs[], size_t bufcnt, size_t total) : ref_list(bufs, bufcnt) {
+		explicit packed_req(socket& self, const node::buffer bufs[], size_t bufcnt, size_t total) : ref_list(bufs, bufs + bufcnt) {
 			this->req.data = &self;
 		}
 
 		uv_udp_send_t req;
-		node::buffer_ref_list ref_list;
+		std::vector<node::buffer> ref_list;
 	};
 
 	auto pack = std::unique_ptr<packed_req>(new packed_req(*this, bufs, bufcnt, total));
