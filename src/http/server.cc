@@ -46,41 +46,41 @@ void server::server_response::set_status_code(uint16_t code) {
 }
 
 void server::server_response::compile_headers(node::mutable_buffer& buf) {
-	{
-		uv_buf_t status = str_status_code(this->status_code());
+	uv_buf_t status = str_status_code(this->status_code());
 
-		if (!status.base) {
-			status = str_status_code(500);
-		}
-
-		/*
-		 * As per RFC 2145 §2.3:
-		 *
-		 * An HTTP server SHOULD send a response version equal to the highest
-		 * version for which the server is at least conditionally compliant, and
-		 * whose major version is less than or equal to the one received in the
-		 * request.
-		 */
-		buf.append("HTTP/1.1 ");
-		buf.append(status.base, status.len);
-		buf.append("\r\n");
+	if (!status.base) {
+		status = str_status_code(500);
 	}
 
-	if (this->_headers.find("date"_view) == this->_headers.end()) {
+	/*
+	 * As per RFC 2145 §2.3:
+	 *
+	 * An HTTP server SHOULD send a response version equal to the highest
+	 * version for which the server is at least conditionally compliant, and
+	 * whose major version is less than or equal to the one received in the
+	 * request.
+	 */
+	buf.append("HTTP/1.1 ");
+	buf.append(status.base, status.len);
+	buf.append("\r\n");
+
+	if (this->_headers.find("date"_view) == this->_headers.cend()) {
 		date_buffer.update(uv_now(*this->socket().get()));
 		buf.append(date_buffer.get_buffer());
 	}
 
-	{
-		for (const auto& iter : this->_headers) {
-			buf.append(iter.first);
-			buf.append(": ");
-			buf.append(iter.second);
-			buf.append("\r\n");
-		}
-
+	for (const auto& iter : this->_headers) {
+		buf.append(iter.first);
+		buf.append(": ");
+		buf.append(iter.second);
 		buf.append("\r\n");
 	}
+
+	if (this->_shutdown_on_end && this->_headers.find("connection"_view) == this->_headers.cend()) {
+		buf.append("connection: close\r\n");
+	}
+
+	buf.append("\r\n");
 }
 
 void server::server_response::_end(const node::buffer chunks[], size_t chunkcnt) {
